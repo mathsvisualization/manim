@@ -2,6 +2,7 @@
 
 # Code of Conduct
 
+# WELCOME
 
 
    > TL;DR Be excellent to each other; we're a community after all. If you run into issues with others in our community, please [contact](https://www.manim.community/discord/) a Manim Community Dev, or Moderator.
@@ -207,7 +208,6 @@ Once the team has approved the behavioral modification plans and consequences, t
 Moderators are required to respond with whether they accept the recommended response to the report. If they disagree with the recommended response, they should provide a detailed response or additional context as to why they disagree. Moderators are encouraged to respond within a week.
 
 In cases where the moderators disagree on the suggested resolution for a report, the Manim Community Code of Conduct team may choose to notify the Manim Community Moderators.
-
 
 
 ### Follow up with the reported person
