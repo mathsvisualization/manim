@@ -20,7 +20,7 @@ directories:
   base: ""
   subdirs:
     # Where should manim output video and image files?
-    output: "/storage/emulated/0/Manim/ManimGL/"
+    output: "videos"
     # If you want to use images, manim will look to these folders to find them
     raster_images: "raster_images"
     vector_images: "vector_images"
@@ -48,7 +48,7 @@ window:
   # size: (1920, 1080)  # Specific size, in pixels
 camera:
   resolution: (1920, 1080)
-  background_color: "#000000"
+  background_color: "#333333"
   fps: 30
   background_opacity: 1.0
 file_writer:
@@ -171,5 +171,5 @@ colors:
   orange: "#FF862F"
 # Can be DEBUG / INFO / WARNING / ERROR / CRITICAL
 log_level: "INFO"
-universal_import_line: "from manim_imports_ext import *"
+universal_import_line: "from manimlib import *"
 ignore_manimlib_modules_on_reload: True
