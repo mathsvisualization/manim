@@ -1,119 +1,27 @@
-<p align="center">
-    <a href="https://github.com/3b1b/manim">
-        <img src="https://raw.githubusercontent.com/3b1b/manim/master/logo/cropped.png">
-    </a>
-</p>
-
-[![pypi version](https://img.shields.io/pypi/v/manimgl?logo=pypi)](https://pypi.org/project/manimgl/)
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://choosealicense.com/licenses/mit/)
-[![Manim Subreddit](https://img.shields.io/reddit/subreddit-subscribers/manim.svg?color=ff4301&label=reddit&logo=reddit)](https://www.reddit.com/r/manim/)
-[![Manim Discord](https://img.shields.io/discord/581738731934056449.svg?label=discord&logo=discord)](https://discord.com/invite/bYCyhM9Kz2)
-[![docs](https://github.com/3b1b/manim/workflows/docs/badge.svg)](https://3b1b.github.io/manim/)
-
-Manim is an engine for precise programmatic animations, designed for creating explanatory math videos.
-
-Note, there are two versions of manim.  This repository began as a personal project by the author of [3Blue1Brown](https://www.3blue1brown.com/) for the purpose of animating those videos, with video-specific code available [here](https://github.com/3b1b/videos).  In 2020 a group of developers forked it into what is now the [community edition](https://github.com/ManimCommunity/manim/), with a goal of being more stable, better tested, quicker to respond to community contributions, and all around friendlier to get started with. See [this page](https://docs.manim.community/en/stable/faq/installation.html#different-versions) for more details.
-
-## Installation
-> [!Warning]
-> **WARNING:** These instructions are for ManimGL _only_. Trying to use these instructions to install [Manim Community/manim](https://github.com/ManimCommunity/manim) or instructions there to install this version will cause problems. You should first decide which version you wish to install, then only follow the instructions for your desired version.
-
-> [!Note]
-> **Note**: To install manim directly through pip, please pay attention to the name of the installed package. This repository is ManimGL of 3b1b. The package name is `manimgl` instead of `manim` or `manimlib`. Please use `pip install manimgl` to install the version in this repository.
-
-Manim runs on Python 3.7 or higher.
-
-System requirements are [FFmpeg](https://ffmpeg.org/), [OpenGL](https://www.opengl.org/) and [LaTeX](https://www.latex-project.org) (optional, if you want to use LaTeX).
-For Linux, [Pango](https://pango.gnome.org) along with its development headers are required. See instruction [here](https://github.com/ManimCommunity/ManimPango#building).
+# 💫 About Me:
+🫶🏼 MIT
 
 
-### Directly
+## 🌐 Socials:
+[![Discord](https://img.shields.io/badge/Discord-%237289DA.svg?logo=discord&logoColor=white)](https://discord.gg/https://discord.gg/kPNdxvdQ) [![Instagram](https://img.shields.io/badge/Instagram-%23E4405F.svg?logo=Instagram&logoColor=white)](https://instagram.com/maths.visualization) [![LinkedIn](https://img.shields.io/badge/LinkedIn-%230077B5.svg?logo=linkedin&logoColor=white)](https://linkedin.com/in/https://www.linkedin.com/in/maths-visualization) [![Reddit](https://img.shields.io/badge/Reddit-%23FF4500.svg?logo=Reddit&logoColor=white)](https://reddit.com/user/maths_visualization) [![X](https://img.shields.io/badge/X-black.svg?logo=X&logoColor=white)](https://x.com/maths_vis) [![email](https://img.shields.io/badge/Email-D14836?logo=gmail&logoColor=white)](mailto:sadiyavip09@gmail.com) 
 
-```sh
-# Install manimgl
-pip install manimgl
+# 💻 Tech Stack:
+![Python](https://img.shields.io/badge/python-3670A0?style=plastic&logo=python&logoColor=ffdd54) ![LaTeX](https://img.shields.io/badge/latex-%23008080.svg?style=plastic&logo=latex&logoColor=white) ![Markdown](https://img.shields.io/badge/markdown-%23000000.svg?style=plastic&logo=markdown&logoColor=white) ![Flask](https://img.shields.io/badge/flask-%23000.svg?style=plastic&logo=flask&logoColor=white) ![MySQL](https://img.shields.io/badge/mysql-4479A1.svg?style=plastic&logo=mysql&logoColor=white) ![Canva](https://img.shields.io/badge/Canva-%2300C4CC.svg?style=plastic&logo=Canva&logoColor=white) ![NumPy](https://img.shields.io/badge/numpy-%23013243.svg?style=plastic&logo=numpy&logoColor=white) ![Matplotlib](https://img.shields.io/badge/Matplotlib-%23ffffff.svg?style=plastic&logo=Matplotlib&logoColor=black) ![Pandas](https://img.shields.io/badge/pandas-%23150458.svg?style=plastic&logo=pandas&logoColor=white) ![Scipy](https://img.shields.io/badge/SciPy-%230C55A5.svg?style=plastic&logo=scipy&logoColor=%white) ![TensorFlow](https://img.shields.io/badge/TensorFlow-%23FF6F00.svg?style=plastic&logo=TensorFlow&logoColor=white) ![scikit-learn](https://img.shields.io/badge/scikit--learn-%23F7931E.svg?style=plastic&logo=scikit-learn&logoColor=white) ![Plotly](https://img.shields.io/badge/Plotly-%233F4F75.svg?style=plastic&logo=plotly&logoColor=white) ![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=plastic&logo=PyTorch&logoColor=white) ![mlflow](https://img.shields.io/badge/mlflow-%23d9ead3.svg?style=plastic&logo=numpy&logoColor=blue) ![Keras](https://img.shields.io/badge/Keras-%23D00000.svg?style=plastic&logo=Keras&logoColor=white) ![Git](https://img.shields.io/badge/git-%23F05033.svg?style=plastic&logo=git&logoColor=white) ![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=plastic&logo=github&logoColor=white)
+# 📊 GitHub Stats:
+![](https://github-readme-stats.vercel.app/api?username=mathsvisualization&theme=aura&hide_border=false&include_all_commits=false&count_private=false)<br/>
+![](https://github-readme-streak-stats.herokuapp.com/?user=mathsvisualization&theme=aura&hide_border=false)<br/>
+![](https://github-readme-stats.vercel.app/api/top-langs/?username=mathsvisualization&theme=aura&hide_border=false&include_all_commits=false&count_private=false&layout=compact)
 
-# Try it out
-manimgl
-```
+## 🏆 GitHub Trophies
+![](https://github-profile-trophy.vercel.app/?username=mathsvisualization&theme=radical&no-frame=false&no-bg=false&margin-w=4)
 
-For more options, take a look at the [Using manim](#using-manim) sections further below.
+### ✍️ Random Dev Quote
+![](https://quotes-github-readme.vercel.app/api?type=horizontal&theme=dark)
 
-If you want to hack on manimlib itself, clone this repository and in that directory execute:
+### 🔝 Top Contributed Repo
+![](https://github-contributor-stats.vercel.app/api?username=mathsvisualization&limit=5&theme=dark&combine_all_yearly_contributions=true)
 
-```sh
-# Install manimgl
-pip install -e .
+---
+[![](https://visitcount.itsvg.in/api?id=mathsvisualization&icon=5&color=6)](https://visitcount.itsvg.in)
 
-# Try it out
-manimgl example_scenes.py OpeningManimExample
-# or
-manim-render example_scenes.py OpeningManimExample
-```
-
-### Directly (Windows)
-
-1. [Install FFmpeg](https://www.wikihow.com/Install-FFmpeg-on-Windows).
-2. Install a LaTeX distribution. [MiKTeX](https://miktex.org/download) is recommended.
-3. Install the remaining Python packages.
-    ```sh
-    git clone https://github.com/3b1b/manim.git
-    cd manim
-    pip install -e .
-    manimgl example_scenes.py OpeningManimExample
-    ```
-
-### Mac OSX
-
-1. Install FFmpeg, LaTeX in terminal using homebrew.
-    ```sh
-    brew install ffmpeg mactex
-    ```
-   
-2. Install latest version of manim using these command.
-    ```sh
-    git clone https://github.com/3b1b/manim.git
-    cd manim
-    pip install -e .
-    manimgl example_scenes.py OpeningManimExample
-    ```
-
-## Anaconda Install
-
-1. Install LaTeX as above.
-2. Create a conda environment using `conda create -n manim python=3.8`.
-3. Activate the environment using `conda activate manim`.
-4. Install manimgl using `pip install -e .`.
-
-
-## Using manim
-Try running the following:
-```sh
-manimgl example_scenes.py OpeningManimExample
-```
-This should pop up a window playing a simple scene.
-
-Look through the [example scenes](https://3b1b.github.io/manim/getting_started/example_scenes.html) to see examples of the library's syntax, animation types and object types. In the [3b1b/videos](https://github.com/3b1b/videos) repo, you can see all the code for 3blue1brown videos, though code from older videos may not be compatible with the most recent version of manim. The readme of that repo also outlines some details for how to set up a more interactive workflow, as shown in [this manim demo video](https://www.youtube.com/watch?v=rbu7Zu5X1zI) for example.
-
-When running in the CLI, some useful flags include:
-* `-w` to write the scene to a file
-* `-o` to write the scene to a file and open the result
-* `-s` to skip to the end and just show the final frame.
-    * `-so` will save the final frame to an image and show it
-* `-n <number>` to skip ahead to the `n`'th animation of a scene.
-* `-f` to make the playback window fullscreen
-
-Take a look at custom_config.yml for further configuration.  To add your customization, you can either edit this file, or add another file by the same name "custom_config.yml" to whatever directory you are running manim from.  For example [this is the one](https://github.com/3b1b/videos/blob/master/custom_config.yml) for 3blue1brown videos.  There you can specify where videos should be output to, where manim should look for image files and sounds you want to read in, and other defaults regarding style and video quality.
-
-### Documentation
-Documentation is in progress at [3b1b.github.io/manim](https://3b1b.github.io/manim/). And there is also a Chinese version maintained by [**@manim-kindergarten**](https://manim.org.cn): [docs.manim.org.cn](https://docs.manim.org.cn/) (in Chinese).
-
-[manim-kindergarten](https://github.com/manim-kindergarten/) wrote and collected some useful extra classes and some codes of videos in [manim_sandbox repo](https://github.com/manim-kindergarten/manim_sandbox).
-
-
-## Contributing
-Is always welcome.  As mentioned above, the [community edition](https://github.com/ManimCommunity/manim) has the most active ecosystem for contributions, with testing and continuous integration, but pull requests are welcome here too.  Please explain the motivation for a given change and examples of its effect.
-
-
-## License
-This project falls under the MIT license.
+<!-- Proudly created with GPRM ( https://gprm.itsvg.in ) -->
