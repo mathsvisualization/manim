@@ -70,7 +70,7 @@ scene:
   # How long does a scene pause on Scene.wait calls
   default_wait_time: 1.0
 vmobject:
-  default_stroke_width: 4.0
+  default_stroke_width: 1.0
 tex:
   # See tex_templates.yml
   template: "default"
@@ -90,7 +90,7 @@ resolution_options:
 sizes:
   # This determines the scale of the manim coordinate system with respect to
   # the viewing frame
-  frame_height: 8.0
+  frame_height: 16.0
   # These determine the constants SMALL_BUFF, MED_SMALL_BUFF, etc., useful
   # for nudging things around and having default spacing values
   small_buff: 0.1
