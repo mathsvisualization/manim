@@ -75,7 +75,7 @@ class DrawBorderThenFill(Animation):
     def __init__(
         self,
         vmobject: VMobject,
-        run_time: float = 2.0,
+        run_time: float = 1.0,
         rate_func: Callable[[float], float] = double_smooth,
         stroke_width: float = 2.0,
         stroke_color: ManimColor = None,
@@ -152,7 +152,7 @@ class Write(DrawBorderThenFill):
         **kwargs
     ):
         if stroke_color is None:
-            stroke_color = vmobject.get_color()
+            stroke_color = vmobject.get_stroke_colors()
         family_size = len(vmobject.family_members_with_points())
         super().__init__(
             vmobject,

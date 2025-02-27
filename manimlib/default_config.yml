@@ -12,7 +12,7 @@ directories:
   # Set this to true if you want the path to video files
   # to match the directory structure of the path to the
   # source code generating that video
-  mirror_module_path: False
+  mirror_module_path: True
   # Manim may write to and read from the file system, e.g.
   # to render videos and to look for svg/png assets. This
   # will specify where those assets live, with a base directory,
@@ -20,7 +20,7 @@ directories:
   base: ""
   subdirs:
     # Where should manim output video and image files?
-    output: "videos"
+    output: "/storage/emulated/0/Manim/ManimGL"
     # If you want to use images, manim will look to these folders to find them
     raster_images: "raster_images"
     vector_images: "vector_images"
@@ -48,7 +48,7 @@ window:
   # size: (1920, 1080)  # Specific size, in pixels
 camera:
   resolution: (1920, 1080)
-  background_color: "#333333"
+  background_color: "#000000"
   fps: 30
   background_opacity: 1.0
 file_writer:
@@ -70,16 +70,16 @@ scene:
   # How long does a scene pause on Scene.wait calls
   default_wait_time: 1.0
 vmobject:
-  default_stroke_width: 4.0
+  default_stroke_width: 1.0
 tex:
   # See tex_templates.yml
   template: "default"
 text:
-  font: "Consolas"
-  alignment: "LEFT"
+  font: "CMU Serif"
+  alignment: "CENTER"
 embed:
   exception_mode: "Verbose"
-  autoreload: False
+  autoreload: True
 resolution_options:
   # When the user passes in -l, -m, --hd or --uhd, these are the corresponding
   # resolutions
