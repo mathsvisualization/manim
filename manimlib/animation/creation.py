@@ -77,7 +77,7 @@ class DrawBorderThenFill(Animation):
         vmobject: VMobject,
         run_time: float = 2.0,
         rate_func: Callable[[float], float] = double_smooth,
-        stroke_width: float = 1.0,
+        stroke_width: float = 2.0,
         stroke_color: ManimColor = None,
         draw_border_animation_config: dict = {},
         fill_animation_config: dict = {},
@@ -101,7 +101,7 @@ class DrawBorderThenFill(Animation):
         self.mobject.set_animating_status(True)
         self.outline = self.get_outline()
         super().begin()
-        #self.mobject.match_style(self.outline)
+        self.mobject.match_style(self.outline)
 
     def finish(self) -> None:
         super().finish()
@@ -112,18 +112,11 @@ class DrawBorderThenFill(Animation):
         outline.set_fill(opacity=0)
         for sm in outline.family_members_with_points():
             sm.set_stroke(
-                color=self.get_stroke_color(sm),
+                color=self.stroke_color or sm.get_stroke_color(),
                 width=self.stroke_width,
                 behind=self.mobject.stroke_behind,
             )
         return outline
-
-    def get_stroke_color(self, vmobject: VMobject | OpenGLVMobject) -> ManimColor:
-        if self.stroke_color:
-            return self.stroke_color
-        elif vmobject.get_stroke_width() > 0:
-            return vmobject.get_stroke_color()
-        return vmobject.get_color()        
 
     def get_all_mobjects(self) -> list[Mobject]:
         return [*super().get_all_mobjects(), self.outline]
@@ -144,7 +137,6 @@ class DrawBorderThenFill(Animation):
 
         if index == 0:
             submob.pointwise_become_partial(outline, 0, subalpha)
-            submob.match_style(outline)
         else:
             submob.interpolate(outline, start, subalpha)
 
@@ -160,7 +152,7 @@ class Write(DrawBorderThenFill):
         **kwargs
     ):
         if stroke_color is None:
-            stroke_color = vmobject.get_stroke_colors()
+            stroke_color = vmobject.get_color()
         family_size = len(vmobject.family_members_with_points())
         super().__init__(
             vmobject,

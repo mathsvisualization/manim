@@ -20,7 +20,7 @@ directories:
   base: ""
   subdirs:
     # Where should manim output video and image files?
-    output: "/storage/emulated/0/Manim/ManimGL/"
+    output: "videos"
     # If you want to use images, manim will look to these folders to find them
     raster_images: "raster_images"
     vector_images: "vector_images"
@@ -48,7 +48,7 @@ window:
   # size: (1920, 1080)  # Specific size, in pixels
 camera:
   resolution: (1920, 1080)
-  background_color: "#000000"
+  background_color: "#333333"
   fps: 30
   background_opacity: 1.0
 file_writer:
@@ -70,12 +70,12 @@ scene:
   # How long does a scene pause on Scene.wait calls
   default_wait_time: 1.0
 vmobject:
-  default_stroke_width: 1.0
+  default_stroke_width: 4.0
 tex:
   # See tex_templates.yml
   template: "default"
 text:
-  font: "CMU Serif"
+  font: "Consolas"
   alignment: "LEFT"
 embed:
   exception_mode: "Verbose"
@@ -90,7 +90,7 @@ resolution_options:
 sizes:
   # This determines the scale of the manim coordinate system with respect to
   # the viewing frame
-  frame_height: 16.0
+  frame_height: 8.0
   # These determine the constants SMALL_BUFF, MED_SMALL_BUFF, etc., useful
   # for nudging things around and having default spacing values
   small_buff: 0.1

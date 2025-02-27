@@ -75,7 +75,6 @@ class Scene(object):
         presenter_mode: bool = False,
         default_wait_time: float = 1.0,
     ):
-        self.three3_mode = False
         self.skip_animations = skip_animations
         self.always_update_mobjects = always_update_mobjects
         self.start_at_animation_number = start_at_animation_number
@@ -469,7 +468,7 @@ class Scene(object):
         if self.skip_animations and not override_skip_animations:
             return [run_time]
 
-        times = np.arange(0, run_time, 1 / int(self.camera.fps)) + 1 / int(self.camera.fps)
+        times = np.arange(0, run_time, 1 / self.camera.fps) + 1 / self.camera.fps
 
         self.file_writer.set_progress_display_description(sub_desc=desc)
 
@@ -739,11 +738,11 @@ class Scene(object):
         event_data = {"point": point, "d_point": d_point}
         propagate_event = EVENT_DISPATCHER.dispatch(EventType.MouseMotionEvent, **event_data)
         if propagate_event is not None and propagate_event is False:
-            return 
-        
+            return
+
         frame = self.camera.frame
         # Handle perspective changes
-        if self.three3_mode:
+        if self.window.is_key_pressed(ord(manim_config.key_bindings.pan_3d)):
             ff_d_point = frame.to_fixed_frame_point(d_point, relative=True)
             ff_d_point *= self.pan_sensitivity
             frame.increment_theta(-ff_d_point[0])
