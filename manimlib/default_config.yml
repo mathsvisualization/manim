@@ -12,29 +12,30 @@ directories:
   # Set this to true if you want the path to video files
   # to match the directory structure of the path to the
   # source code generating that video
-  mirror_module_path: True
+  mirror_module_path: False
   # Manim may write to and read from the file system, e.g.
   # to render videos and to look for svg/png assets. This
   # will specify where those assets live, with a base directory,
   # and various subdirectory names within it
-  base: ""
+  base: "/storage/emulated/0/Manim/ManimGL/"
   subdirs:
     # Where should manim output video and image files?
-    output: "/storage/emulated/0/Manim/ManimGL"
+    output: "Videos/"
     # If you want to use images, manim will look to these folders to find them
-    raster_images: "raster_images"
-    vector_images: "vector_images"
-    # If you want to use sounds, manim will look here to find it.
+    raster_images: "images/raster"
+    vector_images: "images/vector"
+    pi_creature_images: "images/svg"
+    # If you want to use soonds, manim will look here to find it.
     sounds: "sounds"
     # Place for other forms of data relevant to any projects, like csv's
     data: "data"
     # When downloading, say an image, where will it go?
-    downloads: "downloads"
+    downloads: "manim_downloads/"
   # For certain object types, especially Tex and Text, manim will save information
   # to file to prevent the need to re-compute, e.g. recompiling the latex. By default,
   # it stores this saved data to whatever directory appdirs.user_cache_dir("manim") returns,
   # but here a user can specify a different cache location
-  cache: ""
+  cache: "cache/"
 window:
   # The position of window on screen. UR -> Upper Right, and likewise DL -> Down and Left,
   # UO would be upper middle, etc.
@@ -45,7 +46,7 @@ window:
   full_screen: False
   # Other optional specifications that override the above include:
   # position: (500, 500)  # Specific position, in pixel coordinates, for upper right corner
-  # size: (1920, 1080)  # Specific size, in pixels
+  # size: (960, 540)  # Specific size, in pixels
 camera:
   resolution: (1920, 1080)
   background_color: "#000000"
@@ -171,5 +172,5 @@ colors:
   orange: "#FF862F"
 # Can be DEBUG / INFO / WARNING / ERROR / CRITICAL
 log_level: "INFO"
-universal_import_line: "from manimlib import *"
+universal_import_line: "from manim_imports_ext import *"
 ignore_manimlib_modules_on_reload: True
