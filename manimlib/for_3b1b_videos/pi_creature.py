@@ -16,7 +16,7 @@ from manimlib.utils.space_ops import get_norm
 from manimlib.utils.space_ops import normalize
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-FILE_DIR = "./assets/PiCreature"
+FILE_DIR = "/home/ena/Desktop/manimcairo/assets/PiCreature"
 # Define the path to the assets/PiCreature folder inside the current directory
 pi_creature_dir_maybe = os.path.join(CURRENT_DIR, "assets", "PiCreature")
 
