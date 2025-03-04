@@ -134,6 +134,21 @@ def random_bright_color(
         interpolate(*luminance_range, random.random()),
     ))
 
+def random_bright_colors(
+    n: int = 3,
+    hue_range: tuple[float, float] = (0.0, 1.0),
+    saturation_range: tuple[float, float] = (0.5, 0.8),
+    luminance_range: tuple[float, float] = (0.5, 1.0),
+) -> tuple[Color, ...]:
+    """n random bright colors ka tuple return karta hai."""
+    return tuple(
+        Color(hsl=(
+            interpolate(*hue_range, random.random()),
+            interpolate(*saturation_range, random.random()),
+            interpolate(*luminance_range, random.random()),
+        ))
+        for _ in range(n)
+    )
 
 def get_colormap_from_colors(colors: Iterable[ManimColor]) -> Callable[[Sequence[float]], Vect4Array]:
     """

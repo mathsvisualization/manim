@@ -49,7 +49,7 @@ window:
   # size: (960, 540)  # Specific size, in pixels
 camera:
   resolution: (1920, 1080)
-  background_color: "#141414"
+  background_color: "#000000"
   fps: 30
   background_opacity: 1.0
 file_writer:
@@ -58,7 +58,7 @@ file_writer:
   # Parameters to pass into ffmpeg
   video_codec: "libx264"
   pixel_format: "yuv420p"
-  saturation: 1.0
+  saturation: 1.5
   gamma: 1.0
 # Most of the scene configuration will come from CLI arguments,
 # but defaults can be set here

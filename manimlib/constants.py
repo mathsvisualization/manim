@@ -145,3 +145,4 @@ PURPLE: ManimColor = PURPLE_C
 GREY: ManimColor = GREY_C
 
 COLORMAP_3B1B: List[ManimColor] = [BLUE_E, GREEN, YELLOW, RED]
+MATHS_COLOR: List[ManimColor] = ["#b18ddd", "#93a0dd"]
