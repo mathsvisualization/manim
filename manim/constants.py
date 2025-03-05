@@ -1,4 +1,4 @@
-"""Constant definitions. Changes"""
+"""Constant definitions."""
 
 from __future__ import annotations
 
