@@ -58,7 +58,7 @@ file_writer:
   # Parameters to pass into ffmpeg
   video_codec: "libx264"
   pixel_format: "yuv420p"
-  saturation: 1.5
+  saturation: 1.0
   gamma: 1.0
 # Most of the scene configuration will come from CLI arguments,
 # but defaults can be set here
