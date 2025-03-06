@@ -58,7 +58,7 @@ file_writer:
   # Parameters to pass into ffmpeg
   video_codec: "libx264"
   pixel_format: "yuv420p"
-  saturation: 1.5
+  saturation: 1.0
   gamma: 1.0
 # Most of the scene configuration will come from CLI arguments,
 # but defaults can be set here
@@ -91,7 +91,7 @@ resolution_options:
 sizes:
   # This determines the scale of the manim coordinate system with respect to
   # the viewing frame
-  frame_height: 8.0
+  frame_height: 16.0
   # These determine the constants SMALL_BUFF, MED_SMALL_BUFF, etc., useful
   # for nudging things around and having default spacing values
   small_buff: 0.1
