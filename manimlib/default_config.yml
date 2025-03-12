@@ -35,7 +35,7 @@ directories:
   # to file to prevent the need to re-compute, e.g. recompiling the latex. By default,
   # it stores this saved data to whatever directory appdirs.user_cache_dir("manim") returns,
   # but here a user can specify a different cache location
-  cache: "cache/"
+  cache: "/home/ena/cache/"
 window:
   # The position of window on screen. UR -> Upper Right, and likewise DL -> Down and Left,
   # UO would be upper middle, etc.
@@ -58,7 +58,7 @@ file_writer:
   # Parameters to pass into ffmpeg
   video_codec: "libx264"
   pixel_format: "yuv420p"
-  saturation: 1.5
+  saturation: 1.0
   gamma: 1.0
 # Most of the scene configuration will come from CLI arguments,
 # but defaults can be set here

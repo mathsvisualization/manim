@@ -148,7 +148,7 @@ class FadeTransformPieces(FadeTransform):
 
 class VFadeIn(Animation):
     """
-    VFadeIn and VFadeOut only work for VMobjects,
+    VFadeIn and VFadeOut only work for VMobjects.
     """
     def __init__(self, vmobject: VMobject, suspend_mobject_updating: bool = False, **kwargs):
         super().__init__(
@@ -163,13 +163,21 @@ class VFadeIn(Animation):
         start: VMobject,
         alpha: float
     ) -> None:
+        stroke_opacity = start.get_stroke_opacity()
+        fill_opacity = start.get_fill_opacity()
+
+        # Ensure opacity is a valid float
+        if stroke_opacity is None:
+            stroke_opacity = 1.0
+        if fill_opacity is None:
+            fill_opacity = 1.0
+
         submob.set_stroke(
-            opacity=interpolate(0, start.get_stroke_opacity(), alpha)
+            opacity=interpolate(0, stroke_opacity, alpha)
         )
         submob.set_fill(
-            opacity=interpolate(0, start.get_fill_opacity(), alpha)
+            opacity=interpolate(0, fill_opacity, alpha)
         )
-
 
 class VFadeOut(VFadeIn):
     def __init__(
@@ -192,18 +200,22 @@ class VFadeOut(VFadeIn):
         start: VMobject,
         alpha: float
     ) -> None:
-        super().interpolate_submobject(submob, start, 1 - alpha)
+        new_alpha = max(0, min(1, 1 - alpha))  # Ensure alpha is between 0 and 1
+        super().interpolate_submobject(submob, start, new_alpha)
 
 
 class VFadeInThenOut(VFadeIn):
     def __init__(
         self,
         vmobject: VMobject,
-        rate_func: Callable[[float], float] = there_and_back,
+        rate_func: Callable[[float], float] = None,
         remover: bool = True,
         final_alpha_value: float = 0.5,
         **kwargs
     ):
+        if rate_func is None:
+            rate_func = there_and_back  # Default rate function
+        
         super().__init__(
             vmobject,
             rate_func=rate_func,
