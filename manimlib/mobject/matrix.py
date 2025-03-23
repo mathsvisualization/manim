@@ -6,6 +6,7 @@ from manimlib.constants import DOWN, LEFT, RIGHT, ORIGIN
 from manimlib.constants import DEG
 from manimlib.mobject.numbers import DecimalNumber
 from manimlib.mobject.svg.tex_mobject import Tex
+from manimlib.mobject.svg.tex_mobject import TexText
 from manimlib.mobject.types.vectorized_mobject import VGroup
 from manimlib.mobject.types.vectorized_mobject import VMobject
 
@@ -255,6 +256,21 @@ class TexMatrix(Matrix):
         super().__init__(
             matrix,
             element_config=tex_config,
+            **config
+        )
+
+class TexTextMatrix(Matrix):
+    def __init__(
+        self,
+        matrix: StringMatrixType,
+        tex_config: dict = dict(),
+        **config,
+    ):
+        # Har element ko explicitly TexText me wrap karna hoga
+        formatted_matrix = [[TexText(str(item), **tex_config) for item in row] for row in matrix]
+
+        super().__init__(
+            formatted_matrix,
             **config
         )
 
