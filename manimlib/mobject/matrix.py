@@ -6,7 +6,6 @@ from manimlib.constants import DOWN, LEFT, RIGHT, ORIGIN
 from manimlib.constants import DEG
 from manimlib.mobject.numbers import DecimalNumber
 from manimlib.mobject.svg.tex_mobject import Tex
-from manimlib.mobject.svg.tex_mobject import TexText
 from manimlib.mobject.types.vectorized_mobject import VGroup
 from manimlib.mobject.types.vectorized_mobject import VMobject
 
@@ -211,6 +210,21 @@ class Matrix(VMobject):
 
     def get_ellipses(self) -> VGroup:
         return VGroup(*self.ellipses)
+    
+        def __getitem__(self, value: int | slice | tuple) -> VMobject:
+        """Matrix ke elements ko access karne ke liye"""
+        if isinstance(value, int):  
+            return VGroup(*self.elements[value])  # Row access karega
+
+        elif isinstance(value, slice):  
+            return VGroup(*[VGroup(*row) for row in self.elements[value]])  # Multiple rows return karega
+        
+        elif isinstance(value, tuple) and len(value) == 2:  
+            row, col = value
+            return self.elements[row][col]  # Specific element access karega
+        
+        raise TypeError("Invalid index type. Use int, slice, or (row, col) tuple.")
+
 
 
 class DecimalMatrix(Matrix):
@@ -267,10 +281,10 @@ class TexTextMatrix(Matrix):
         **config,
     ):
         # Har element ko explicitly TexText me wrap karna hoga
-        formatted_matrix = [[TexText(str(item), **tex_config) for item in row] for row in matrix]
+        self.elements = [[TexText(str(item), **tex_config) for item in row] for row in matrix]
 
         super().__init__(
-            formatted_matrix,
+            self.elements,
             **config
         )
 
