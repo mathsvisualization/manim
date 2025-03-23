@@ -6,6 +6,7 @@ from manimlib.constants import DOWN, LEFT, RIGHT, ORIGIN
 from manimlib.constants import DEG
 from manimlib.mobject.numbers import DecimalNumber
 from manimlib.mobject.svg.tex_mobject import Tex
+from manimlib.mobject.svg.tex_mobject import TexText
 from manimlib.mobject.types.vectorized_mobject import VGroup
 from manimlib.mobject.types.vectorized_mobject import VMobject
 
@@ -211,7 +212,7 @@ class Matrix(VMobject):
     def get_ellipses(self) -> VGroup:
         return VGroup(*self.ellipses)
     
-        def __getitem__(self, value: int | slice | tuple) -> VMobject:
+    def __getitem__(self, value: int | slice | tuple) -> VMobject:
         """Matrix ke elements ko access karne ke liye"""
         if isinstance(value, int):  
             return VGroup(*self.elements[value])  # Row access karega
