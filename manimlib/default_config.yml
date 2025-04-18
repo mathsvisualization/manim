@@ -50,7 +50,7 @@ window:
 camera:
   resolution: (1920, 1080)
   background_color: "#000000"
-  fps: 60
+  fps: 30
   background_opacity: 1.0
 file_writer:
   # What command to use for ffmpeg
@@ -58,7 +58,7 @@ file_writer:
   # Parameters to pass into ffmpeg
   video_codec: "libx264"
   pixel_format: "yuv420p"
-  saturation: 1.0
+  saturation: 1.2
   gamma: 1.0
 # Most of the scene configuration will come from CLI arguments,
 # but defaults can be set here
@@ -71,7 +71,7 @@ scene:
   # How long does a scene pause on Scene.wait calls
   default_wait_time: 1.0
 vmobject:
-  default_stroke_width: 1.0
+  default_stroke_width: 4.0
 tex:
   # See tex_templates.yml
   template: "default"

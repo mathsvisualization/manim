@@ -16,6 +16,7 @@ from manimlib.mobject.geometry import Arrow
 from manimlib.mobject.geometry import DashedLine
 from manimlib.mobject.geometry import Line
 from manimlib.mobject.geometry import Rectangle
+from manimlib.mobject.numbers import DecimalNumber
 from manimlib.mobject.number_line import NumberLine
 from manimlib.mobject.svg.tex_mobject import Tex
 from manimlib.mobject.types.dot_cloud import DotCloud
@@ -524,6 +525,38 @@ class Axes(VGroup, CoordinateSystem):
             labels = axis.add_numbers(values, excluding=excluding, **kwargs)
             self.coordinate_labels.add(labels)
         return self.coordinate_labels
+    
+    def get_coordinate_labels(
+        self,
+        font_size_x=26,
+        font_size_y=26,
+        num_x_place=0,
+        num_y_place=0,
+        skip_x_zero=True,
+        skip_y_zero=True,
+        **kwargs
+    ) -> VGroup:
+        labels = VGroup()
+
+        # X-axis labels
+        x_min, x_max, x_step = self.x_range
+        for x in np.arange(x_min, x_max + x_step, x_step):  
+            if skip_x_zero and x == 0:  
+                continue  # X-axis ka zero skip karega agar `skip_x_zero=True`
+            label = DecimalNumber(x, num_decimal_places=num_x_place, font_size=font_size_x, **kwargs)
+            label.next_to(self.x_axis.n2p(x), DOWN * 0.3 + 0.4 * LEFT)
+            labels.add(label)
+
+        # Y-axis labels
+        y_min, y_max, y_step = self.y_range
+        for y in np.arange(y_min, y_max + y_step, y_step):
+            if skip_y_zero and y == 0:  
+                continue  # Y-axis ka zero skip karega agar `skip_y_zero=True`
+            label = DecimalNumber(y, num_decimal_places=num_y_place, font_size=font_size_y, **kwargs)
+            label.next_to(self.y_axis.n2p(y), LEFT * 0.3 + 0.4 * DOWN)
+            labels.add(label)
+
+        return labels
 
 
 class ThreeDAxes(Axes):
@@ -770,6 +803,13 @@ class ComplexPlane(NumberPlane):
                 axis = self.get_x_axis()
                 value = z.real
             number_mob = axis.get_number_mobject(value, font_size=font_size, **kwargs)
+            # For -i, remove the "1"
+            if z.imag == -1:
+                number_mob.remove(number_mob[1])
+                number_mob[0].next_to(
+                    number_mob[1], LEFT,
+                    buff=number_mob[0].get_width() / 4
+                )
             self.coordinate_labels.add(number_mob)
         self.add(self.coordinate_labels)
         return self

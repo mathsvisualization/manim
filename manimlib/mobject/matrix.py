@@ -212,21 +212,6 @@ class Matrix(VMobject):
     def get_ellipses(self) -> VGroup:
         return VGroup(*self.ellipses)
     
-    def __getitem__(self, value: int | slice | tuple) -> VMobject:
-        """Matrix ke elements ko access karne ke liye"""
-        if isinstance(value, int):  
-            return VGroup(*self.elements[value])  # Row access karega
-
-        elif isinstance(value, slice):  
-            return VGroup(*[VGroup(*row) for row in self.elements[value]])  # Multiple rows return karega
-        
-        elif isinstance(value, tuple) and len(value) == 2:  
-            row, col = value
-            return self.elements[row][col]  # Specific element access karega
-        
-        raise TypeError("Invalid index type. Use int, slice, or (row, col) tuple.")
-
-
 
 class DecimalMatrix(Matrix):
     def __init__(
