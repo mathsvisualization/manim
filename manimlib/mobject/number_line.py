@@ -164,7 +164,7 @@ class NumberLine(Line):
         **number_config
     ) -> DecimalNumber:
         number_config = merge_dicts_recursively(
-            number_config, self.decimal_number_config,
+            self.decimal_number_config, number_config,
         )
         if direction is None:
             direction = self.line_to_number_direction
@@ -182,13 +182,9 @@ class NumberLine(Line):
         if x < 0 and direction[0] == 0:
             # Align without the minus sign
             num_mob.shift(num_mob[0].get_width() * LEFT / 2)
-        if abs(x) == unit and unit_tex:
+        if x == unit and unit_tex:
             center = num_mob.get_center()
-            if x > 0:
-                num_mob.remove(num_mob[0])
-            else:
-                num_mob.remove(num_mob[1])
-                num_mob[0].next_to(num_mob[1], LEFT, buff=num_mob[0].get_width() / 4)
+            num_mob.remove(num_mob[0])
             num_mob.move_to(center)
         return num_mob
 
@@ -225,13 +221,11 @@ class UnitInterval(NumberLine):
         big_tick_numbers: list[float] = [0, 1],
         decimal_number_config: dict = dict(
             num_decimal_places=1,
-        ),
-        **kwargs
+        )
     ):
         super().__init__(
             x_range=x_range,
             unit_size=unit_size,
             big_tick_numbers=big_tick_numbers,
             decimal_number_config=decimal_number_config,
-            **kwargs
         )
