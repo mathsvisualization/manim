@@ -171,7 +171,7 @@ class Mobject(object):
         return _AnimationBuilder(self)
 
     @property
-    def always(self) -> _UpdaterBuilder:
+    def always(self) -> _UpdaterBuilder | Self:
         """
         Methods called with mobject.always.method(*args, **kwargs)
         will result in the call mobject.method(*args, **kwargs)
@@ -2320,6 +2320,18 @@ class _UpdaterBuilder:
             )
             return self
         return add_updater
+    
+    def __dir__(self) -> list[str]:
+        """
+        Extend attribute list of _AnimationBuilder object to include mobject attributes
+        for better autocompletion in the IPython terminal when using interactive mode.
+        """
+        methods = super().__dir__()
+        mobject_methods = [
+            attr for attr in dir(self.mobject)
+            if not attr.startswith('_')
+        ]
+        return sorted(set(methods+mobject_methods))
 
 
 class _FunctionalUpdaterBuilder:
@@ -2339,3 +2351,15 @@ class _FunctionalUpdaterBuilder:
             )
             return self
         return add_updater
+    
+    def __dir__(self) -> list[str]:
+        """
+        Extend attribute list of _AnimationBuilder object to include mobject attributes
+        for better autocompletion in the IPython terminal when using interactive mode.
+        """
+        methods = super().__dir__()
+        mobject_methods = [
+            attr for attr in dir(self.mobject)
+            if not attr.startswith('_')
+        ]
+        return sorted(set(methods+mobject_methods))
