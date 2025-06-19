@@ -5,6 +5,7 @@ from functools import wraps
 import numpy as np
 
 from manimlib.constants import GREY_A, GREY_C, GREY_E
+from manimlib.constants import DEFAULT_VMOBJECT_FILL_COLOR, DEFAULT_VMOBJECT_STROKE_COLOR
 from manimlib.constants import BLACK
 from manimlib.constants import DEFAULT_STROKE_WIDTH
 from manimlib.constants import DEG
@@ -15,7 +16,6 @@ from manimlib.mobject.mobject import Mobject
 from manimlib.mobject.mobject import Group
 from manimlib.mobject.mobject import Point
 from manimlib.utils.bezier import bezier
-from manimlib.utils.bezier import partial_bezier_points
 from manimlib.utils.bezier import get_quadratic_approximation_of_cubic
 from manimlib.utils.bezier import approx_smooth_quadratic_bezier_handles
 from manimlib.utils.bezier import smooth_quadratic_path
@@ -53,9 +53,6 @@ if TYPE_CHECKING:
     from typing import Callable, Tuple, Any, Optional
     from manimlib.typing import ManimColor, Vect3, Vect4, Vect3Array, Self
     from moderngl.context import Context
-
-DEFAULT_STROKE_COLOR = GREY_A
-DEFAULT_FILL_COLOR = GREY_C
 
 
 class VMobject(Mobject):
@@ -100,9 +97,9 @@ class VMobject(Mobject):
         fill_border_width: float = 0.0,
         **kwargs
     ):
-        self.fill_color = fill_color or color or DEFAULT_FILL_COLOR
+        self.fill_color = fill_color or color or DEFAULT_VMOBJECT_FILL_COLOR
         self.fill_opacity = fill_opacity
-        self.stroke_color = stroke_color or color or DEFAULT_STROKE_COLOR
+        self.stroke_color = stroke_color or color or DEFAULT_VMOBJECT_STROKE_COLOR
         self.stroke_opacity = stroke_opacity
         self.stroke_width = stroke_width
         self.stroke_behind = stroke_behind
@@ -119,7 +116,7 @@ class VMobject(Mobject):
         self.needs_new_unit_normal = True
         self.subpath_end_indices = None
         self.outer_vert_indices = np.zeros(0, dtype=int)
-        
+
         super().__init__(**kwargs)
 
     def get_group_class(self):
@@ -208,9 +205,8 @@ class VMobject(Mobject):
         self,
         color: ManimColor | Iterable[ManimColor] = BLACK,
         width: float | Iterable[float] = 3,
-        opacity: float | Iterable[float] = 1.0
     ) -> Self:
-        self.set_stroke(color, width, opacity, behind=True)
+        self.set_stroke(color, width, behind=True)
         return self
 
     @Mobject.affects_family_data
@@ -736,9 +732,6 @@ class VMobject(Mobject):
         n_curves = (len(points) - 1) // 2
         return (points[2 * i:2 * i + 3] for i in range(n_curves))
 
-    def get_num_anchor_points(self):
-        return (len(self.get_points()) - 1)/3 + 1
-
     def get_bezier_tuples(self) -> Iterable[Vect3Array]:
         return self.get_bezier_tuples_from_points(self.get_points())
 
@@ -1012,38 +1005,6 @@ class VMobject(Mobject):
             for a1, a2 in zip(alphas, alphas[1:]):
                 new_points.extend(partial_quadratic_bezier_points(tup, a1, a2)[1:])
         return np.vstack(new_points)
-
-    def insert_n_anchor_points(self, n):
-        self.points = self.data["point"]
-        curr = int(self.get_num_anchor_points())
-        if curr == 0:
-            self.points = np.zeros((1, 3))
-            n = n-1
-        if curr == 1:
-            self.points = np.repeat(self.points, 3 * n + 1, axis = 0)
-            return self
-        points = [self.points[0]]
-        num_curves = curr - 1
-        #Curves in self are buckets, and we need to know 
-        #how many new anchor points to put into each one.  
-        #Each element of index_allocation is like a bucket, 
-        #and its value tells you the appropriate index of 
-        #the smaller curve.
-        index_allocation = (np.arange(curr + n - 1) * num_curves) / (curr + n - 1)
-        for index in range(num_curves):
-            curr_bezier_points = self.points[3 * index:3 * index + 4]
-            num_inter_curves = np.sum(index_allocation == index)
-            
-            if num_inter_curves == 0:
-                continue
-            
-            alphas = np.linspace(0, 1, num_inter_curves + 1)
-            for a, b in zip(alphas, alphas[1:]):
-                new_points = partial_bezier_points(curr_bezier_points, a, b)
-                points.extend(new_points[1:])
-                
-        self.set_points(np.array(points))
-        return self
 
     def pointwise_become_partial(self, vmobject: VMobject, a: float, b: float) -> Self:
         assert isinstance(vmobject, VMobject)

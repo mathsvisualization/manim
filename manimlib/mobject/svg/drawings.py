@@ -344,6 +344,8 @@ class ClockPassesTime(AnimationGroup):
                 angle=12 * hour_radians,
                 **rot_kwargs
             ),
+            group=clock,
+            run_time=run_time,
             **kwargs
         )
 
@@ -374,7 +376,7 @@ class Bubble(VGroup):
             content.set_fill(opacity=0)
             content.set_stroke(width=0)
         elif isinstance(content, str):
-            content = Text(content, font="CMU Serif")
+            content = Text(content)
         self.content = content
 
         self.body = self.get_body(content, direction, buff)

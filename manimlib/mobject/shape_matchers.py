@@ -3,7 +3,7 @@ from __future__ import annotations
 from colour import Color
 
 from manimlib.config import manim_config
-from manimlib.constants import BLACK, RED, YELLOW, WHITE
+from manimlib.constants import BLACK, RED, YELLOW, DEFAULT_MOBJECT_COLOR
 from manimlib.constants import DL, DOWN, DR, LEFT, RIGHT, UL, UR
 from manimlib.constants import SMALL_BUFF
 from manimlib.mobject.geometry import Line
@@ -112,27 +112,13 @@ class Cross(VGroup):
         self.replace(mobject, stretch=True)
         self.set_stroke(stroke_color, width=stroke_width)
 
-class SingleCross(Line):
-    def __init__(
-        self,
-        mobject: Mobject,
-        stroke_color: ManimColor = RED,
-        stroke_width: float | Sequence[float] = [0, 3, 0],
-        stretch_factor = 1.0,
-        **kwargs
-    ):
-        super().__init__(UR, DL, **kwargs)
-        self.insert_n_curves(100)
-        self.replace(mobject, stretch=True)
-        self.set_stroke(color=stroke_color, width=stroke_width)
-        self.set_width(self.get_width() * stretch_factor)
 
 class Underline(Line):
     def __init__(
         self,
         mobject: Mobject,
         buff: float = SMALL_BUFF,
-        stroke_color=WHITE,
+        stroke_color=DEFAULT_MOBJECT_COLOR,
         stroke_width: float | Sequence[float] = [0, 3, 3, 0],
         stretch_factor=1.2,
         **kwargs
