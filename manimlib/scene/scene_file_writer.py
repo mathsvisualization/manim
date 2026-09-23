@@ -176,7 +176,10 @@ class SceneFileWriter(object):
         end_time: float | None = None,
         repeat: int = 1,
         fade_in: float = 0.0,
-        fade_out: float = 0.0
+        fade_out: float = 0.0,
+        pan: float | None = None,
+        pan_start: float | None = None,
+        pan_end: float | None = None
     ) -> None:
         file_path = get_full_sound_file_path(sound_file)
         new_segment = AudioSegment.from_file(file_path)
@@ -194,6 +197,32 @@ class SceneFileWriter(object):
         # Allows looping short effects (e.g., ticking) natively, avoiding redundant add_sound() calls.
         if repeat > 1:
             new_segment = new_segment * int(repeat)
+
+        # Dynamic or Static Stereo Panning (FPS-Synced)
+        if pan_start is not None and pan_end is not None:
+            # Sync audio chunks perfectly with visual frames using the scene's camera FPS
+            fps = self.scene.camera.fps
+            chunk_size = max(1, int(1000 / fps))
+            
+            total_ms = len(new_segment)
+            panned_chunks = []
+            
+            for i in range(0, total_ms, chunk_size):
+                chunk = new_segment[i:i + chunk_size]
+                # BUG FIX: Ensure the VERY LAST chunk hits exactly 1.0 progress
+                if i + chunk_size >= total_ms:
+                    progress = 1.0
+                else:
+                    progress = i / total_ms                 
+                current_pan = pan_start + (pan_end - pan_start) * progress
+                panned_chunks.append(chunk.pan(current_pan))
+                
+            new_segment = panned_chunks[0]
+            for chunk in panned_chunks[1:]:
+                new_segment += chunk
+                
+        elif pan is not None:
+            new_segment = new_segment.pan(pan)
 
         # Adding fade-in and fade-out effect smoothly
         # Normalized: User inputs time in seconds, we convert it to milliseconds internally for pydub
