@@ -189,7 +189,10 @@ class SceneFileWriter(object):
         # to ensure the effects apply exactly to the boundaries of the trimmed segment.
         if start_time is not None or end_time is not None:
             start_ms = int(start_time * 1000) if start_time is not None else 0
-            end_ms = int(end_time * 1000) if end_time is not None else None
+            if end_time is not None:
+                end_ms = len(new_segment) - int(end_time * 1000)
+            else:
+                end_ms = len(segment)
             new_segment = new_segment[start_ms:end_ms]
         if gain:
             new_segment = new_segment.apply_gain(gain)
