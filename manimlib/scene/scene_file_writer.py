@@ -192,7 +192,7 @@ class SceneFileWriter(object):
             if end_time is not None:
                 end_ms = len(new_segment) - int(end_time * 1000)
             else:
-                end_ms = len(segment)
+                end_ms = len(new_segment)
             new_segment = new_segment[start_ms:end_ms]
         if gain:
             new_segment = new_segment.apply_gain(gain)
