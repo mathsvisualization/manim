@@ -181,24 +181,9 @@ class SceneFileWriter(object):
         pan_start: float | None = None,
         pan_end: float | None = None
     ) -> None:
-        # Validate panning parameters
-        if pan is not None and (pan_start is not None or pan_end is not None):
-            raise ValueError("Cannot use 'pan' and 'pan_start'/'pan_end' simultaneously.")
-        
-        if (pan_start is not None and pan_end is None) or (pan_start is None and pan_end is not None):
-            raise ValueError("Both 'pan_start' and 'pan_end' must be provided for dynamic panning.")
 
-        for val, name in [(pan, 'pan'), (pan_start, 'pan_start'), (pan_end, 'pan_end')]:
-            if val is not None and not (-1.0 <= val <= 1.0):
-                raise ValueError(f"'{name}' expects a value between -1.0 and 1.0. Got {val}")
-
-        # Validate basic parameters
-        if repeat < 1:
-            raise ValueError("'repeat' must be at least 1.")
-        if fade_in < 0.0 or fade_out < 0.0:
-            raise ValueError("Fade durations cannot be negative.")
-        if (start_time is not None and start_time < 0) or (end_time is not None and end_time < 0):
-            raise ValueError("'start_time' and 'end_time' cannot be negative.")
+        # Validation call
+        self._validate_add_sound(start_time, end_time, repeat, fade_in, fade_out, pan, pan_start, pan_end)
 
         file_path = get_full_sound_file_path(sound_file)
         new_segment = AudioSegment.from_file(file_path)
@@ -262,6 +247,36 @@ class SceneFileWriter(object):
         if fade_out > 0.0:
             new_segment = new_segment.fade_out(int(fade_out * 1000))
         self.add_audio_segment(new_segment, time, gain_to_background)
+
+    def _validate_add_sound(
+        self,
+        start_time: float | None,
+        end_time: float | None,
+        repeat: int,
+        fade_in: float,
+        fade_out: float,
+        pan: float | None,
+        pan_start: float | None,
+        pan_end: float | None
+    ) -> None:
+        # Validate panning parameters
+        if pan is not None and (pan_start is not None or pan_end is not None):
+            raise ValueError("Cannot use 'pan' and 'pan_start'/'pan_end' simultaneously.")
+        
+        if (pan_start is not None and pan_end is None) or (pan_start is None and pan_end is not None):
+            raise ValueError("Both 'pan_start' and 'pan_end' must be provided for dynamic panning.")
+
+        for val, name in [(pan, 'pan'), (pan_start, 'pan_start'), (pan_end, 'pan_end')]:
+            if val is not None and not (-1.0 <= val <= 1.0):
+                raise ValueError(f"'{name}' expects a value between -1.0 and 1.0. Got {val}")
+
+        # Validate basic parameters
+        if repeat < 1:
+            raise ValueError("'repeat' must be at least 1.")
+        if fade_in < 0.0 or fade_out < 0.0:
+            raise ValueError("Fade durations cannot be negative.")
+        if (start_time is not None and start_time < 0) or (end_time is not None and end_time < 0):
+            raise ValueError("'start_time' and 'end_time' cannot be negative.")
 
     # Writers
     def begin(self) -> None:
