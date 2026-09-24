@@ -202,6 +202,8 @@ class SceneFileWriter(object):
 
         file_path = get_full_sound_file_path(sound_file)
         new_segment = AudioSegment.from_file(file_path)
+        # need? original duration in second.
+        original_duration = len(new_segment)/1000.0
       
         # Slice (trim) the audio segment if start_time or end_time is provided.
         # Note: Slicing is intentionally performed BEFORE applying gain and fades 
@@ -214,9 +216,12 @@ class SceneFileWriter(object):
                 end_ms = len(new_segment)
             new_segment = new_segment[start_ms:end_ms]
             if len(new_segment) <= 0:
-                raise ValueError(
-                    f"Trim parameters (start={start_time}, end={end_time}) exceed audio duration."
+                log.warning(
+                    f"\n[Audio Error] '{sound_file}' was trimmed to 0 seconds and skipped.\n"
+                    f"-> HINT: The original audio is only {original_duration:.2f} seconds long, "
+                    f"but you sliced it with start_time={start_time} and end_time={end_time}."
                 )
+                return
         if gain:
             new_segment = new_segment.apply_gain(gain)
 
