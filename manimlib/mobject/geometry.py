@@ -938,6 +938,94 @@ class Elbow(VMobject):
 
 
 class StrokeArrow(Line):
+    """
+    A line with a stroke-based arrow tip.
+
+    The arrow tip is formed by varying the stroke width near the end
+    of the line, rather than by adding a separate polygon. Its width
+    is determined by the original stroke width and ``tip_width_ratio``,
+    while its length is constrained by
+    ``max_tip_length_to_length_ratio``.
+
+    The tip is reconstructed whenever the line endpoints or stroke
+    width change, allowing the arrow to retain its intended geometry
+    after these modifications.
+
+    Parameters
+    ----------
+    start : Vect3 or Mobject
+        Starting point of the arrow. If a Mobject is supplied, its
+        position is used to determine the starting point of the line.
+    end : Vect3 or Mobject
+        Ending point of the arrow. If a Mobject is supplied, its
+        position is used to determine the ending point of the line.
+    stroke_color : ManimColor
+        Color of the arrow stroke.
+    stroke_width : float
+        Base width of the arrow stroke. This value also determines
+        the width of the arrow tip in combination with
+        ``tip_width_ratio``.
+    buff : float
+        Distance to leave between the arrow endpoints and the
+        specified start and end points. The exact effect depends on
+        the endpoint handling implemented by the parent ``Line``.
+    tip_width_ratio : float
+        Multiplier used to determine the tip width relative to the
+        original stroke width. Larger values produce a wider tip.
+    tip_len_to_width : float
+        Factor used to calculate the tip length from the stroke
+        width and ``tip_width_ratio``. The initial tip length is
+        calculated as::
+
+            tip_len = stroke_width * tip_width_ratio * tip_len_to_width
+
+    max_tip_length_to_length_ratio : float
+        Maximum allowed ratio of the tip length to the total arc
+        length of the arrow path. If the calculated tip length
+        exceeds this limit, the tip length is capped accordingly.
+    max_width_to_length_ratio : float
+        Maximum ratio used to constrain the tip width relative to
+        the arrow's length. This prevents the tip from becoming
+        excessively wide compared with a short arrow.
+    **kwargs
+        Additional keyword arguments passed to the parent ``Line``
+        constructor.
+
+    Examples
+    --------
+    Create a basic arrow::
+
+        arrow = StrokeArrow(LEFT, RIGHT)
+
+    Customize the stroke color and width::
+
+        arrow = StrokeArrow(
+            LEFT,
+            RIGHT * 3,
+            stroke_color=BLUE,
+            stroke_width=8,
+        )
+
+    Adjust the arrow tip proportions::
+
+        arrow = StrokeArrow(
+            LEFT,
+            RIGHT * 3,
+            tip_width_ratio=4,
+            tip_len_to_width=0.01,
+            max_tip_length_to_length_ratio=0.25,
+        )
+
+    Create an arrow between two Mobjects::
+
+        arrow = StrokeArrow(circle, square)
+
+    See Also
+    --------
+    Line
+        The parent class providing the underlying line geometry.
+    """
+
     def __init__(
         self,
         start: Vect3 | Mobject,
