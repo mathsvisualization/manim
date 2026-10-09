@@ -187,6 +187,150 @@ class AnimatedBoundary(VGroup):
 
 
 class TracedPath(VMobject):
+    """
+    Trace the path followed by a point over time.
+
+    A TracedPath creates a VMobject that records the successive positions
+    returned by a point-producing function. As the scene updates, the
+    recorded points are connected with a smooth curve, creating a visual
+    trail behind the moving object.
+
+    The path can retain all recorded points or only a limited portion
+    of the trajectory, depending on ``time_traced``. Its appearance
+    is controlled by the stroke configuration supplied at initialization.
+
+    Parameters
+    ----------
+    traced_point_func : Callable[[], Vect3]
+        A callable that returns the current 3D position of the point
+        to trace. It is evaluated during each update, and the returned
+        point is copied before being stored.
+    time_traced : float
+        Duration of the trajectory to retain. By default, ``np.inf``
+        keeps the entire recorded trajectory. A finite value limits
+        the trail to a recent portion of the motion.
+    time_per_anchor : float
+        Time interval between path anchors, expressed in seconds.
+        This parameter is stored by the object but is not directly
+        used by the current ``update_path`` implementation.
+    stroke_color : ManimColor
+        Color of the traced path.
+    stroke_width : float or Iterable[float]
+        Width of the path stroke. A single float applies a uniform
+        width, while an iterable can specify varying stroke widths.
+    stroke_opacity : float
+        Opacity of the path stroke, where 0 is fully transparent
+        and 1 is fully opaque.
+    **kwargs
+        Additional keyword arguments passed to the parent ``VMobject``
+        constructor.
+
+    Examples
+    --------
+    Trace a moving dot::
+
+        dot = Dot()
+        trace = TracedPath(dot.get_center)
+
+        self.add(trace, dot)
+        dot.add_updater(
+            lambda m, dt: m.shift(RIGHT * dt)
+        )
+
+    Trace circular motion::
+
+        dot = Dot(radius=0.08)
+        dot.move_to(RIGHT)
+
+        trace = TracedPath(
+            dot.get_center,
+            stroke_color=BLUE,
+            stroke_width=3,
+        )
+
+        self.add(trace, dot)
+        dot.add_updater(
+            lambda m, dt: m.rotate(
+                dt,
+                about_point=ORIGIN,
+            )
+        )
+
+    Keep a finite trail::
+
+        dot = Dot().move_to(RIGHT)
+        trace = TracedPath(
+            dot.get_center,
+            time_traced=2.0,
+            stroke_color=YELLOW,
+            stroke_width=4,
+        )
+
+        self.add(trace, dot)
+        dot.add_updater(
+            lambda m, dt: m.rotate(
+                dt,
+                about_point=ORIGIN,
+            )
+        )
+
+    Trace a point defined by a custom function::
+
+        tracker = ValueTracker(0)
+
+        def moving_point():
+            t = tracker.get_value()
+            return np.array([
+                np.cos(t),
+                np.sin(2 * t),
+                0,
+            ])
+
+        trace = TracedPath(
+            moving_point,
+            stroke_color=GREEN,
+            stroke_width=2,
+        )
+
+        self.add(trace)
+        self.play(
+            tracker.animate.set_value(TAU),
+            run_time=4,
+        )
+
+    Customize the stroke appearance::
+
+        trace = TracedPath(
+            dot.get_center,
+            stroke_color=RED,
+            stroke_width=5,
+            stroke_opacity=0.7,
+        )
+
+    Notes
+    -----
+    The path is updated automatically using an updater. Each update
+    samples the current point position and reconstructs the visible
+    path from the recorded positions.
+
+    When ``time_traced`` is finite, the implementation estimates the
+    number of relevant samples using the current frame's ``dt``.
+    Consequently, the retained trail duration is approximate and can
+    depend on the update interval.
+
+    The ``time_per_anchor`` parameter is stored but is not currently
+    used by ``update_path`` to control sampling frequency.
+
+    See Also
+    --------
+    VMobject
+        Base class providing vector geometry and stroke styling.
+    ShowPassingFlash
+        An animation that displays a moving segment of a VMobject.
+    ValueTracker
+        A helper for animating a numerical value over time.
+    """
+
     def __init__(
         self,
         traced_point_func: Callable[[], Vect3],
