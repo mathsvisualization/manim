@@ -1426,6 +1426,65 @@ class Polygon(VMobject):
 
 
 class Polyline(VMobject):
+    """
+    A piecewise linear curve connecting a sequence of vertices.
+
+    The polyline is constructed by connecting the supplied vertices
+    with straight line segments in the order they are given. Unlike
+    a closed polygon, the polyline does not automatically connect
+    its final vertex back to its first vertex.
+
+    As a subclass of ``VMobject``, it supports the styling and
+    configuration options provided by its parent class.
+
+    Parameters
+    ----------
+    *vertices : Vect3
+        Sequence of 3D points defining the polyline. Each consecutive
+        pair of vertices is connected by a straight line segment.
+    **kwargs
+        Additional keyword arguments passed to ``VMobject``.
+        These may include options for color, stroke width, fill
+        opacity, and other supported Mobject properties.
+
+    Examples
+    --------
+    Create a polyline through three points::
+
+        polyline = Polyline(
+            LEFT,
+            ORIGIN,
+            RIGHT,
+        )
+
+    Create a polyline with custom stroke styling::
+
+        polyline = Polyline(
+            LEFT,
+            UP,
+            RIGHT,
+            color=BLUE,
+            stroke_width=4,
+        )
+
+    Create a polyline using explicit 3D coordinates::
+
+        polyline = Polyline(
+            np.array([0, 0, 0]),
+            np.array([1, 1, 0]),
+            np.array([2, 0, 0]),
+        )
+
+    See Also
+    --------
+    VMobject
+        The base class providing vector geometry and styling behavior.
+    Polygon
+        A polygonal object whose boundary is closed.
+    Line
+        A straight line segment between two points.
+    """
+
     def __init__(
         self,
         *vertices: Vect3,
