@@ -443,6 +443,144 @@ class Axes(VGroup, CoordinateSystem):
     default_x_axis_config: dict = dict()
     default_y_axis_config: dict = dict(line_to_number_direction=LEFT)
 
+    """
+    A two-dimensional coordinate system formed by perpendicular x- and
+    y-axes.
+
+    Each axis is represented by a :class:`NumberLine`. The x-axis is
+    constructed horizontally, while the y-axis is rotated by 90 degrees.
+    Both axes are shifted so that their zero coordinates coincide at the
+    origin, and the resulting group is centered.
+
+    The class also provides coordinate transformations, coordinate labels,
+    and graphing utilities through its :class:`CoordinateSystem` base class.
+
+    Parameters
+    ----------
+    x_range
+        Range specification for the x-axis. It is processed by
+        ``full_range_specifier`` and passed to the x-axis constructor.
+        The range specification may include a minimum, maximum, and tick
+        step, depending on the accepted ``RangeSpecifier`` format.
+
+    y_range
+        Range specification for the y-axis. It is processed in the same
+        way as ``x_range``.
+
+    axis_config
+        Configuration dictionary shared by both axes. The ``unit_size``
+        argument is inserted into this configuration before it is merged
+        with the default and axis-specific configurations.
+
+    x_axis_config
+        Configuration dictionary applied specifically to the x-axis.
+        Its values are merged with the default axis settings and
+        ``axis_config``.
+
+    y_axis_config
+        Configuration dictionary applied specifically to the y-axis.
+        Its values are merged with the default axis settings and
+        ``axis_config``. By default, the y-axis uses
+        ``line_to_number_direction=LEFT``.
+
+    height
+        Optional length of the y-axis in scene units. Passed as the
+        ``width`` argument to the underlying ``NumberLine`` constructor.
+
+    width
+        Optional length of the x-axis in scene units. Passed as the
+        ``width`` argument to the underlying ``NumberLine`` constructor.
+
+    unit_size
+        Scale factor supplied to both axis configurations. Its precise
+        geometric effect depends on how ``NumberLine`` uses this setting.
+        Defaults to 1.0.
+
+    **kwargs
+        Additional keyword arguments passed to ``VGroup.__init__``.
+        The ``num_sampled_graph_points_per_tick`` keyword is removed
+        before this call because it belongs to ``CoordinateSystem`` and
+        is not a ``VGroup`` argument.
+
+    Attributes
+    ----------
+    x_range
+        Normalized x-axis range specification inherited from
+        ``CoordinateSystem``.
+
+    y_range
+        Normalized y-axis range specification inherited from
+        ``CoordinateSystem``.
+
+    num_sampled_graph_points_per_tick
+        Number of graph sample points per tick interval, inherited from
+        ``CoordinateSystem``.
+
+    x_axis
+        The horizontal ``NumberLine`` representing the x-axis.
+
+    y_axis
+        The vertical ``NumberLine`` representing the y-axis.
+
+    axes
+        A ``VGroup`` containing ``x_axis`` and ``y_axis`` in that order.
+
+    coordinate_labels
+        Created by ``add_coordinate_labels`` when that method is called.
+
+    Notes
+    -----
+    ``Axes`` inherits the coordinate conversion and graphing utilities of
+    ``CoordinateSystem``. For example, ``c2p(x, y)`` converts coordinates
+    to a scene point, while ``p2c(point)`` converts a scene point back
+    to coordinates.
+
+    The axis configuration dictionaries are merged with the class-level
+    defaults. The default configuration for the y-axis specifies
+    ``line_to_number_direction=LEFT``.
+
+    Examples
+    --------
+    Create axes with the default ranges and configuration:
+
+    >>> axes = Axes()
+
+    Specify custom ranges and dimensions:
+
+    >>> axes = Axes(
+    ...     x_range=(-4, 4, 1),
+    ...     y_range=(-2, 6, 2),
+    ...     width=8,
+    ...     height=5,
+    ... )
+
+    Customize the axes independently:
+
+    >>> axes = Axes(
+    ...     axis_config={"include_ticks": True},
+    ...     x_axis_config={"color": BLUE},
+    ...     y_axis_config={"color": GREEN},
+    ... )
+
+    Convert coordinates to a scene point and back:
+
+    >>> axes = Axes()
+    >>> point = axes.c2p(2, 3)
+    >>> coordinates = axes.p2c(point)
+
+    Add labels to the coordinate axes:
+
+    >>> axes = Axes()
+    >>> labels = axes.get_axis_labels("x", "y")
+    >>> axes.add_coordinate_labels()
+
+    See Also
+    --------
+    CoordinateSystem
+    NumberLine
+    NumberPlane
+    """
+
     def __init__(
         self,
         x_range: RangeSpecifier = DEFAULT_X_RANGE,
