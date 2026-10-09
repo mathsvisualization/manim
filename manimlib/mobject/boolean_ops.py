@@ -135,6 +135,57 @@ class Union(VMobject):
 
 
 class Difference(VMobject):
+    """
+    Create a VMobject representing the difference between two shapes.
+
+    The difference operation subtracts the region covered by ``clip``
+    from the region covered by ``subject``. The resulting VMobject
+    contains the portions of the subject that remain outside the clip.
+
+    Parameters
+    ----------
+    subject : VMobject
+        The VMobject whose region forms the starting shape. The portions
+        of this shape that are not covered by ``clip`` are retained.
+    clip : VMobject
+        The VMobject whose region is subtracted from ``subject``.
+    **kwargs
+        Additional keyword arguments passed to the parent ``VMobject``
+        constructor, such as supported styling options.
+
+    Examples
+    --------
+    Subtract a circle from a square::
+
+        subject = Square()
+        clip = Circle()
+        difference = Difference(subject, clip)
+
+    Subtract an overlapping shape::
+
+        subject = Circle().shift(LEFT * 0.5)
+        clip = Square().shift(RIGHT * 0.5)
+        difference = Difference(subject, clip, color=BLUE)
+
+    Notes
+    -----
+    The operation uses the paths of the input VMobjects to compute
+    the geometric difference. The resulting geometry is stored in
+    the new VMobject.
+
+    The order of the arguments matters: ``Difference(subject, clip)``
+    is generally not equivalent to ``Difference(clip, subject)``.
+
+    See Also
+    --------
+    Union
+        Combines the regions of multiple VMobjects.
+    Intersection
+        Retains the regions shared by two VMobjects.
+    VMobject
+        Base class for vectorized objects.
+    """
+
     def __init__(self, subject: VMobject, clip: VMobject, **kwargs):
         super().__init__(**kwargs)
         outpen = pathops.Path()
