@@ -198,6 +198,67 @@ class Difference(VMobject):
 
 
 class Intersection(VMobject):
+    """
+    Create a VMobject representing the intersection of multiple shapes.
+
+    The intersection operation retains the regions shared by all the
+    provided VMobjects. When more than two VMobjects are supplied,
+    their intersections are computed successively to obtain the final
+    result.
+
+    At least two VMobjects must be provided. The resulting geometry
+    is stored in the new VMobject.
+
+    Parameters
+    ----------
+    *vmobjects : VMobject
+        Two or more VMobjects whose common regions are to be retained.
+        The intersection is computed between the first two objects,
+        then successively with each remaining object.
+    **kwargs
+        Additional keyword arguments passed to the parent ``VMobject``
+        constructor, including supported styling options.
+
+    Raises
+    ------
+    ValueError
+        If fewer than two VMobjects are provided.
+
+    Examples
+    --------
+    Find the overlapping region of two circles::
+
+        circle1 = Circle().shift(LEFT * 0.5)
+        circle2 = Circle().shift(RIGHT * 0.5)
+        intersection = Intersection(circle1, circle2)
+
+    Find the common region of multiple shapes::
+
+        intersection = Intersection(
+            Circle(),
+            Square(),
+            Triangle(),
+            color=BLUE,
+        )
+
+    Notes
+    -----
+    The order of the input objects does not change the mathematical
+    intersection, although the operation is evaluated successively.
+
+    The resulting VMobject contains the common geometry rather than
+    a group of the original input objects.
+
+    See Also
+    --------
+    Union
+        Combines the regions covered by multiple VMobjects.
+    Difference
+        Subtracts one VMobject's region from another.
+    VMobject
+        Base class for vectorized objects.
+    """
+
     def __init__(self, *vmobjects: VMobject, **kwargs):
         if len(vmobjects) < 2:
             raise ValueError("At least 2 mobjects needed for Intersection.")
