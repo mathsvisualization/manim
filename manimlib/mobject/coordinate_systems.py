@@ -671,6 +671,146 @@ class Axes(VGroup, CoordinateSystem):
 
 
 class ThreeDAxes(Axes):
+    """
+    A three-dimensional coordinate system consisting of x-, y-, and z-axes.
+
+    ``ThreeDAxes`` extends ``Axes`` by adding a third ``NumberLine`` for
+    the z-coordinate. The three axes are collected in ``self.axes`` and
+    can be used for converting between 3D coordinates and scene points
+    through the inherited ``CoordinateSystem`` interface.
+
+    The orientation of the z-axis is controlled by ``z_normal``. The
+    class also provides helpers for labeling all three axes and creating
+    graph surfaces from explicit functions or parametric definitions.
+
+    Parameters
+    ----------
+    x_range
+        Range specification for the x-axis. Defaults to
+        ``(-6.0, 6.0, 1.0)``.
+
+    y_range
+        Range specification for the y-axis. Defaults to
+        ``(-5.0, 5.0, 1.0)``.
+
+    z_range
+        Range specification for the z-axis. It is normalized using
+        ``full_range_specifier``. Defaults to ``(-4.0, 4.0, 1.0)``.
+
+    z_axis_config
+        Configuration dictionary applied specifically to the z-axis.
+        It is merged with the default general axis configuration,
+        ``default_z_axis_config``, the shared ``axis_config`` supplied
+        through ``kwargs``, and this dictionary, in that order.
+
+    z_normal
+        Vector used to determine the orientation of the z-axis.
+        The z-axis is first rotated by -90 degrees about the UP
+        direction, then rotated about OUT by the angle of this vector.
+        Defaults to ``DOWN``.
+
+    depth
+        Optional length of the z-axis in scene units. Passed as the
+        ``width`` argument to the underlying ``NumberLine`` constructor.
+
+    **kwargs
+        Additional arguments forwarded to ``Axes.__init__``. These
+        include inherited axis settings such as ``axis_config``,
+        ``x_axis_config``, ``y_axis_config``, ``width``, ``height``,
+        and ``unit_size``.
+
+    Attributes
+    ----------
+    dimension
+        Class-level dimension set to 3.
+
+    z_range
+        Normalized range specification for the z-axis.
+
+    z_axis
+        The ``NumberLine`` representing the z-axis.
+
+    axes
+        Inherited group containing the x- and y-axes, extended to
+        include the z-axis.
+
+    axis_labels
+        Set by ``add_axis_labels`` to the group of x-, y-, and z-axis
+        labels.
+
+    Notes
+    -----
+    The x- and y-axes are initialized by ``Axes.__init__``. The z-axis
+    is then created separately, rotated according to ``z_normal``, and
+    shifted so that its zero coordinate aligns with the x-axis origin.
+
+    ``get_all_ranges`` returns the x-, y-, and z-axis range
+    specifications.
+
+    ``get_graph`` constructs a surface for a function of two variables,
+    z = func(x, y), and transforms it using the unit direction vectors
+    of the three axes. ``get_parametric_surface`` instead accepts a
+    function that directly returns points in three-dimensional
+    coordinates.
+
+    Examples
+    --------
+    Create a 3D coordinate system:
+
+    >>> axes = ThreeDAxes()
+
+    Specify ranges and dimensions for the axes:
+
+    >>> axes = ThreeDAxes(
+    ...     x_range=(-4, 4, 1),
+    ...     y_range=(-3, 3, 1),
+    ...     z_range=(-2, 5, 1),
+    ...     width=8,
+    ...     height=6,
+    ...     depth=5,
+    ... )
+
+    Convert a 3D coordinate to a scene point:
+
+    >>> axes = ThreeDAxes()
+    >>> point = axes.c2p(1, 2, 3)
+    >>> coordinates = axes.p2c(point)
+
+    Add labels to the three axes:
+
+    >>> axes = ThreeDAxes()
+    >>> axes.add_axis_labels("x", "y", "z")
+
+    Create a surface from z = f(x, y):
+
+    >>> axes = ThreeDAxes()
+    >>> surface = axes.get_graph(
+    ...     lambda x, y: x**2 + y**2,
+    ...     u_range=(-2, 2),
+    ...     v_range=(-2, 2),
+    ... )
+
+    Create a parametric surface:
+
+    >>> axes = ThreeDAxes()
+    >>> surface = axes.get_parametric_surface(
+    ...     lambda u, v: np.array([
+    ...         u * np.cos(v),
+    ...         u * np.sin(v),
+    ...         v,
+    ...     ]),
+    ...     u_range=(0, 2),
+    ...     v_range=(0, TAU),
+    ... )
+
+    See Also
+    --------
+    Axes
+    CoordinateSystem
+    NumberLine
+    ParametricSurface
+    """
+
     dimension: int = 3
     default_z_axis_config: dict = dict()
 
