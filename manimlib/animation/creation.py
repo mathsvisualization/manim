@@ -32,8 +32,8 @@ class ShowPartial(Animation, ABC):
 
     def interpolate_submobject(
         self,
-        submob: VMobject,
-        start_submob: VMobject,
+        submob: Mobject,
+        start_submob: Mobject,
         alpha: float
     ) -> None:
         submob.pointwise_become_partial(
@@ -103,10 +103,6 @@ class DrawBorderThenFill(Animation):
         super().begin()
         self.mobject.match_style(self.outline)
 
-    def finish(self) -> None:
-        super().finish()
-        self.mobject.refresh_joint_angles()
-
     def get_outline(self) -> VMobject:
         outline = self.mobject.copy()
         outline.set_fill(opacity=0)
@@ -120,6 +116,17 @@ class DrawBorderThenFill(Animation):
 
     def get_all_mobjects(self) -> list[Mobject]:
         return [*super().get_all_mobjects(), self.outline]
+
+    def get_interpolation_ends(self) -> tuple[VMobject, VMobject]:
+        """
+        The second half blends between these two, and the first half never blends at all: it
+        traces the outline with pointwise_become_partial, which writes the points itself and
+        refreshes the box from them, so what is settled here is read only where it holds.
+
+        The outline being a copy of the mobject in another style, the two agree about every
+        point and about the box, and only the style has anywhere to go.
+        """
+        return self.outline, self.starting_mobject
 
     def interpolate_submobject(
         self,

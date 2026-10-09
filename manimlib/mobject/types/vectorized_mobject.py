@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from functools import wraps
 
 import numpy as np
@@ -9,8 +10,7 @@ from manimlib.constants import DEFAULT_VMOBJECT_FILL_COLOR, DEFAULT_VMOBJECT_STR
 from manimlib.constants import BLACK
 from manimlib.constants import DEFAULT_STROKE_WIDTH
 from manimlib.constants import DEG
-from manimlib.constants import ORIGIN, OUT
-from manimlib.constants import PI
+from manimlib.constants import ORIGIN, OUT, RIGHT
 from manimlib.constants import TAU
 from manimlib.mobject.mobject import Mobject
 from manimlib.mobject.mobject import Group
@@ -27,23 +27,27 @@ from manimlib.utils.bezier import outer_interpolate
 from manimlib.utils.bezier import partial_quadratic_bezier_points
 from manimlib.utils.bezier import quadratic_bezier_points_for_arc
 from manimlib.utils.color import color_gradient
+from manimlib.utils.color import color_to_rgb
 from manimlib.utils.color import rgb_to_hex
+from manimlib.utils.iterables import index_within_group
+from manimlib.utils.iterables import listify
 from manimlib.utils.iterables import make_even
 from manimlib.utils.iterables import resize_array
 from manimlib.utils.iterables import resize_with_interpolation
 from manimlib.utils.iterables import resize_preserving_order
 from manimlib.utils.space_ops import angle_between_vectors
-from manimlib.utils.space_ops import cross2d
-from manimlib.utils.space_ops import earclip_triangulation
+from manimlib.utils.space_ops import boxes_are_disjoint
 from manimlib.utils.space_ops import get_norm
 from manimlib.utils.space_ops import get_unit_normal
 from manimlib.utils.space_ops import line_intersects_path
 from manimlib.utils.space_ops import midpoint
+from manimlib.utils.space_ops import normalize
 from manimlib.utils.space_ops import rotation_between_vectors
 from manimlib.utils.space_ops import rotation_matrix_transpose
 from manimlib.utils.space_ops import poly_line_length
-from manimlib.utils.space_ops import z_to_vector
-from manimlib.shader_wrapper import VShaderWrapper
+from manimlib.renderer.drawing import VDrawing
+from manimlib.renderer.uniform_block import COMMON_UNIFORMS
+from manimlib.renderer.uniform_block import uniform_block_dtype
 
 from typing import TYPE_CHECKING
 from typing import Generic, TypeVar, Iterable
@@ -52,29 +56,40 @@ SubVmobjectType = TypeVar('SubVmobjectType', bound='VMobject')
 if TYPE_CHECKING:
     from typing import Callable, Tuple, Any, Optional
     from manimlib.typing import ManimColor, Vect3, Vect4, Vect3Array, Self
-    from moderngl.context import Context
+
+
+GRADIENT_POINT_KEYS = ['gradient_start', 'gradient_end']
 
 
 class VMobject(Mobject):
+    drawing_class: type = VDrawing
+    structural_data_keys = ['subpath_range']
     data_dtype: np.dtype = np.dtype([
         ('point', np.float32, (3,)),
         ('stroke_rgba', np.float32, (4,)),
         ('stroke_width', np.float32, (1,)),
-        ('joint_angle', np.float32, (1,)),
-        ('fill_rgba', np.float32, (4,)),
-        ('base_normal', np.float32, (3,)),  # Base points and unit normal vectors are interleaved in this array
-        ('fill_border_width', np.float32, (1,)),
+        # How far the subpath a point belongs to reaches back before it and on after it, as
+        # a distance rather than an index, so that a record means the same thing wherever it
+        # sits, see set_subpath_range
+        ('subpath_range', np.float32, (2,)),
     ])
+    uniform_dtype: np.dtype = uniform_block_dtype(
+        *COMMON_UNIFORMS,
+        ("anti_alias_width", 1),
+        ("joint_roundness", 1),
+        ("flat_stroke", 1),
+        ("stroke_width_in_scene_units", 1),
+        ("unit_normal", 3),
+        ("fill_rgba", 4),
+        ("fill_rgba_end", 4),
+        ("gradient_start", 3),
+        ("gradient_end", 3),
+        ("fill_border_width", 1),
+    )
     pre_function_handle_to_anchor_scale_factor: float = 0.01
     make_smooth_after_applying_functions: bool = False
     # TODO, do we care about accounting for varying zoom levels?
     tolerance_for_point_equality: float = 1e-8
-    joint_type_map: dict = {
-        "no_joint": 0,
-        "auto": 1,
-        "bevel": 2,
-        "miter": 3,
-    }
 
     def __init__(
         self,
@@ -87,10 +102,14 @@ class VMobject(Mobject):
         stroke_behind: bool = False,
         background_image_file: str | None = None,
         long_lines: bool = False,
-        # Could also be "no_joint", "bevel", "miter"
-        joint_type: str = "auto",
+        # From 0, leaving corners as sharp as they can be without jutting out, up to
+        # 1, rounding off every one of them
+        joint_roundness: float = 0.0,
         flat_stroke: bool = False,
-        scale_stroke_with_zoom: bool = False,
+        # If false, stroke width is measured relative to the frame, so that a given
+        # width looks the same at any zoom level. If true, it's measured relative to
+        # the scene, so that zooming in makes the stroke look thicker.
+        stroke_width_in_scene_units: bool = False,
         use_simple_quadratic_approx: bool = False,
         # Measured in pixel widths
         anti_alias_width: float = 1.5,
@@ -105,19 +124,96 @@ class VMobject(Mobject):
         self.stroke_behind = stroke_behind
         self.background_image_file = background_image_file
         self.long_lines = long_lines
-        self.joint_type = joint_type
+        self.joint_roundness = joint_roundness
         self.flat_stroke = flat_stroke
-        self.scale_stroke_with_zoom = scale_stroke_with_zoom
+        self.stroke_width_in_scene_units = stroke_width_in_scene_units
         self.use_simple_quadratic_approx = use_simple_quadratic_approx
         self.anti_alias_width = anti_alias_width
         self.fill_border_width = fill_border_width
 
-        self.needs_new_joint_angles = True
         self.needs_new_unit_normal = True
-        self.subpath_end_indices = None
-        self.outer_vert_indices = np.zeros(0, dtype=int)
+
+        self.shader_code_target = None
+        # Which set of mobjects this one's fill has been promised not to overlap
+        self.fill_group: VMobject | None = None
 
         super().__init__(**kwargs)
+
+    def draw_fills_together(self, draw_together: bool = True) -> Self:
+        """
+        Promises that these mobjects' filled regions do not overlap one another, which lets
+        one draw cover the lot of them rather than three passes each, see VDrawing.can_follow.
+        A page of text drawn this way is a handful of draws rather than one per glyph.
+
+        The promise is kept against this mobject in particular, so two groups which have each
+        made it are still drawn apart: glyphs of one string are laid out by the typesetter and
+        really do not overlap, while two strings laid over one another say nothing of the sort.
+
+        Broken, what changes is the overlap: filled once between them rather than each blending
+        in turn. For opaque fills that is the same picture, and for partly transparent ones it
+        is a lighter one.
+        """
+        group = self if draw_together else None
+        for mob in self.get_family():
+            mob.fill_group = group
+        return self
+
+    def draw_fills_together_if_disjoint(self) -> Self:
+        """
+        Looks at where the filled members of this family sit, and makes the promise of
+        draw_fills_together when none of them meet, so that a group laid out with room
+        between its members is drawn together without anyone having to say so.
+
+        What is compared is bounding boxes, so two shapes which do not overlap but whose
+        boxes do are taken to, which costs a few draws and never the picture. And what is
+        answered is how things stand now, so a group moved about or added to afterwards
+        is worth asking again.
+        """
+        filled = [
+            mob for mob in self.get_family()
+            if mob.has_points() and mob.has_fill()
+        ]
+        # Each member's own points rather than its bounding box, which for one holding
+        # submobjects covers them too and would have it overlap its own children
+        boxes = np.array([
+            [points.min(0), points.max(0)]
+            for points in (mob.get_points() for mob in filled)
+        ]).reshape((len(filled), 2, self.dim))
+        if boxes_are_disjoint(boxes[:, 0], boxes[:, 1]):
+            return self.draw_fills_together(True)
+        # Nothing to promise here, but one made about some smaller group, a string's
+        # glyphs say, is about a family this says nothing of and still holds. Only this
+        # mobject's own promise, which the layout no longer bears out, is dropped.
+        for mob in self.get_family():
+            if mob.fill_group is self:
+                mob.fill_group = None
+        return self
+
+    def get_grid(self, *args, **kwargs) -> Self:
+        """
+        Copies laid out apart from one another, so unless the layout crowds them their
+        fills may share a draw.
+        """
+        return super().get_grid(*args, **kwargs).draw_fills_together_if_disjoint()
+
+    def copy(self, deep: bool = False) -> Self:
+        """
+        A copy is a group of its own. Left pointing at what it was copied from, its fills
+        would be taken to be disjoint from that original's, which a copy laid over the thing
+        it copies is the opposite of.
+        """
+        result = super().copy(deep)
+        if deep:
+            return result
+        originals = self.get_family()
+        copies = result.get_family()
+        if len(originals) != len(copies):
+            return result
+        matching = {id(mob): copies[index] for index, mob in enumerate(originals)}
+        for mob in copies:
+            if mob.fill_group is not None:
+                mob.fill_group = matching.get(id(mob.fill_group))
+        return result
 
     def get_group_class(self):
         return VGroup
@@ -126,9 +222,22 @@ class VMobject(Mobject):
         super().init_uniforms()
         self.uniforms.update(
             anti_alias_width=self.anti_alias_width,
-            joint_type=self.joint_type_map[self.joint_type],
+            joint_roundness=float(self.joint_roundness),
             flat_stroke=float(self.flat_stroke),
-            scale_stroke_with_zoom=float(self.scale_stroke_with_zoom)
+            stroke_width_in_scene_units=float(self.stroke_width_in_scene_units),
+            # A filled VMobject is taken to be flat, which is what lets its normal
+            # be one value rather than one per point, and what makes the winding
+            # count deciding its interior meaningful in the first place
+            unit_normal=np.array(OUT, dtype=float),
+            # A fill is one flat region of one color, so unlike stroke there is
+            # nothing for a per point value to mean
+            fill_rgba=np.zeros(4),
+            # A second color, equal to the first unless a gradient was asked for,
+            # along with the two points it runs between, see inserts/fill_color.wgsl
+            fill_rgba_end=np.zeros(4),
+            gradient_start=np.zeros(3),
+            gradient_end=np.zeros(3),
+            fill_border_width=float(self.fill_border_width),
         )
 
     def add(self, *vmobjects: VMobject) -> Self:
@@ -159,14 +268,59 @@ class VMobject(Mobject):
         color: ManimColor | Iterable[ManimColor] = None,
         opacity: float | Iterable[float] | None = None,
         border_width: float | None = None,
+        gradient_direction: Vect3 | None = None,
         recurse: bool = True
     ) -> Self:
-        self.set_rgba_array_by_color(color, opacity, 'fill_rgba', recurse)
-        if border_width is not None:
-            self.border_width = border_width
-            for mob in self.get_family(recurse):
-                data = mob.data if mob.has_points() > 0 else mob._data_defaults
-                data["fill_border_width"] = border_width
+        """
+        Two colors, or two opacities, fill with a gradient running between them along
+        gradient_direction. Anything more than two of either is cut down to two.
+        """
+        set_colors = color is not None or opacity is not None
+        for mob in self.get_family(recurse):
+            if set_colors:
+                ends = np.array([mob.uniforms["fill_rgba"], mob.uniforms["fill_rgba_end"]])
+                if color is not None:
+                    rgbs = np.array([color_to_rgb(c) for c in listify(color)[:2]])
+                    ends[:, :3] = rgbs if len(rgbs) == 2 else rgbs[0]
+                if opacity is not None:
+                    ops = np.array(listify(opacity)[:2], dtype=float)
+                    ends[:, 3] = ops if len(ops) == 2 else ops[0]
+                mob.uniforms["fill_rgba"] = ends[0]
+                mob.uniforms["fill_rgba_end"] = ends[1]
+            if border_width is not None:
+                mob.uniforms["fill_border_width"] = float(border_width)
+        if gradient_direction is not None or (set_colors and self.has_fill_gradient()):
+            self.set_fill_gradient_points(gradient_direction, recurse)
+        return self
+
+    def set_fill_gradient_points(
+        self,
+        direction: Vect3 | None = None,
+        recurse: bool = True
+    ) -> Self:
+        """
+        Puts the gradient's two ends on the extremes of this mobject along the given
+        direction, keeping to the one it already runs in when none is given.
+
+        Every member of the family is handed the same pair. Since the two are points
+        in space rather than anything measured against each member, that is what makes
+        a gradient set on a group run across the whole of it, rather than starting over
+        at each of its members.
+        """
+        if direction is None:
+            direction = self.uniforms["gradient_end"] - self.uniforms["gradient_start"]
+        if not np.any(direction):
+            direction = RIGHT
+        direction = normalize(np.array(direction, dtype=float))
+
+        bbox = self.get_bounding_box()
+        reach = np.dot(np.abs(direction), 0.5 * (bbox[2] - bbox[0]))
+        for mob in self.get_family(recurse):
+            mob.uniforms["gradient_start"] = bbox[1] - reach * direction
+            mob.uniforms["gradient_end"] = bbox[1] + reach * direction
+            # Only now that these mean something do they need carrying along with the
+            # points. Left out otherwise, so that moving a plain fill touches nothing.
+            mob.pointlike_uniform_keys = GRADIENT_POINT_KEYS
         return self
 
     def set_stroke(
@@ -182,19 +336,17 @@ class VMobject(Mobject):
 
         if width is not None:
             for mob in self.get_family(recurse):
-                data = mob.data if mob.get_num_points() > 0 else mob._data_defaults
-                if isinstance(width, (float, int, np.floating)):
-                    data['stroke_width'][:, 0] = width
-                else:
-                    data['stroke_width'][:, 0] = resize_with_interpolation(
-                        np.array(width), len(data)
-                    ).flatten()
+                with mob.data.being_written() as data:
+                    if isinstance(width, (float, int, np.floating)):
+                        data['stroke_width'][:, 0] = width
+                    else:
+                        data['stroke_width'][:, 0] = resize_with_interpolation(
+                            np.array(width), len(data)
+                        ).flatten()
 
         if behind is not None:
             for mob in self.get_family(recurse):
-                if mob.stroke_behind != behind:
-                    mob.stroke_behind = behind
-                    mob.refresh_shader_wrapper_id()
+                mob.stroke_behind = behind
 
         if flat is not None:
             self.set_flat_stroke(flat)
@@ -209,12 +361,12 @@ class VMobject(Mobject):
         self.set_stroke(color, width, behind=True)
         return self
 
-    @Mobject.affects_family_data
     def set_style(
         self,
         fill_color: ManimColor | Iterable[ManimColor] | None = None,
         fill_opacity: float | Iterable[float] | None = None,
         fill_rgba: Vect4 | None = None,
+        fill_rgba_end: Vect4 | None = None,
         fill_border_width: float | None = None,
         stroke_color: ManimColor | Iterable[ManimColor] | None = None,
         stroke_opacity: float | Iterable[float] | None = None,
@@ -227,17 +379,21 @@ class VMobject(Mobject):
     ) -> Self:
         for mob in self.get_family(recurse):
             if fill_rgba is not None:
-                mob.data['fill_rgba'][:] = resize_with_interpolation(fill_rgba, len(mob.data['fill_rgba']))
+                mob.uniforms["fill_rgba"] = np.array(fill_rgba, dtype=float)
+                end = fill_rgba if fill_rgba_end is None else fill_rgba_end
+                mob.uniforms["fill_rgba_end"] = np.array(end, dtype=float)
             else:
                 mob.set_fill(
                     color=fill_color,
                     opacity=fill_opacity,
-                    border_width=fill_border_width,
                     recurse=False
                 )
+            # Applied either way, since passing in fill_rgba skips the branch above
+            if fill_border_width is not None:
+                mob.set_fill(border_width=fill_border_width, recurse=False)
 
             if stroke_rgba is not None:
-                mob.data['stroke_rgba'][:] = resize_with_interpolation(stroke_rgba, len(mob.data['stroke_rgba']))
+                mob.data['stroke_rgba'] = resize_with_interpolation(stroke_rgba, len(mob.data))
                 mob.set_stroke(
                     width=stroke_width,
                     behind=stroke_behind,
@@ -259,10 +415,11 @@ class VMobject(Mobject):
         return self
 
     def get_style(self) -> dict[str, Any]:
-        data = self.data if self.get_num_points() > 0 else self._data_defaults
+        data = self.data.rows_or_defaults
         return {
-            "fill_rgba": data['fill_rgba'].copy(),
-            "fill_border_width": data['fill_border_width'].copy(),
+            "fill_rgba": self.uniforms["fill_rgba"].copy(),
+            "fill_rgba_end": self.uniforms["fill_rgba_end"].copy(),
+            "fill_border_width": self.uniforms["fill_border_width"],
             "stroke_rgba": data['stroke_rgba'].copy(),
             "stroke_width": data['stroke_width'].copy(),
             "stroke_behind": self.stroke_behind,
@@ -303,6 +460,37 @@ class VMobject(Mobject):
         self.set_stroke(opacity=opacity, recurse=recurse)
         return self
 
+    def set_color_by_proportion(self, prop_to_color: Callable[[float], Color]) -> Self:
+        colors = list(map(prop_to_color, np.linspace(0, 1, self.get_num_points())))
+        self.set_stroke(color=colors)
+        return self
+
+    def set_color_by_code(self, wgsl_code: str, code_target: str | None = None) -> Self:
+        self.replace_shader_code(
+            "///// INSERT COLOR FUNCTION HERE /////",
+            wgsl_code,
+            code_target
+        )
+        return self
+
+    def replace_shader_code(
+        self,
+        old: str,
+        new: str,
+        code_target: str | None = None
+    ) -> Self:
+        """
+        A snippet naming a field of one of the two shaders, stroke_rgba say, would not compile
+        against the other, so code_target says which of "fill" and "stroke" it is meant for.
+        Left out, it goes to both, see VDrawing.module_specs.
+        """
+        if code_target is not None:
+            for mob in self.get_family():
+                mob.shader_code_target = code_target
+        # Which records the replacement against every member of the family
+        super().replace_shader_code(old, new)
+        return self
+
     def set_anti_alias_width(self, anti_alias_width: float, recurse: bool = True) -> Self:
         self.set_uniform(recurse, anti_alias_width=anti_alias_width)
         return self
@@ -321,15 +509,6 @@ class VMobject(Mobject):
             )
         return self
 
-    def get_fill_colors(self) -> list[str]:
-        return [
-            rgb_to_hex(rgba[:3])
-            for rgba in self.data['fill_rgba']
-        ]
-
-    def get_fill_opacities(self) -> np.ndarray:
-        return self.data['fill_rgba'][:, 3]
-
     def get_stroke_colors(self) -> list[str]:
         return [
             rgb_to_hex(rgba[:3])
@@ -344,32 +523,25 @@ class VMobject(Mobject):
 
     # TODO, it's weird for these to return the first of various lists
     # rather than the full information
+    def get_fill_colors(self) -> list[str]:
+        return [rgb_to_hex(self.uniforms[name][:3]) for name in ["fill_rgba", "fill_rgba_end"]]
+
     def get_fill_color(self) -> str:
-        """
-        If there are multiple colors (for gradient)
-        this returns the first one
-        """
-        data = self.data if self.has_points() else self._data_defaults
-        return rgb_to_hex(data["fill_rgba"][0, :3])
+        return rgb_to_hex(self.uniforms["fill_rgba"][:3])
 
     def get_fill_opacity(self) -> float:
-        """
-        If there are multiple opacities, this returns the
-        first
-        """
-        data = self.data if self.has_points() else self._data_defaults
-        return data["fill_rgba"][0, 3]
+        return float(self.uniforms["fill_rgba"][3])
 
     def get_stroke_color(self) -> str:
-        data = self.data if self.has_points() else self._data_defaults
+        data = self.data.rows_or_defaults
         return rgb_to_hex(data["stroke_rgba"][0, :3])
 
     def get_stroke_width(self) -> float:
-        data = self.data if self.has_points() else self._data_defaults
+        data = self.data.rows_or_defaults
         return data["stroke_width"][0, 0]
 
     def get_stroke_opacity(self) -> float:
-        data = self.data if self.has_points() else self._data_defaults
+        data = self.data.rows_or_defaults
         return data["stroke_rgba"][0, 3]
 
     def get_color(self) -> str:
@@ -381,12 +553,14 @@ class VMobject(Mobject):
         return self.uniforms["anti_alias_width"]
 
     def has_stroke(self) -> bool:
-        data = self.data if len(self.data) > 0 else self._data_defaults
+        data = self.data.rows_or_defaults
         return any(data['stroke_width']) and any(data['stroke_rgba'][:, 3])
 
+    def has_fill_gradient(self) -> bool:
+        return bool((self.uniforms["fill_rgba"] != self.uniforms["fill_rgba_end"]).any())
+
     def has_fill(self) -> bool:
-        data = self.data if len(self.data) > 0 else self._data_defaults
-        return any(data['fill_rgba'][:, 3])
+        return bool(max(self.uniforms["fill_rgba"][3], self.uniforms["fill_rgba_end"][3]))
 
     def get_opacity(self) -> float:
         if self.has_fill():
@@ -400,20 +574,27 @@ class VMobject(Mobject):
     def get_flat_stroke(self) -> bool:
         return self.uniforms["flat_stroke"] == 1.0
 
-    def set_scale_stroke_with_zoom(self, scale_stroke_with_zoom: bool = True, recurse: bool = True) -> Self:
-        self.set_uniform(recurse, scale_stroke_with_zoom=float(scale_stroke_with_zoom))
-        pass
-
-    def get_scale_stroke_with_zoom(self) -> bool:
-        return self.uniforms["flat_stroke"] == 1.0
-
-    def set_joint_type(self, joint_type: str, recurse: bool = True) -> Self:
-        for mob in self.get_family(recurse):
-            mob.uniforms["joint_type"] = self.joint_type_map[joint_type]
+    def set_stroke_width_in_scene_units(self, value: bool = True, recurse: bool = True) -> Self:
+        self.set_uniform(recurse, stroke_width_in_scene_units=float(value))
         return self
 
-    def get_joint_type(self) -> float:
-        return self.uniforms["joint_type"]
+    def get_stroke_width_in_scene_units(self) -> bool:
+        return self.uniforms["stroke_width_in_scene_units"] == 1.0
+
+    # Old names, kept so that existing scenes don't break
+    def set_scale_stroke_with_zoom(self, scale_stroke_with_zoom: bool = True, recurse: bool = True) -> Self:
+        return self.set_stroke_width_in_scene_units(scale_stroke_with_zoom, recurse)
+
+    def get_scale_stroke_with_zoom(self) -> bool:
+        return self.get_stroke_width_in_scene_units()
+
+    def set_joint_roundness(self, roundness: float, recurse: bool = True) -> Self:
+        for mob in self.get_family(recurse):
+            mob.uniforms["joint_roundness"] = float(roundness)
+        return self
+
+    def get_joint_roundness(self) -> float:
+        return self.uniforms["joint_roundness"]
 
     def apply_depth_test(
         self,
@@ -494,6 +675,9 @@ class VMobject(Mobject):
             quad_approx = get_quadratic_approximation_of_cubic(
                 last, handle1, handle2, anchor
             )
+            if self.consider_points_equal(quad_approx[3], quad_approx[4]):
+                # Avoid degenerate handles (duplicate points) to prevent visual bug
+                quad_approx[3] = midpoint(*quad_approx[2:4])
         if self.consider_points_equal(quad_approx[1], last):
             # This is to prevent subpaths from accidentally being marked closed
             quad_approx[1] = midpoint(*quad_approx[1:3])
@@ -576,8 +760,7 @@ class VMobject(Mobject):
     def close_path(self, smooth: bool = False) -> Self:
         if self.is_closed():
             return self
-        ends = self.get_subpath_end_indices()
-        last_path_start = self.get_points()[0 if len(ends) == 1 else ends[-2] + 2]
+        last_path_start = self.get_points()[self.get_subpath_range()[0]]
         if smooth:
             self.add_smooth_curve_to(last_path_start)
         else:
@@ -586,9 +769,8 @@ class VMobject(Mobject):
 
     def is_closed(self) -> bool:
         points = self.get_points()
-        ends = self.get_subpath_end_indices()
-        last_path_start = points[0 if len(ends) == 1 else ends[-2] + 2]
-        return self.consider_points_equal(last_path_start, points[-1])
+        start, end = self.get_subpath_range()
+        return self.consider_points_equal(points[start], points[end])
 
     def subdivide_curves_by_condition(
         self,
@@ -626,6 +808,7 @@ class VMobject(Mobject):
 
     def subdivide_intersections(self, recurse: bool = True, n_subdivisions: int = 1) -> Self:
         path = self.get_anchors()
+
         def tuple_to_subdivisions(b0, b1, b2):
             if line_intersects_path(b0, b1, path):
                 return n_subdivisions
@@ -655,8 +838,23 @@ class VMobject(Mobject):
         return self
 
     def is_smooth(self, angle_tol=1 * DEG) -> bool:
-        angles = np.abs(self.get_joint_angles()[0::2])
-        return (angles < angle_tol).all()
+        """
+        Whether the tangent direction carries through each anchor, rather than
+        turning a corner there. Anchors where a subpath ends have no tangent on one
+        side, which shows up as a zero length difference, and are passed over.
+        """
+        points = self.get_points()
+        a0, h, a1 = points[0:-1:2], points[1::2], points[2::2]
+        # Tangent leaving the first anchor of each curve, and arriving at its second
+        tan_out, tan_in = h - a0, a1 - h
+        # A null curve, whose handle sits on its first anchor, ends a subpath rather
+        # than being drawn, so it lends no tangent to either of its anchors
+        tan_in[(tan_out == 0).all(1)] = 0
+        # Comparing against the product of norms rather than normalizing leaves an
+        # anchor with a tangent on only one side passing, as it comes out as 0 >= 0
+        dots = (tan_in[:-1] * tan_out[1:]).sum(1)
+        norms = np.sqrt((tan_in[:-1]**2).sum(1) * (tan_out[1:]**2).sum(1))
+        return bool((dots >= norms * math.cos(angle_tol)).all())
 
     def change_anchor_mode(self, mode: str) -> Self:
         assert mode in ("jagged", "approx_smooth", "true_smooth")
@@ -680,6 +878,9 @@ class VMobject(Mobject):
             a1 = new_subpath[2::2]
             false_ends = np.equal(a0, h).all(1)
             h[false_ends] = 0.5 * (a0[false_ends] + a1[false_ends])
+            # Avoid degenerate handles (duplicate points) to prevent visual bug
+            degenerate_handles = np.equal(h, a1).all(1)
+            h[degenerate_handles] = 0.5 * (a0[degenerate_handles] + a1[degenerate_handles])
             self.add_subpath(new_subpath)
         return self
 
@@ -720,7 +921,7 @@ class VMobject(Mobject):
     def append_vectorized_mobject(self, vmobject: VMobject) -> Self:
         self.add_subpath(vmobject.get_points())
         n = vmobject.get_num_points()
-        self.data[-n:] = vmobject.data
+        self.data[-n:] = vmobject.data.array
         return self
 
     #
@@ -747,10 +948,43 @@ class VMobject(Mobject):
         end_indices = (2 * n for n, end in enumerate(is_end) if end)
         return np.array([*end_indices, len(points) - 1])
 
+    def set_subpath_range(self) -> Self:
+        """
+        Notes against every point how far off the ends of its subpath are. The stroke shader
+        reads this to find the tangents either side of a joint, and to tell whether a subpath
+        closes back on itself, and everything else that needs to know where the subpaths lie
+        reads it from here rather than looking again.
+
+        Held as how far the subpath reaches either side of the point rather than as an index
+        into the array, so that a record says the same thing wherever it is read from, and so
+        that two of them interpolate to the subpaths their blended points actually have, see
+        structural_data_keys.
+        """
+        points = self.get_points()
+        if len(points) == 0:
+            return self
+        ends = self.get_subpath_end_indices_from_points(points)
+        starts = [0, *(ends[:-1] + 2)]
+        with self.data.being_written() as data:
+            ranges = data["subpath_range"]
+            for start, end in zip(starts, ends):
+                # Reaching one past the end takes in the null curve's handle sitting
+                # there, which belongs to no subpath, so that every point gets written
+                ranges[start:end + 2] = (-start, end)
+            ranges += np.arange(len(points))[:, np.newaxis] * (1, -1)
+        return self
+
+    def get_subpath_range(self, index: int = -1) -> Tuple[int, int]:
+        """
+        Where the subpath holding the point at the given index begins and ends
+        """
+        back, on = self.data["subpath_range"][index]
+        at = range(len(self.data))[index]
+        return at - int(back), at + int(on)
+
     def get_subpath_end_indices(self) -> np.ndarray:
-        if self.subpath_end_indices is None:
-            self.subpath_end_indices = self.get_subpath_end_indices_from_points(self.get_points())
-        return self.subpath_end_indices
+        ends = self.data["subpath_range"][:, 1] + np.arange(len(self.data))
+        return np.unique(ends).astype(int)
 
     def get_subpaths_from_points(self, points: Vect3Array) -> list[Vect3Array]:
         if len(points) == 0:
@@ -867,24 +1101,29 @@ class VMobject(Mobject):
         if not self.has_points():
             return np.zeros(3)
 
-        p0 = self.get_anchors()
-        p1 = np.vstack([p0[1:], p0[0]])
+        area = np.zeros(3)
+        for subpath in self.get_subpaths():
+            p0 = subpath[::2]  # anchors for this subpath
+            if len(p0) == 0:
+                continue
+            p1 = np.vstack([p0[1:], p0[0]])
 
-        # Each term goes through all edges [(x0, y0, z0), (x1, y1, z1)]
-        sums = p0 + p1
-        diffs = p1 - p0
-        return 0.5 * np.array([
-            (sums[:, 1] * diffs[:, 2]).sum(),  # Add up (y0 + y1)*(z1 - z0)
-            (sums[:, 2] * diffs[:, 0]).sum(),  # Add up (z0 + z1)*(x1 - x0)
-            (sums[:, 0] * diffs[:, 1]).sum(),  # Add up (x0 + x1)*(y1 - y0)
-        ])
+            # Each term goes through all edges [(x0, y0, z0), (x1, y1, z1)]
+            sums = p0 + p1
+            diffs = p1 - p0
+            area += 0.5 * np.array([
+                (sums[:, 1] * diffs[:, 2]).sum(),  # Add up (y0 + y1)*(z1 - z0)
+                (sums[:, 2] * diffs[:, 0]).sum(),  # Add up (z0 + z1)*(x1 - x0)
+                (sums[:, 0] * diffs[:, 1]).sum(),  # Add up (x0 + x1)*(y1 - y0)
+            ])
+        return area
 
     def get_unit_normal(self, refresh: bool = False) -> Vect3:
         if self.get_num_points() < 3:
             return OUT
 
         if not self.needs_new_unit_normal and not refresh:
-            return self.data["base_normal"][1, :]
+            return self.uniforms["unit_normal"]
 
         area_vect = self.get_area_vector()
         area = get_norm(area_vect)
@@ -893,7 +1132,10 @@ class VMobject(Mobject):
         else:
             p = self.get_points()
             normal = get_unit_normal(p[1] - p[0], p[2] - p[1])
-        self.data["base_normal"][1::2] = normal
+        # Rounded, adding zero to leave no negative one of it, so that mobjects facing
+        # the same way say so exactly rather than to within whatever noise their own
+        # points worked out to. Six digits is finer than any shading can show.
+        self.uniforms["unit_normal"] = np.round(normal, 6) + 0.0
         self.needs_new_unit_normal = False
         return normal
 
@@ -922,8 +1164,6 @@ class VMobject(Mobject):
     # Alignment
     def align_points(self, vmobject: VMobject) -> Self:
         if self.get_num_points() == len(vmobject.get_points()):
-            for mob in [self, vmobject]:
-                mob.get_joint_angles()
             return self
 
         for mob in self, vmobject:
@@ -969,7 +1209,6 @@ class VMobject(Mobject):
             new_points = np.vstack(paths)
             mob.resize_points(len(new_points), resize_func=resize_preserving_order)
             mob.set_points(new_points)
-            mob.get_joint_angles()
         return self
 
     def insert_n_curves(self, n: int, recurse: bool = True) -> Self:
@@ -980,36 +1219,57 @@ class VMobject(Mobject):
         return self
 
     def insert_n_curves_to_point_list(self, n: int, points: Vect3Array) -> Vect3Array:
+        """
+        The same path traced by n more curves than it was, cut so as to leave the longest of
+        them as short as it can be, which is what keeps the anchors evenly spread.
+        """
         if len(points) == 1:
             return np.repeat(points, 2 * n + 1, 0)
+        if n == 0:
+            return points.copy()
 
-        bezier_tuples = list(self.get_bezier_tuples_from_points(points))
-        atol = self.tolerance_for_point_equality
-        norms = [
-            0 if get_norm(tup[1] - tup[0]) < atol else get_norm(tup[2] - tup[0])
-            for tup in bezier_tuples
-        ]
-        # Calculate insertions per curve (ipc)
-        ipc = np.zeros(len(bezier_tuples), dtype=int)
-        for _ in range(n):
-            index = np.argmax(norms)
-            ipc[index] += 1
-            norms[index] *= ipc[index] / (ipc[index] + 1)
+        a0, h, a1 = points[0:-1:2], points[1::2], points[2::2]
+        # Straight line distance stands in for how long a curve is
+        lengths = np.linalg.norm(a1 - a0, axis=1)
+        # A curve whose handle sits on its first anchor is what marks the end of a subpath,
+        # and is left whole: the pieces of a cut one no longer sit on their handles, so the
+        # mark would be lost and the hop between two subpaths would get drawn
+        lengths[np.linalg.norm(h - a0, axis=1) < self.tolerance_for_point_equality] = 0
+        if lengths.sum() == 0:
+            # Nothing to even out, so pad with more of the null curves it is made of, which
+            # draw nothing wherever they sit
+            return np.vstack([np.repeat(points[:1], 2 * n, 0), points])
 
-        new_points = [points[0]]
-        for tup, n_inserts in zip(bezier_tuples, ipc):
-            # What was once a single quadratic curve defined
-            # by "tup" will now be broken into n_inserts + 1
-            # smaller quadratic curves
-            alphas = np.linspace(0, 1, n_inserts + 2)
-            for a1, a2 in zip(alphas, alphas[1:]):
-                new_points.extend(partial_quadratic_bezier_points(tup, a1, a2)[1:])
-        return np.vstack(new_points)
+        # Cutting a curve of length L into j pieces leaves the longest of them L / j, so the
+        # n cuts to make are those with the n largest such values. No curve takes more than
+        # its share of the pieces there are to go around, which caps how many to weigh up
+        caps = ((len(lengths) + n) * lengths / lengths.sum()).astype(int)
+        candidates = np.repeat(np.arange(len(lengths)), caps)
+        piece_lengths = lengths[candidates] / (index_within_group(caps) + 1)
+        best = np.argpartition(piece_lengths, -n)[-n:]
+        counts = 1 + np.bincount(candidates[best], minlength=len(lengths))
+
+        # Which curve each piece comes from, and the stretch of it the piece is to cover
+        curve = np.repeat(np.arange(len(counts)), counts)
+        width = (1.0 / counts[curve])[:, np.newaxis]
+        lower = width * index_within_group(counts)[:, np.newaxis]
+        # One step of de Casteljau, which leaves two points lying half a tangent apart. So
+        # the piece covering [t, t + width] has its anchor where the curve is at t, and its
+        # handle a step of that width along the tangent there
+        first = a0[curve] + lower * (h[curve] - a0[curve])
+        second = h[curve] + lower * (a1[curve] - h[curve])
+        anchors = first + lower * (second - first)
+
+        new_points = np.empty((2 * len(curve) + 1, points.shape[1]))
+        new_points[0:-1:2] = anchors
+        new_points[1::2] = anchors + width * (second - first)
+        # Taken over rather than worked out, so that the path still ends where it did
+        new_points[-1] = points[-1]
+        return new_points
 
     def pointwise_become_partial(self, vmobject: VMobject, a: float, b: float) -> Self:
         assert isinstance(vmobject, VMobject)
         vm_points = vmobject.get_points()
-        self.data["joint_angle"] = vmobject.data["joint_angle"]
         if a <= 0 and b >= 1:
             self.set_points(vm_points, refresh=False)
             return self
@@ -1044,8 +1304,6 @@ class VMobject(Mobject):
             # Keep new_points i2:i3 as they are
             new_points[i3:i4] = high_tup
             new_points[i4:] = high_tup[2]
-        self.data["joint_angle"][:i1] = 0
-        self.data["joint_angle"][i4:] = 0
         self.set_points(new_points, refresh=False)
         return self
 
@@ -1054,142 +1312,12 @@ class VMobject(Mobject):
         vmob.pointwise_become_partial(self, a, b)
         return vmob
 
-    def get_outer_vert_indices(self) -> np.ndarray:
-        """
-        Returns the pattern (0, 1, 2, 2, 3, 4, 4, 5, 6, ...)
-        """
-        n_curves = self.get_num_curves()
-        if len(self.outer_vert_indices) != 3 * n_curves:
-            # Creates the pattern (0, 1, 2, 2, 3, 4, 4, 5, 6, ...)
-            self.outer_vert_indices = (np.arange(1, 3 * n_curves + 1) * 2) // 3
-        return self.outer_vert_indices
-
-    # Data for shaders that may need refreshing
-
-    def get_triangulation(self) -> np.ndarray:
-        # Figure out how to triangulate the interior to know
-        # how to send the points as to the vertex shader.
-        # First triangles come directly from the points
-        points = self.get_points()
-
-        if len(points) <= 1:
-            return np.zeros(0, dtype='i4')
-
-        normal_vector = self.get_unit_normal()
-
-        # Rotate points such that unit normal vector is OUT
-        if not np.isclose(normal_vector, OUT).all():
-            points = np.dot(points, z_to_vector(normal_vector))
-
-        v01s = points[1::2] - points[0:-1:2]
-        v12s = points[2::2] - points[1::2]
-        curve_orientations = np.sign(cross2d(v01s, v12s))
-
-        concave_parts = curve_orientations < 0
-
-        # These are the vertices to which we'll apply a polygon triangulation
-        indices = np.arange(len(points), dtype=int)
-        inner_vert_indices = np.hstack([
-            indices[0::2],
-            indices[1::2][concave_parts],
-        ])
-        inner_vert_indices.sort()
-        # Even indices correspond to anchors, and `end_indices // 2`
-        # shows which anchors are considered end points
-        end_indices = self.get_subpath_end_indices()
-        counts = np.arange(1, len(inner_vert_indices) + 1)
-        rings = counts[inner_vert_indices % 2 == 0][end_indices // 2]
-
-        # Triangulate
-        inner_verts = points[inner_vert_indices]
-        inner_tri_indices = inner_vert_indices[
-            earclip_triangulation(inner_verts, rings)
-        ]
-        # Remove null triangles, coming from adjascent points
-        iti = inner_tri_indices
-        null1 = (iti[0::3] + 1 == iti[1::3]) & (iti[0::3] + 2 == iti[2::3])
-        null2 = (iti[0::3] - 1 == iti[1::3]) & (iti[0::3] - 2 == iti[2::3])
-        inner_tri_indices = iti[~(null1 | null2).repeat(3)]
-
-        ovi = self.get_outer_vert_indices()
-        tri_indices = np.hstack([ovi, inner_tri_indices])
-        return tri_indices
-
-    def refresh_joint_angles(self) -> Self:
-        for mob in self.get_family():
-            mob.needs_new_joint_angles = True
-        return self
-
-    def get_joint_angles(self, refresh: bool = False) -> np.ndarray:
-        """
-        The 'joint product' is a 4-vector holding the cross and dot
-        product between tangent vectors at a joint
-        """
-        if not self.needs_new_joint_angles and not refresh:
-            return self.data["joint_angle"][:, 0]
-
-        if "joint_angle" in self.locked_data_keys:
-            return self.data["joint_angle"][:, 0]
-
-        self.needs_new_joint_angles = False
-        self._data_has_changed = True
-
-        # Rotate points such that positive z direction is the normal
-        points = self.get_points() @ rotation_between_vectors(OUT, self.get_unit_normal())
-
-        if len(points) < 3:
-            return self.data["joint_angle"][:, 0]
-
-        # Find all the unit tangent vectors at each joint
-        a0, h, a1 = points[0:-1:2], points[1::2], points[2::2]
-        a0_to_h = h - a0
-        h_to_a1 = a1 - h
-
-        # Tangent vectors into each vertex
-        v_in = np.zeros(points.shape)
-        # Tangent vectors out of each vertex
-        v_out = np.zeros(points.shape)
-
-        v_in[1::2] = a0_to_h
-        v_in[2::2] = h_to_a1
-        v_out[0:-1:2] = a0_to_h
-        v_out[1::2] = h_to_a1
-
-        # Joint up closed loops, or mark unclosed paths as such
-        ends = self.get_subpath_end_indices()
-        starts = [0, *(e + 2 for e in ends[:-1])]
-        for start, end in zip(starts, ends):
-            if start == end:
-                continue
-            if (points[start] == points[end]).all():
-                v_in[start] = v_out[end - 1]
-                v_out[end] = v_in[start + 1]
-            else:
-                v_in[start] = v_out[start]
-                v_out[end] = v_in[end]
-
-        # Find the angles between vectors into each vertex, and out of it
-        angles_in = np.arctan2(v_in[:, 1], v_in[:, 0])
-        angles_out = np.arctan2(v_out[:, 1], v_out[:, 0])
-        angle_diffs = angles_out - angles_in
-        angle_diffs[angle_diffs < -PI] += TAU
-        angle_diffs[angle_diffs > PI] -= TAU
-        self.data["joint_angle"][:, 0] = angle_diffs
-        return self.data["joint_angle"][:, 0]
-
-    def lock_matching_data(self, vmobject1: VMobject, vmobject2: VMobject) -> Self:
-        for mob in [self, vmobject1, vmobject2]:
-            mob.get_joint_angles()
-        super().lock_matching_data(vmobject1, vmobject2)
-        return self
-
     def triggers_refresh(func: Callable):
         @wraps(func)
         def wrapper(self, *args, refresh=True, **kwargs):
             func(self, *args, **kwargs)
             if refresh:
-                self.subpath_end_indices = None
-                self.refresh_joint_angles()
+                self.set_subpath_range()
                 self.refresh_unit_normal()
             return self
         return wrapper
@@ -1205,16 +1333,19 @@ class VMobject(Mobject):
         return super().append_points(points)
 
     def reverse_points(self, recurse: bool = True) -> Self:
-        # This will reset which anchors are
-        # considered path ends
         for mob in self.get_family(recurse):
             if not mob.has_points():
                 continue
+            # Move the null curve marking the end of each subpath, so that it still
+            # marks an end once the order of the points is flipped
             inner_ends = mob.get_subpath_end_indices()[:-1]
-            mob.data["point"][inner_ends + 1] = mob.data["point"][inner_ends + 2]
-            mob.data["base_normal"][1::2] *= -1  # Invert normal vector
-            self.subpath_end_indices = None
-        return super().reverse_points()
+            with mob.data.being_written() as data:
+                data["point"][inner_ends + 1] = data["point"][inner_ends + 2]
+            mob.uniforms["unit_normal"] = -mob.uniforms["unit_normal"]
+        super().reverse_points()
+        for mob in self.get_family(recurse):
+            mob.set_subpath_range()
+        return self
 
     @triggers_refresh
     def set_data(self, data: np.ndarray) -> Self:
@@ -1257,40 +1388,6 @@ class VMobject(Mobject):
         for mob in self.get_family():
             mob.get_unit_normal(refresh=True)
         return self
-
-    def set_animating_status(self, is_animating: bool, recurse: bool = True):
-        super().set_animating_status(is_animating, recurse)
-        for submob in self.get_family(recurse):
-            submob.get_joint_angles(refresh=True)
-        return self
-
-    # For shaders
-
-    def init_shader_wrapper(self, ctx: Context):
-        self.shader_wrapper = VShaderWrapper(
-            ctx=ctx,
-            vert_data=self.data,
-            mobject_uniforms=self.uniforms,
-            code_replacements=self.shader_code_replacements,
-            stroke_behind=self.stroke_behind,
-            depth_test=self.depth_test
-        )
-
-    def refresh_shader_wrapper_id(self):
-        for submob in self.get_family():
-            if submob.shader_wrapper is not None:
-                submob.shader_wrapper.stroke_behind = submob.stroke_behind
-        super().refresh_shader_wrapper_id()
-        return self
-
-    def get_shader_data(self) -> np.ndarray:
-        # Do we want this elsewhere? Say whenever points are refreshed or something?
-        self.get_joint_angles()
-        self.data["base_normal"][0::2] = self.data["point"][0]
-        return super().get_shader_data()
-
-    def get_shader_vert_indices(self) -> Optional[np.ndarray]:
-        return self.get_outer_vert_indices()
 
 
 class VGroup(Group, VMobject, Generic[SubVmobjectType]):

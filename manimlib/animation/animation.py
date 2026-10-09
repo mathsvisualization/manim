@@ -74,10 +74,35 @@ class Animation(object):
             self.mobject_was_updating = not self.mobject.updating_suspended
             self.mobject.suspend_updating()
         self.families = list(self.get_all_families_zipped())
+        self.prepare_interpolation()
         self.interpolate(0)
+
+    def prepare_interpolation(self) -> None:
+        """
+        Whatever holds of the two ends for the whole of the animation, settled here rather
+        than found again in every blend, see Mobject.prepare_interpolation.
+
+        One which changes its ends after they have been made says so by calling this again,
+        see FadeTransform.
+        """
+        ends = self.get_interpolation_ends()
+        if ends is not None:
+            self.mobject.prepare_interpolation(*ends)
+
+    def get_interpolation_ends(self) -> tuple[Mobject, Mobject] | None:
+        """
+        The two states every blend this animation makes runs between, in the order it blends
+        them, or none where it makes no such blend and so has nothing to settle in advance.
+
+        Saying so is the animation's to do rather than something read off the mobjects it
+        gathers: those same three may be two ends with the mobject between them, or a mobject
+        and two others put to some other use entirely.
+        """
+        return None
 
     def finish(self) -> None:
         self.interpolate(self.final_alpha_value)
+        self.mobject.turn_off_interpolation_skip()
         self.mobject.set_animating_status(False)
         if self.suspend_mobject_updating and self.mobject_was_updating:
             self.mobject.resume_updating()
@@ -102,23 +127,26 @@ class Animation(object):
             for mob in self.get_all_mobjects()
         ])
 
-    def update_mobjects(self, dt: float) -> None:
+    def update_reference_mobjects(self, dt: float, frame_rate: float | None = None) -> None:
         """
         Updates things like starting_mobject, and (for
         Transforms) target_mobject.
         """
-        for mob in self.get_all_mobjects_to_update():
-            mob.update(dt)
+        for mob in self.get_reference_mobjects():
+            mob.update(dt, frame_rate=frame_rate)
 
-    def get_all_mobjects_to_update(self) -> list[Mobject]:
-        # The surrounding scene typically handles
-        # updating of self.mobject.
-        items = list(filter(
-            lambda m: m is not self.mobject,
-            self.get_all_mobjects()
-        ))
-        items = remove_list_redundancies(items)
-        return items
+    def get_reference_mobjects(self) -> list[Mobject]:
+        """
+        Returns mobjects the Animation tracks other than
+        self.mobject, e.g. the start and end points of
+        interpolation.
+        """
+        # Remove redundancies for cases like Transform where target and target_copy
+        # are the same, which happens when the already align.
+        return remove_list_redundancies([
+            mob for mob in self.get_all_mobjects()
+            if mob is not self.mobject
+        ])
 
     def copy(self):
         return deepcopy(self)

@@ -1,6 +1,15 @@
-import pkg_resources
+try:
+    from importlib.metadata import version, PackageNotFoundError
+except ImportError:  # For Python <3.8 fallback
+    from importlib_metadata import version, PackageNotFoundError  # type: ignore
 
-__version__ = pkg_resources.get_distribution("manimgl").version
+try:
+    __version__ = version("manimgl")
+except PackageNotFoundError:
+    __version__ = "unknown"
+
+
+from manimlib.config import manim_config
 
 from typing import TYPE_CHECKING
 
@@ -30,6 +39,7 @@ from manimlib.camera.camera import *
 from manimlib.mobject.boolean_ops import *
 from manimlib.mobject.changing import *
 from manimlib.mobject.coordinate_systems import *
+from manimlib.mobject.fractals import *
 from manimlib.mobject.frame import *
 from manimlib.mobject.functions import *
 from manimlib.mobject.geometry import *
@@ -53,12 +63,16 @@ from manimlib.mobject.types.dot_cloud import *
 from manimlib.mobject.types.image_mobject import *
 from manimlib.mobject.types.point_cloud_mobject import *
 from manimlib.mobject.types.surface import *
+from manimlib.mobject.types.video_mobject import *
 from manimlib.mobject.types.vectorized_mobject import *
 from manimlib.mobject.value_tracker import *
 from manimlib.mobject.vector_field import *
 
 from manimlib.scene.interactive_scene import *
 from manimlib.scene.scene import *
+
+from manimlib.renderer.shader_source import get_colormap_code
+from manimlib.renderer.uniform_block import *
 
 from manimlib.utils.bezier import *
 from manimlib.utils.cache import *
@@ -72,7 +86,7 @@ from manimlib.utils.iterables import *
 from manimlib.utils.paths import *
 from manimlib.utils.rate_functions import *
 from manimlib.utils.simple_functions import *
-from manimlib.utils.shaders import *
 from manimlib.utils.sounds import *
 from manimlib.utils.space_ops import *
+from manimlib.utils.svg_export import *
 from manimlib.utils.tex import *

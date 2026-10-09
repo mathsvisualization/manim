@@ -38,13 +38,18 @@ def get_tex_config(template: str = "") -> tuple[str, str]:
 
 
 def get_full_tex(content: str, preamble: str = ""):
-    return "\n\n".join((
-        "\\documentclass[preview]{standalone}",
-        preamble,
-        "\\begin{document}",
-        content,
-        "\\end{document}"
-    )) + "\n"
+    return (
+        "\n\n".join(
+            (
+                "\\documentclass[preview]{standalone}",
+                preamble,
+                "\\begin{document}",
+                content,
+                "\\end{document}",
+            )
+        )
+        + "\n"
+    )
 
 
 @lru_cache(maxsize=128)
@@ -93,53 +98,61 @@ def full_tex_to_svg(full_tex: str, compiler: str = "latex", message: str = ""):
     else:
         raise NotImplementedError(f"Compiler '{compiler}' is not implemented")
 
-    # Write intermediate files to a temporary directory
-    with tempfile.TemporaryDirectory() as temp_dir:
-        tex_path = Path(temp_dir, "working").with_suffix(".tex")
-        dvi_path = tex_path.with_suffix(dvi_ext)
+    # Use the custom LaTeX cache directory from the config
+    temp_dir = Path(manim_config.directories.latex_cache)
+    temp_dir.mkdir(exist_ok=True)  # Create the directory if it does not already exist
 
-        # Write tex file
-        tex_path.write_text(full_tex)
+    # Define paths for the intermediate TeX and DVI files
+    tex_path = temp_dir / "working.tex"
+    dvi_path = tex_path.with_suffix(dvi_ext)
 
-        # Run latex compiler
-        process = subprocess.run(
-            [
-                compiler,
-                *(['-no-pdf'] if compiler == "xelatex" else []),
-                "-interaction=batchmode",
-                "-halt-on-error",
-                f"-output-directory={temp_dir}",
-                tex_path
-            ],
-            capture_output=True,
-            text=True
-        )
+    # Write tex file
+    tex_path.write_text(full_tex)
 
-        if process.returncode != 0:
-            # Handle error
-            error_str = ""
-            log_path = tex_path.with_suffix(".log")
-            if log_path.exists():
-                content = log_path.read_text()
-                error_match = re.search(r"(?<=\n! ).*\n.*\n", content)
-                if error_match:
-                    error_str = error_match.group()
-            raise LatexError(error_str or "LaTeX compilation failed")
+    # Run latex compiler
+    process = subprocess.run(
+        [
+            compiler,
+            *(["-no-pdf"] if compiler == "xelatex" else []),
+            "-interaction=batchmode",
+            "-halt-on-error",
+            f"-output-directory={temp_dir}",
+            tex_path.as_posix(),
+        ],
+        capture_output=True,
+        text=True,
+    )
 
-        # Run dvisvgm and capture output directly
-        process = subprocess.run(
-            [
-                "dvisvgm",
-                dvi_path,
-                "-n",  # no fonts
-                "-v", "0",  # quiet
-                "--stdout",  # output to stdout instead of file
-            ],
-            capture_output=True
-        )
+    if process.returncode != 0 and not dvi_path.exists():
+        # Handle error
+        error_str = ""
+        log_path = tex_path.with_suffix(".log")
+        if log_path.exists():
+            content = log_path.read_text()
+            error_match = re.search(r"(?<=\n! ).*\n.*\n", content)
+            if error_match:
+                error_str = error_match.group()
+        raise LatexError(error_str or "LaTeX compilation failed")
 
-        # Return SVG string
-        result = process.stdout.decode('utf-8')
+    # Run dvisvgm and capture output directly
+    process = subprocess.run(
+        [
+            "dvisvgm",
+            dvi_path,
+            "-n",  # no fonts
+            "-v",
+            "0",  # quiet
+            "--stdout",  # output to stdout instead of file
+        ],
+        capture_output=True,
+    )
+
+    if process.returncode != 0:
+        error_str = process.stderr.decode("utf-8", errors="replace").strip()
+        raise LatexError(error_str or "dvisvgm failed to convert DVI to SVG")
+
+    # Return SVG string
+    result = process.stdout.decode("utf-8")
 
     if message:
         print(" " * len(message), end="\r")

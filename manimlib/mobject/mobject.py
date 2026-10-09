@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import copy
 from functools import wraps
+import inspect
 import itertools as it
 import os
 import pickle
 import random
 import sys
 
-import moderngl
 import numbers
 import numpy as np
 
@@ -23,23 +23,28 @@ from manimlib.event_handler import EVENT_DISPATCHER
 from manimlib.event_handler.event_listner import EventListener
 from manimlib.event_handler.event_type import EventType
 from manimlib.logger import log
-from manimlib.shader_wrapper import ShaderWrapper
+from manimlib.renderer.drawing import Drawing
+from manimlib.renderer.texture import TextureSource
+from manimlib.renderer.texture import check_texture_filter
+from manimlib.renderer.uniform_block import COMMON_UNIFORMS
+from manimlib.renderer.uniform_block import Uniforms
+from manimlib.renderer.uniform_block import uniform_block_dtype
+from manimlib.utils.structured_array import StructuredArray
 from manimlib.utils.color import color_gradient
 from manimlib.utils.color import color_to_rgb
 from manimlib.utils.color import get_colormap_list
 from manimlib.utils.color import rgb_to_hex
 from manimlib.utils.iterables import arrays_match
-from manimlib.utils.iterables import array_is_constant
-from manimlib.utils.iterables import batch_by_property
 from manimlib.utils.iterables import list_update
 from manimlib.utils.iterables import listify
 from manimlib.utils.iterables import resize_array
 from manimlib.utils.iterables import resize_preserving_order
 from manimlib.utils.iterables import resize_with_interpolation
+from manimlib.utils.iterables import keep_larger
 from manimlib.utils.bezier import integer_interpolate
 from manimlib.utils.bezier import interpolate
 from manimlib.utils.paths import straight_path
-from manimlib.utils.shaders import get_colormap_code
+from manimlib.renderer.shader_source import get_colormap_code
 from manimlib.utils.space_ops import angle_of_vector
 from manimlib.utils.space_ops import get_norm
 from manimlib.utils.space_ops import rotation_matrix_transpose
@@ -52,13 +57,12 @@ SubmobjectType = TypeVar('SubmobjectType', bound='Mobject')
 if TYPE_CHECKING:
     from typing import Callable, Iterator, Union, Tuple, Optional, Any
     import numpy.typing as npt
-    from manimlib.typing import ManimColor, Vect3, Vect4Array, Vect3Array, UniformDict, Self
-    from moderngl.context import Context
+    from manimlib.typing import ManimColor, Vect3, Vect4Array, Vect3Array, Self
 
     T = TypeVar('T')
     TimeBasedUpdater = Callable[["Mobject", float], "Mobject" | None]
     NonTimeUpdater = Callable[["Mobject"], "Mobject" | None]
-    Updater = Union[TimeBasedUpdater, NonTimeUpdater]
+    UpdateFunction = Union[TimeBasedUpdater, NonTimeUpdater]
 
 
 class Mobject(object):
@@ -66,23 +70,38 @@ class Mobject(object):
     Mathematical Object
     """
     dim: int = 3
-    shader_folder: str = ""
-    render_primitive: int = moderngl.TRIANGLE_STRIP
-    # Must match in attributes of vert shader
+    # What draws this kind of mobject, see drawing.Drawing
+    drawing_class: type = Drawing
+    shader_file: str = ""
+    # No shader is handed vertex attributes. Each reads the records of the buffer they
+    # are gathered in itself, see inserts/read_data.wgsl.
+    verts_per_record: int = 0
+    # The offsets a shader indexes its records by are generated from this,
+    # so the two cannot disagree. See shader_source.data_layout_code, 
     data_dtype: np.dtype = np.dtype([
         ('point', np.float32, (3,)),
         ('rgba', np.float32, (4,)),
     ])
-    aligned_data_keys = ['point']
+    # How its images are read between their pixels, see renderer.gpu.Gpu.sampler
+    texture_filter: str = "linear"
+    # One value each for the whole mobject, as opposed to one per point
+    uniform_dtype: np.dtype = uniform_block_dtype(*COMMON_UNIFORMS)
+    # Data holding a point, which transforms act on, and which a blend of two mobjects
+    # sends along a path rather than straight from one to the other.
     pointlike_data_keys = ['point']
+    # Values saying how the points are grouped rather than where they are.
+    # See VMobject.set_subpath_range.
+    structural_data_keys: list[str] = []
+    # Uniforms holding a point, which transforms act on just as they do on the points
+    pointlike_uniform_keys: list[str] = []
 
     def __init__(
         self,
         color: ManimColor = DEFAULT_MOBJECT_COLOR,
         opacity: float = 1.0,
         shading: Tuple[float, float, float] = (0.0, 0.0, 0.0),
-        # For shaders
-        texture_paths: dict[str, str] | None = None,
+        textures: dict[str, TextureSource] | None = None,
+        texture_filter: str | None = None,
         # If true, the mobject will not get rotated according to camera position
         is_fixed_in_frame: bool = False,
         depth_test: bool = False,
@@ -91,7 +110,9 @@ class Mobject(object):
         self.color = color
         self.opacity = opacity
         self.shading = shading
-        self.texture_paths = texture_paths
+        self.textures = textures or dict()
+        if texture_filter is not None:
+            self.set_texture_filter(texture_filter, recurse=False)
         self.depth_test = depth_test
         self.z_index = z_index
 
@@ -99,16 +120,14 @@ class Mobject(object):
         self.submobjects: list[Mobject] = []
         self.parents: list[Mobject] = []
         self.family: list[Mobject] | None = [self]
-        self.locked_data_keys: set[str] = set()
-        self.const_data_keys: set[str] = set()
-        self.locked_uniform_keys: set[str] = set()
         self.saved_state = None
         self.target = None
         self.bounding_box: Vect3Array = np.zeros((3, 3))
-        self.shader_wrapper: Optional[ShaderWrapper] = None
+        # Whether the box is the same at both ends of an animation, and so wants no blending,
+        # see prepare_interpolation
+        self.skip_box_interpolation: bool = False
         self._is_animating: bool = False
         self._needs_new_bounding_box: bool = True
-        self._data_has_changed: bool = True
         self.shader_code_replacements: dict[str, str] = dict()
 
         self.init_data()
@@ -135,15 +154,12 @@ class Mobject(object):
         return self.replicate(other)
 
     def init_data(self, length: int = 0):
-        self.data = np.zeros(length, dtype=self.data_dtype)
-        self._data_defaults = np.ones(1, dtype=self.data.dtype)
+        self.data: StructuredArray = StructuredArray(self.data_dtype, length)
 
     def init_uniforms(self):
-        self.uniforms: UniformDict = {
-            "is_fixed_in_frame": 0.0,
-            "shading": np.array(self.shading, dtype=float),
-            "clip_plane": np.zeros(4),
-        }
+        # Anything left unmentioned starts at zero, as with data
+        self.uniforms: Uniforms = Uniforms(self.uniform_dtype)
+        self.uniforms["shading"] = self.shading
 
     def init_colors(self):
         self.set_color(self.color, self.opacity)
@@ -152,11 +168,8 @@ class Mobject(object):
         # Typically implemented in subclass, unlpess purposefully left blank
         pass
 
-    def set_uniforms(self, uniforms: dict) -> Self:
-        for key, value in uniforms.items():
-            if isinstance(value, np.ndarray):
-                value = value.copy()
-            self.uniforms[key] = value
+    def set_uniforms(self, uniforms: Uniforms) -> Self:
+        self.uniforms.match(uniforms)
         return self
 
     @property
@@ -202,80 +215,44 @@ class Mobject(object):
         """
         return _FunctionalUpdaterBuilder(self)
 
-    def note_changed_data(self, recurse_up: bool = True) -> Self:
-        self._data_has_changed = True
-        if recurse_up:
-            for mob in self.parents:
-                mob.note_changed_data()
-        return self
-
-    @staticmethod
-    def affects_data(func: Callable[..., T]) -> Callable[..., T]:
-        @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            result = func(self, *args, **kwargs)
-            self.note_changed_data()
-            return result
-        return wrapper
-
-    @staticmethod
-    def affects_family_data(func: Callable[..., T]) -> Callable[..., T]:
-        @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            result = func(self, *args, **kwargs)
-            for mob in self.family_members_with_points():
-                mob.note_changed_data()
-            return result
-        return wrapper
-
     # Only these methods should directly affect points
-    @affects_data
-    def set_data(self, data: np.ndarray) -> Self:
-        assert data.dtype == self.data.dtype
-        self.resize_points(len(data))
-        self.data[:] = data
+    def set_data(self, data: np.ndarray | StructuredArray) -> Self:
+        array = data.array if isinstance(data, StructuredArray) else data
+        assert array.dtype == self.data.dtype
+        self.resize_points(len(array))
+        self.data[:] = array
         return self
 
-    @affects_data
     def resize_points(
         self,
         new_length: int,
         resize_func: Callable[[np.ndarray, int], np.ndarray] = resize_array
     ) -> Self:
-        if new_length == 0:
-            if len(self.data) > 0:
-                self._data_defaults[:1] = self.data[:1]
-        elif self.get_num_points() == 0:
-            self.data = self._data_defaults.copy()
-
-        self.data = resize_func(self.data, new_length)
+        self.data.resize(new_length, resize_func)
         self.refresh_bounding_box()
         return self
 
-    @affects_data
     def set_points(self, points: Vect3Array | list[Vect3]) -> Self:
         self.resize_points(len(points), resize_func=resize_preserving_order)
-        self.data["point"][:] = points
+        self.data["point"] = points
         return self
 
-    @affects_data
     def append_points(self, new_points: Vect3Array) -> Self:
         n = self.get_num_points()
         self.resize_points(n + len(new_points))
         # Have most data default to the last value
         self.data[n:] = self.data[n - 1]
-        # Then read in new points
-        self.data["point"][n:] = new_points
+        # Then read in the new points
+        with self.data.being_written() as data:
+            data["point"][n:] = new_points
         self.refresh_bounding_box()
         return self
 
-    @affects_family_data
     def reverse_points(self) -> Self:
         for mob in self.get_family():
             mob.data[:] = mob.data[::-1]
         return self
 
-    @affects_family_data
     def apply_points_function(
         self,
         func: Callable[[np.ndarray], np.ndarray],
@@ -286,16 +263,25 @@ class Mobject(object):
         if about_point is None and about_edge is not None:
             about_point = self.get_bounding_box_point(about_edge)
 
-        for mob in self.get_family():
-            arrs = [mob.data[key] for key in mob.pointlike_data_keys if mob.has_points()]
-            if works_on_bounding_box:
-                arrs.append(mob.get_bounding_box())
+        def moved(points: Vect3Array) -> Vect3Array:
+            if about_point is None:
+                return func(points)
+            return func(points - about_point) + about_point
 
-            for arr in arrs:
-                if about_point is None:
-                    arr[:] = func(arr)
-                else:
-                    arr[:] = func(arr - about_point) + about_point
+        for mob in self.get_family():
+            # Asked for before the points move, since a stale one is worked out from
+            # them, and moving it is only right for the box the points had
+            box = mob.get_bounding_box() if works_on_bounding_box else None
+            if mob.has_points():
+                for key in mob.pointlike_data_keys:
+                    mob.data[key] = moved(mob.data[key])
+            for key in mob.pointlike_uniform_keys:
+                mob.uniforms.apply(key, moved)
+            if box is not None:
+                # Re-derive the corners, since a negative factor swaps which is which
+                corners = moved(box[::2].copy())
+                box[0], box[2] = corners.min(0), corners.max(0)
+                box[1] = (box[0] + box[2]) / 2
 
         if not works_on_bounding_box:
             self.refresh_bounding_box(recurse_down=True)
@@ -304,11 +290,10 @@ class Mobject(object):
                 parent.refresh_bounding_box()
         return self
 
-    @affects_data
     def match_points(self, mobject: Mobject) -> Self:
         self.resize_points(len(mobject.data), resize_func=resize_preserving_order)
         for key in self.pointlike_data_keys:
-            self.data[key][:] = mobject.data[key]
+            self.data[key] = mobject.data[key]
         return self
 
     # Others related to points
@@ -410,7 +395,6 @@ class Mobject(object):
     def split(self) -> list[Self]:
         return self.submobjects
 
-    @affects_data
     def note_changed_family(self, only_changed_order=False) -> Self:
         self.family = None
         if not only_changed_order:
@@ -671,10 +655,9 @@ class Mobject(object):
         # copy.copy is only a shallow copy, so the internal
         # data which are numpy arrays or other mobjects still
         # need to be further copied.
-        result.uniforms = {
-            key: value.copy() if isinstance(value, np.ndarray) else value
-            for key, value in self.uniforms.items()
-        }
+        result.data = self.data.copy()
+        result.uniforms = self.uniforms.copy()
+        result.textures = {name: src.copy() for name, src in self.textures.items()}
 
         # Instead of adding using result.add, which does some checks for updating
         # updater statues and bounding box, just directly modify the family-related
@@ -687,8 +670,6 @@ class Mobject(object):
         # Similarly, instead of calling match_updaters, since we know the status
         # won't have changed, just directly match.
         result.updaters = list(self.updaters)
-        result._data_has_changed = True
-        result.shader_wrapper = None
 
         family = self.get_family()
         for attr, value in self.__dict__.items():
@@ -727,10 +708,11 @@ class Mobject(object):
             sm1.set_data(sm2.data)
             sm1.set_uniforms(sm2.uniforms)
             sm1.bounding_box[:] = sm2.bounding_box
-            sm1.shader_folder = sm2.shader_folder
-            sm1.texture_paths = sm2.texture_paths
+            sm1.pointlike_uniform_keys = sm2.pointlike_uniform_keys
+            sm1.shader_file = sm2.shader_file
+            sm1.textures = {name: src.copy() for name, src in sm2.textures.items()}
+            sm1.texture_filter = sm2.texture_filter
             sm1.depth_test = sm2.depth_test
-            sm1.render_primitive = sm2.render_primitive
             sm1._needs_new_bounding_box = sm2._needs_new_bounding_box
         # Make sure named family members carry over
         for attr, value in list(mobject.__dict__.items()):
@@ -750,18 +732,12 @@ class Mobject(object):
                 return False
             if not m1.data.dtype == m2.data.dtype:
                 return False
-            for key in m1.data.dtype.names:
-                if not np.isclose(m1.data[key], m2.data[key]).all():
-                    return False
-            if set(m1.uniforms).difference(m2.uniforms):
+            if not np.isclose(m1.data.floats, m2.data.floats).all():
                 return False
-            for key in m1.uniforms:
-                value1 = m1.uniforms[key]
-                value2 = m2.uniforms[key]
-                if isinstance(value1, np.ndarray) and isinstance(value2, np.ndarray) and not value1.size == value2.size:
-                    return False
-                if not np.isclose(value1, value2).all():
-                    return False
+            if not m1.uniforms.array.dtype == m2.uniforms.array.dtype:
+                return False
+            if not np.isclose(m1.uniforms.floats, m2.uniforms.floats).all():
+                return False
         return True
 
     def has_same_shape_as(self, mobject: Mobject) -> bool:
@@ -817,51 +793,61 @@ class Mobject(object):
     def init_updaters(self):
         self.updaters: list[Updater] = list()
         self._has_updaters_in_family: Optional[bool] = False
+        self._has_time_based_updaters_in_family: Optional[bool] = False
         self.updating_suspended: bool = False
 
-    def update(self, dt: float = 0, recurse: bool = True) -> Self:
+    def update(
+        self,
+        dt: float = 0,
+        recurse: bool = True,
+        frame_rate: float | None = None
+    ) -> Self:
+        """
+        Calls all updaters in the family. Passing in a frame_rate accounts for
+        the possibility that dt spans multiple frames, as happens when
+        animations are being skipped, in which case time based updaters are
+        called once for each frame that dt stands in for.
+        """
         if not self.has_updaters() or self.updating_suspended:
             return self
         if recurse:
             for submob in self.submobjects:
-                submob.update(dt, recurse)
+                submob.update(dt, recurse, frame_rate)
         for updater in self.updaters:
-            # This is hacky, but if an updater takes dt as an arg,
-            # it will be passed the change in time from here
-            if "dt" in updater.__code__.co_varnames:
-                updater(self, dt=dt)
-            else:
-                updater(self)
+            updater(self, dt, frame_rate)
         return self
 
-    def get_updaters(self) -> list[Updater]:
-        return self.updaters
+    def get_updaters(self) -> list[UpdateFunction]:
+        return [updater.func for updater in self.updaters]
 
-    def add_updater(self, update_func: Updater, call: bool = True) -> Self:
-        self.updaters.append(update_func)
+    def add_updater(self, update_func: UpdateFunction, call: bool = True) -> Self:
+        self.updaters.append(Updater(update_func))
+        self.refresh_has_updater_status()
         if call:
             self.update(dt=0)
-        self.refresh_has_updater_status()
-        self.update()
         return self
 
-    def insert_updater(self, update_func: Updater, index=0):
-        self.updaters.insert(index, update_func)
+    def insert_updater(self, update_func: UpdateFunction, index=0):
+        self.updaters.insert(index, Updater(update_func))
         self.refresh_has_updater_status()
         return self
 
-    def remove_updater(self, update_func: Updater) -> Self:
-        while update_func in self.updaters:
-            self.updaters.remove(update_func)
+    def remove_updater(self, update_func: UpdateFunction) -> Self:
+        self.updaters = [
+            updater for updater in self.updaters
+            if updater.func is not update_func
+        ]
         self.refresh_has_updater_status()
         return self
 
     def clear_updaters(self, recurse: bool = True) -> Self:
         for mob in self.get_family(recurse):
             mob.updaters = []
-            mob._has_updaters_in_family = False
-        for parent in self.get_ancestors():
-            parent._has_updaters_in_family = False
+            mob._has_updaters_in_family = None
+            mob._has_time_based_updaters_in_family = None
+        # Note this also propagates up to any ancestors, which may
+        # still have other descendants with updaters
+        self.refresh_has_updater_status()
         return self
 
     def match_updaters(self, mobject: Mobject) -> Self:
@@ -895,8 +881,19 @@ class Mobject(object):
             )
         return self._has_updaters_in_family
 
+    def has_time_based_updaters(self) -> bool:
+        if self._has_time_based_updaters_in_family is None:
+            # Recompute and save
+            self._has_time_based_updaters_in_family = any(
+                updater.takes_dt
+                for mob in self.get_family()
+                for updater in mob.updaters
+            )
+        return self._has_time_based_updaters_in_family
+
     def refresh_has_updater_status(self) -> Self:
         self._has_updaters_in_family = None
+        self._has_time_based_updaters_in_family = None
         for parent in self.parents:
             parent.refresh_has_updater_status()
         return self
@@ -1232,8 +1229,9 @@ class Mobject(object):
     def set_z(self, z: float, direction: Vect3 = ORIGIN) -> Self:
         return self.set_coord(z, 2, direction)
 
-    def set_z_index(self, z_index: int) -> Self:
-        self.z_index = z_index
+    def set_z_index(self, z_index: int, recurse=True) -> Self:
+        for mob in self.get_family(recurse):
+            mob.z_index = z_index
         return self
 
     def space_out_submobjects(self, factor: float = 1.5, **kwargs) -> Self:
@@ -1284,6 +1282,14 @@ class Mobject(object):
         self.scale((length + buff) / length)
         return self
 
+    def put_start_on(self, point: Vect3) -> Self:
+        self.shift(point - self.get_start())
+        return self
+
+    def put_end_on(self, point: Vect3) -> Self:
+        self.shift(point - self.get_end())
+        return self
+
     def put_start_and_end_on(self, start: Vect3, end: Vect3) -> Self:
         curr_start, curr_end = self.get_start_and_end()
         curr_vect = curr_end - curr_start
@@ -1306,7 +1312,6 @@ class Mobject(object):
 
     # Color functions
 
-    @affects_family_data
     def set_rgba_array(
         self,
         rgba_array: npt.ArrayLike,
@@ -1314,8 +1319,8 @@ class Mobject(object):
         recurse: bool = False
     ) -> Self:
         for mob in self.get_family(recurse):
-            data = mob.data if mob.get_num_points() > 0 else mob._data_defaults
-            data[name][:] = rgba_array
+            with mob.data.being_written() as data:
+                data[name] = rgba_array
         return self
 
     def set_color_by_rgba_func(
@@ -1324,7 +1329,7 @@ class Mobject(object):
         recurse: bool = True
     ) -> Self:
         """
-        Func should take in a point in R3 and output an rgba value
+        Func should accept an (N, 3) array and return an (N, 4) array of RGB values in [0,1]
         """
         for mob in self.get_family(recurse):
             mob.set_rgba_array(func(mob.get_points()))
@@ -1337,7 +1342,7 @@ class Mobject(object):
         recurse: bool = True
     ) -> Self:
         """
-        Func should take in a point in R3 and output an rgb value
+        Func should accept an (N, 3) array and return an (N, 3) array of RGB values in [0,1]
         """
         for mob in self.get_family(recurse):
             points = mob.get_points()
@@ -1345,7 +1350,6 @@ class Mobject(object):
             mob.set_rgba_array(np.hstack((func(points), opacity)))
         return self
 
-    @affects_family_data
     def set_rgba_array_by_color(
         self,
         color: ManimColor | Iterable[ManimColor] | None = None,
@@ -1354,16 +1358,16 @@ class Mobject(object):
         recurse: bool = True
     ) -> Self:
         for mob in self.get_family(recurse):
-            data = mob.data if mob.has_points() > 0 else mob._data_defaults
-            if color is not None:
-                rgbs = np.array(list(map(color_to_rgb, listify(color))))
-                if 1 < len(rgbs):
-                    rgbs = resize_with_interpolation(rgbs, len(data))
-                data[name][:, :3] = rgbs
-            if opacity is not None:
-                if not isinstance(opacity, (float, int, np.floating)):
-                    opacity = resize_with_interpolation(np.array(opacity), len(data))
-                data[name][:, 3] = opacity
+            with mob.data.being_written() as data:
+                if color is not None:
+                    rgbs = np.array(list(map(color_to_rgb, listify(color))))
+                    if 1 < len(rgbs):
+                        rgbs = resize_with_interpolation(rgbs, len(data))
+                    data[name][:, :3] = rgbs
+                if opacity is not None:
+                    if not isinstance(opacity, (float, int, np.floating)):
+                        opacity = resize_with_interpolation(np.array(opacity), len(data))
+                    data[name][:, 3] = opacity
         return self
 
     def set_color(
@@ -1391,6 +1395,17 @@ class Mobject(object):
                 submob.set_opacity(opacity, recurse=True)
         return self
 
+    def set_texture_filter(self, texture_filter: str, recurse: bool = True) -> Self:
+        """
+        How the images this is drawn with are read between their pixels. The default is
+        "linear", but "nearest" can be used to take the nearest pixel, e.g. for scaled
+        up pixel art.
+        """
+        check_texture_filter(texture_filter)
+        for mob in self.get_family(recurse):
+            mob.texture_filter = texture_filter
+        return self
+
     def get_color(self) -> str:
         return rgb_to_hex(self.data["rgba"][0, :3])
 
@@ -1407,7 +1422,7 @@ class Mobject(object):
             self.set_submobject_colors_by_gradient(*colors)
         return self
 
-    def set_submobject_colors_by_gradient(self, *colors: ManimColor) -> Self:
+    def set_submobject_colors_by_gradient(self, *colors: ManimColor, interp_by_hsl=False) -> Self:
         if len(colors) == 0:
             raise Exception("Need at least one color")
         elif len(colors) == 1:
@@ -1415,7 +1430,7 @@ class Mobject(object):
 
         # mobs = self.family_members_with_points()
         mobs = self.submobjects
-        new_colors = color_gradient(colors, len(mobs))
+        new_colors = color_gradient(colors, len(mobs), interp_by_hsl=interp_by_hsl)
 
         for mob, color in zip(mobs, new_colors):
             mob.set_color(color)
@@ -1623,11 +1638,6 @@ class Mobject(object):
             for a1, a2 in zip(alphas[:-1], alphas[1:])
         ])
 
-    def get_z_index_reference_point(self) -> Vect3:
-        # TODO, better place to define default z_index_group?
-        z_index_group = getattr(self, "z_index_group", self)
-        return z_index_group.get_center()
-
     # Match other mobject properties
 
     def match_color(self, mobject: Mobject) -> Self:
@@ -1802,27 +1812,34 @@ class Mobject(object):
         alpha: float,
         path_func: Callable[[np.ndarray, np.ndarray, float], np.ndarray] = straight_path
     ) -> Self:
-        keys = [k for k in self.data.dtype.names if k not in self.locked_data_keys]
-        if keys:
-            self.note_changed_data()
-        for key in keys:
-            md1 = mobject1.data[key]
-            md2 = mobject2.data[key]
-            if key in self.const_data_keys:
-                md1 = md1[0]
-                md2 = md2[0]
-            if key in self.pointlike_data_keys:
-                self.data[key] = path_func(md1, md2, alpha)
-            else:
-                self.data[key] = (1 - alpha) * md1 + alpha * md2
+        # Maps from keys to what to write over a blend of them with, none where a plain
+        # blend is right for every field, which for most mobjects going straight it is
+        data_keys_to_alt_func = None
+        uniform_keys_to_alt_func = None
+        along_a_path = path_func is not straight_path
+        if along_a_path or self.structural_data_keys:
+            data_keys_to_alt_func = {
+                key: keep_larger
+                for key in self.structural_data_keys
+            }
+        if along_a_path:
+            data_keys_to_alt_func.update({
+                key: path_func
+                for key in self.pointlike_data_keys
+            })
+            uniform_keys_to_alt_func = {
+                key: path_func
+                for key in self.pointlike_uniform_keys
+            }
 
-        for key in self.uniforms:
-            if key in self.locked_uniform_keys:
-                continue
-            if key not in mobject1.uniforms or key not in mobject2.uniforms:
-                continue
-            self.uniforms[key] = (1 - alpha) * mobject1.uniforms[key] + alpha * mobject2.uniforms[key]
-        self.bounding_box[:] = path_func(mobject1.bounding_box, mobject2.bounding_box, alpha)
+        self.data.interpolate(mobject1.data, mobject2.data, alpha, data_keys_to_alt_func)
+        self.uniforms.interpolate(
+            mobject1.uniforms, mobject2.uniforms, alpha, uniform_keys_to_alt_func,
+        )
+        if not self.skip_box_interpolation:
+            self.bounding_box[:] = path_func(
+                mobject1.bounding_box, mobject2.bounding_box, alpha,
+            )
         return self
 
     def pointwise_become_partial(self, mobject, a, b) -> Self:
@@ -1835,85 +1852,49 @@ class Mobject(object):
         # To be implemented in subclass
         return self
 
-    # Locking data
+    # Settling what an interpolation comes to before it is made
 
-    def lock_data(self, keys: Iterable[str]) -> Self:
+    def prepare_interpolation(self, mobject1: Mobject, mobject2: Mobject) -> Self:
         """
-        To speed up some animations, particularly transformations,
-        it can be handy to acknowledge which pieces of data
-        won't change during the animation so that calls to
-        interpolate can skip this, and so that it's not
-        read into the shader_wrapper objects needlessly
+        Tells every submobject's arrays what a blend between the two ends of an animation
+        comes to, before any of it is made, see StructuredArray.prepare_interpolation.
+
+        A submobject holding the same values at both ends is left alone for the length of the
+        animation: blending would only write back what is already there, at the cost of
+        sending the array to the gpu again for nothing. One whose ends are laid out
+        differently, as two kinds of mobject are, is blended a field at a time instead.
+
+        The bounding box goes the same way, kept apart from the arrays only because it is no
+        part of what a shader reads.
         """
-        if self.has_updaters():
-            return self
-        self.locked_data_keys = set(keys)
+        fam1 = mobject1.get_family()
+        fam2 = mobject2.get_family()
+        for sm, sm1, sm2 in zip(self.get_family(), fam1, fam2):
+            sm.data.prepare_interpolation(sm1.data, sm2.data)
+            sm.uniforms.prepare_interpolation(sm1.uniforms, sm2.uniforms)
+            sm.skip_box_interpolation = arrays_match(
+                sm1.get_bounding_box(), sm2.get_bounding_box(),
+            )
         return self
 
-    def lock_uniforms(self, keys: Iterable[str]) -> Self:
-        if self.has_updaters():
-            return self
-        self.locked_uniform_keys = set(keys)
-        return self
-
-    def lock_matching_data(self, mobject1: Mobject, mobject2: Mobject) -> Self:
-        tuples = zip(
-            self.get_family(),
-            mobject1.get_family(),
-            mobject2.get_family(),
-        )
-        for sm, sm1, sm2 in tuples:
-            if not sm.data.dtype == sm1.data.dtype == sm2.data.dtype:
-                continue
-            sm.lock_data(
-                key for key in sm.data.dtype.names
-                if arrays_match(sm1.data[key], sm2.data[key])
-            )
-            sm.lock_uniforms(
-                key for key in self.uniforms
-                if all(listify(mobject1.uniforms.get(key, 0) == mobject2.uniforms.get(key, 0)))
-            )
-            sm.const_data_keys = set(
-                key for key in sm.data.dtype.names
-                if key not in sm.locked_data_keys
-                if all(
-                    array_is_constant(mob.data[key])
-                    for mob in (sm, sm1, sm2)
-                )
-            )
-
-        return self
-
-    def unlock_data(self) -> Self:
+    def turn_off_interpolation_skip(self) -> Self:
         for mob in self.get_family():
-            mob.locked_data_keys = set()
-            mob.const_data_keys = set()
-            mob.locked_uniform_keys = set()
+            for arr in [mob.data, mob.uniforms]:
+                arr.turn_off_interpolation_skip()
+            mob.skip_box_interpolation = False
         return self
 
     # Operations touching shader uniforms
 
-    @staticmethod
-    def affects_shader_info_id(func: Callable[..., T]) -> Callable[..., T]:
-        @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            result = func(self, *args, **kwargs)
-            self.refresh_shader_wrapper_id()
-            return result
-        return wrapper
-
-    @affects_shader_info_id
     def set_uniform(self, recurse: bool = True, **new_uniforms) -> Self:
         for mob in self.get_family(recurse):
             mob.uniforms.update(new_uniforms)
         return self
 
-    @affects_shader_info_id
     def fix_in_frame(self, recurse: bool = True) -> Self:
         self.set_uniform(recurse, is_fixed_in_frame=1.0)
         return self
 
-    @affects_shader_info_id
     def unfix_from_frame(self, recurse: bool = True) -> Self:
         self.set_uniform(recurse, is_fixed_in_frame=0.0)
         return self
@@ -1921,76 +1902,89 @@ class Mobject(object):
     def is_fixed_in_frame(self) -> bool:
         return bool(self.uniforms["is_fixed_in_frame"])
 
-    @affects_shader_info_id
     def apply_depth_test(self, recurse: bool = True) -> Self:
         for mob in self.get_family(recurse):
             mob.depth_test = True
         return self
 
-    @affects_shader_info_id
     def deactivate_depth_test(self, recurse: bool = True) -> Self:
         for mob in self.get_family(recurse):
             mob.depth_test = False
         return self
 
-    def set_clip_plane(
+    def set_clip_plane(self, vect: Vect3, threshold: float, recurse=True) -> Self:
+        for submob in self.get_family(recurse):
+            submob.uniforms["clip_plane0"] = np.array([*vect, threshold])
+        return self
+
+    def set_clip_planes(
         self,
-        vect: Vect3 | None = None,
-        threshold: float | None = None,
+        *vect_threshold_pairs: Iterable[Tuple[Vect3, float]],
         recurse=True
     ) -> Self:
         for submob in self.get_family(recurse):
-            if vect is not None:
-                submob.uniforms["clip_plane"][:3] = vect
-            if threshold is not None:
-                submob.uniforms["clip_plane"][3] = threshold
+            for n in range(4):
+                submob.uniforms[f"clip_plane{n}"] = np.zeros(4)
+            for n, (vect, threshold) in enumerate(vect_threshold_pairs):
+                submob.uniforms[f"clip_plane{n}"] = np.array([*vect, threshold])
         return self
 
-    def deactivate_clip_plane(self) -> Self:
-        self.uniforms["clip_plane"][:] = 0
+    def deactivate_clip_plane(self, recurse=True) -> Self:
+        for submob in self.get_family(recurse):
+            for n in range(4):
+                submob.uniforms[f"clip_plane{n}"] = np.zeros(4)
         return self
+
+    def clip_to_box(self, box: Mobject, recurse=True) -> Self:
+        return self.set_clip_planes(
+            (RIGHT, -box.get_x(LEFT)),   # keep x >= left edge
+            (LEFT, box.get_x(RIGHT)),    # keep x <= right edge
+            (UP, -box.get_y(DOWN)),      # keep y >= bottom edge
+            (DOWN, box.get_y(UP)),       # keep y <= top edge
+            recurse=recurse,
+        )
 
     # Shader code manipulation
 
-    @affects_data
     def replace_shader_code(self, old: str, new: str) -> Self:
         for mob in self.get_family():
-            mob.shader_code_replacements[old] = new
-            mob.shader_wrapper = None
+            # A new dict rather than a write into the old one, so that whatever is drawing
+            # this mobject can see that its shaders have changed, see Renderer.resolve
+            mob.shader_code_replacements = {**mob.shader_code_replacements, old: new}
         return self
 
-    def set_color_by_code(self, glsl_code: str) -> Self:
+    def set_color_by_code(self, wgsl_code: str) -> Self:
         """
-        Takes a snippet of code and inserts it into a
-        context which has the following variables:
-        vec4 color, vec3 point, vec3 unit_normal.
-        The code should change the color variable
+        Takes a snippet of code and inserts it into a context which has the following
+        variables: color: vec4f, point: vec3f, normal: vec3f. The code should assign to
+        color, which being a vec4f has to be assigned to whole, WGSL having no way to
+        write to part of one.
         """
         self.replace_shader_code(
             "///// INSERT COLOR FUNCTION HERE /////",
-            glsl_code
+            wgsl_code
         )
         return self
 
     def set_color_by_xyz_func(
         self,
-        glsl_snippet: str,
+        wgsl_snippet: str,
         min_value: float = -5.0,
         max_value: float = 5.0,
         colormap: str = "viridis"
     ) -> Self:
         """
-        Pass in a glsl expression in terms of x, y and z which returns
+        Pass in a wgsl expression in terms of x, y and z which returns
         a float.
         """
         # TODO, add a version of this which changes the point data instead
         # of the shader code
         for char in "xyz":
-            glsl_snippet = glsl_snippet.replace(char, "point." + char)
+            wgsl_snippet = wgsl_snippet.replace(char, "point." + char)
         rgb_list = get_colormap_list(colormap)
         self.set_color_by_code(
-            "color.rgb = float_to_color({}, {}, {}, {});".format(
-                glsl_snippet,
+            "color = vec4f(float_to_color({}, {}, {}, {}), color.a);".format(
+                wgsl_snippet,
                 float(min_value),
                 float(max_value),
                 get_colormap_code(rgb_list)
@@ -1998,67 +1992,8 @@ class Mobject(object):
         )
         return self
 
-    # For shader data
-
-    def init_shader_wrapper(self, ctx: Context):
-        self.shader_wrapper = ShaderWrapper(
-            ctx=ctx,
-            vert_data=self.data,
-            shader_folder=self.shader_folder,
-            mobject_uniforms=self.uniforms,
-            texture_paths=self.texture_paths,
-            depth_test=self.depth_test,
-            render_primitive=self.render_primitive,
-            code_replacements=self.shader_code_replacements,
-        )
-
-    def refresh_shader_wrapper_id(self):
-        for submob in self.get_family():
-            if submob.shader_wrapper is not None:
-                submob.shader_wrapper.depth_test = submob.depth_test
-                submob.shader_wrapper.refresh_id()
-        for mob in (self, *self.get_ancestors()):
-            mob._data_has_changed = True
-        return self
-
-    def get_shader_wrapper(self, ctx: Context) -> ShaderWrapper:
-        if self.shader_wrapper is None:
-            self.init_shader_wrapper(ctx)
-        return self.shader_wrapper
-
-    def get_shader_wrapper_list(self, ctx: Context) -> list[ShaderWrapper]:
-        family = self.family_members_with_points()
-        batches = batch_by_property(family, lambda sm: sm.get_shader_wrapper(ctx).get_id())
-
-        result = []
-        for submobs, sid in batches:
-            shader_wrapper = submobs[0].shader_wrapper
-            data_list = [sm.get_shader_data() for sm in submobs]
-            shader_wrapper.read_in(data_list)
-            result.append(shader_wrapper)
-        return result
-
-    def get_shader_data(self) -> np.ndarray:
-        indices = self.get_shader_vert_indices()
-        if indices is not None:
-            return self.data[indices]
-        else:
-            return self.data
-
     def get_uniforms(self):
         return self.uniforms
-
-    def get_shader_vert_indices(self) -> Optional[np.ndarray]:
-        return None
-
-    def render(self, ctx: Context, camera_uniforms: dict):
-        if self._data_has_changed:
-            self.shader_wrappers = self.get_shader_wrapper_list(ctx)
-            self._data_has_changed = False
-        for shader_wrapper in self.shader_wrappers:
-            shader_wrapper.update_program_uniforms(camera_uniforms)
-            shader_wrapper.pre_render()
-            shader_wrapper.render()
 
     # Event Handlers
     """
@@ -2307,6 +2242,43 @@ def override_animate(method):
         return animation_method
 
     return decorator
+
+
+class Updater(object):
+    """
+    Light wrapper for a function meant to be called on a mobject every frame.
+    Such a function may take in a second argument, which is passed the change
+    in time since the last frame. This way users need not think about which of
+    the two forms they've written, and the distinction is only worked out once,
+    rather than on every call.
+    """
+
+    def __init__(self, func: UpdateFunction):
+        self.func = func
+        self.takes_dt = self.func_takes_dt(func)
+
+    @staticmethod
+    def func_takes_dt(func: UpdateFunction) -> bool:
+        try:
+            inspect.signature(func).bind(None, None)
+            return True
+        except (TypeError, ValueError):
+            # Either it takes no second argument, or it's one of the
+            # rare callables which cannot be inspected, like some builtins
+            return False
+
+    def __call__(self, mobject: Mobject, dt: float = 0, frame_rate: float | None = None) -> None:
+        if not self.takes_dt:
+            self.func(mobject)
+            return
+        # When animations are skipped, dt can span many frames at once. Time
+        # based updaters are written as if called once per frame, and often
+        # accumulate state in a way which depends on the size of the steps they
+        # take, so given a frame rate, such a jump is broken back up into the
+        # number of frames it stands in for.
+        n_steps = 1 if frame_rate is None else max(int(dt * frame_rate), 1)
+        for _ in range(n_steps):
+            self.func(mobject, dt / n_steps)
 
 
 class _UpdaterBuilder:

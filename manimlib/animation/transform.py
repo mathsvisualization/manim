@@ -28,7 +28,7 @@ class Transform(Animation):
         self,
         mobject: Mobject,
         target_mobject: Mobject | None = None,
-        path_arc: float = 0.0,
+        path_arc: float | Tuple[float, float] = 0.0,
         path_arc_axis: np.ndarray = OUT,
         path_func: Callable | None = None,
         **kwargs
@@ -43,7 +43,7 @@ class Transform(Animation):
     def init_path_func(self) -> None:
         if self.path_func is not None:
             return
-        elif self.path_arc == 0:
+        elif isinstance(self.path_arc, float) and self.path_arc == 0:
             self.path_func = straight_path
         else:
             self.path_func = path_along_arc(
@@ -56,6 +56,7 @@ class Transform(Animation):
         self.check_target_mobject_validity()
 
         if self.mobject.is_aligned_with(self.target_mobject):
+            # Nothing to align, so nothing is done to the target and it can stand as it is
             self.target_copy = self.target_mobject
         else:
             # Use a copy of target_mobject for the align_data_and_family
@@ -63,17 +64,8 @@ class Transform(Animation):
             # preserved, since calling align_data will potentially
             # change the structure of both arguments
             self.target_copy = self.target_mobject.copy()
-        self.mobject.align_data_and_family(self.target_copy)
+            self.mobject.align_data_and_family(self.target_copy)
         super().begin()
-        if not self.mobject.has_updaters():
-            self.mobject.lock_matching_data(
-                self.starting_mobject,
-                self.target_copy,
-            )
-
-    def finish(self) -> None:
-        super().finish()
-        self.mobject.unlock_data()
 
     def create_target(self) -> Mobject:
         # Has no meaningful effect here, but may be useful
@@ -117,6 +109,9 @@ class Transform(Animation):
                 self.target_copy,
             ]
         ])
+
+    def get_interpolation_ends(self) -> tuple[Mobject, Mobject]:
+        return self.starting_mobject, self.target_copy
 
     def interpolate_submobject(
         self,

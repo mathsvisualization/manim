@@ -24,12 +24,15 @@ directories:
     # If you want to use images, manim will look to these folders to find them
     raster_images: "raster_images"
     vector_images: "vector_images"
+    three_d_models: "three_d_models"
     # If you want to use sounds, manim will look here to find it.
     sounds: "sounds"
     # Place for other forms of data relevant to any projects, like csv's
     data: "data"
     # When downloading, say an image, where will it go?
     downloads: "downloads"
+    # For storing cached LaTeX compilation results
+    latex_cache: "latex_cache"
   # For certain object types, especially Tex and Text, manim will save information
   # to file to prevent the need to re-compute, e.g. recompiling the latex. By default,
   # it stores this saved data to whatever directory appdirs.user_cache_dir("manim") returns,
@@ -47,6 +50,13 @@ window:
   # position: (500, 500)  # Specific position, in pixel coordinates, for upper right corner
   # size: (1920, 1080)  # Specific size, in pixels
 camera:
+  # A frame's draws are gathered into a render bundle and replayed for as long as the sequence
+  # of them holds, see Bundling. Turning this off makes every draw afresh each frame, which
+  # says the same thing more slowly.
+  bundle_draws: True
+  # Mobjects which one draw could cover are gathered and drawn together, see Renderer.group.
+  # Turning this off draws each on its own, which says the same thing more slowly.
+  draw_together: True
   resolution: (1920, 1080)
   background_color: "#333333"
   fps: 30
@@ -59,6 +69,11 @@ file_writer:
   pixel_format: "yuv420p"
   saturation: 1.0
   gamma: 1.0
+  # For a render nothing is going to be measured against, the encoder's own default is
+  # plenty. To keep every pixel exactly as it was drawn, say
+  #   video_codec: "libx264rgb"
+  #   pixel_format: "rgb24"
+  #   crf: 0
 # Most of the scene configuration will come from CLI arguments,
 # but defaults can be set here
 scene:
@@ -69,6 +84,7 @@ scene:
   preview_while_skipping: True
   # How long does a scene pause on Scene.wait calls
   default_wait_time: 1.0
+  invert_zoom_scroll: False
 vmobject:
   default_stroke_width: 4.0
   default_stroke_color: "#DDDDDD"     # Default is GREY_A
@@ -79,10 +95,14 @@ mobject:
 tex:
   # See tex_templates.yml
   template: "default"
+  # The font size at which Tex("0") has a height of 1 manim unit
+  font_size_for_unit_height: 144
 text:
   # font: "Cambria Math"
   font: "Consolas"
   alignment: "LEFT"
+  # The font size at which Text("0") has a height of 1 manim unit
+  font_size_for_unit_height: 144
 embed:
   exception_mode: "Verbose"
   autoreload: False
@@ -116,6 +136,7 @@ key_bindings:
   grab: "g"
   x_grab: "h"
   y_grab: "v"
+  z_grab: "z"
   resize: "t"
   color: "c"
   information: "i"

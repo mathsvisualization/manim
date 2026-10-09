@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-from functools import reduce
 import math
-import operator as op
-import platform
 
-from mapbox_earcut import triangulate_float32 as earcut
 import numpy as np
 from scipy.spatial.transform import Rotation
-from tqdm.auto import tqdm as ProgressDisplay
 
 from manimlib.constants import DOWN, OUT, RIGHT, UP
 from manimlib.constants import PI, TAU
@@ -115,10 +110,19 @@ def quaternion_conjugate(quaternion: Vect4) -> Vect4:
 
 
 def rotate_vector(
-    vector: Vect3,
+    vector: Vect2 | Vect3 | Vect2Array | Vect3Array,
     angle: float,
     axis: Vect3 = OUT
-) -> Vect3:
+) -> Vect2 | Vect3 | Vect2Array | Vect3Array:
+    if np.shape(vector)[-1] == 2:
+        cos_angle = math.cos(angle)
+        sin_angle = math.sin(angle)
+        matrix = np.array([
+            [cos_angle, -sin_angle],
+            [sin_angle, cos_angle],
+        ])
+        return np.dot(vector, matrix.T)
+
     rot = Rotation.from_rotvec(angle * normalize(axis))
     return np.dot(vector, rot.as_matrix().T)
 
@@ -368,6 +372,42 @@ def get_closest_point_on_line(a: VectN, b: VectN, p: VectN) -> VectN:
     return ((t * a) + ((1 - t) * b))
 
 
+def boxes_are_disjoint(mins: Vect3Array, maxs: Vect3Array) -> bool:
+    """
+    Whether no two of the boxes with these lower and upper corners share any of their
+    insides, two which meet along a face counting as apart.
+
+    Rather than ask it of every pair, the boxes are swept along the axis they are most
+    spread out on: sorted by where each begins, it is compared only with those which
+    have begun and not yet ended. For a row of things laid out side by side, which is
+    mostly what this is asked about, that is a couple of neighbors each where all pairs
+    would be the whole row.
+    """
+    if len(mins) < 2:
+        return True
+    spread = maxs.max(0) - mins.min(0)
+    # A flat shape has no thickness at all in some direction, and two of them sharing
+    # nothing there are not thereby apart, so any such direction is given a little and
+    # what is compared is where the two lie in their own plane
+    thickness = 1e-6 * max(spread.max(), 1.0)
+    maxs = np.where(maxs - mins < thickness, mins + thickness, maxs)
+
+    axis = int(spread.argmax())
+    order = np.argsort(mins[:, axis])
+    mins, maxs = mins[order], maxs[order]
+    # Where the run of boxes still to compare against begins. Since one which ends before
+    # the sweep has reached this box ends before every box after it too, the run only ever
+    # moves forward, and its first box always reaches past the sweep, so it stops in time
+    first = 0
+    for index, (low, high) in enumerate(zip(mins, maxs)):
+        while maxs[first, axis] <= low[axis]:
+            first += 1
+        others = slice(first, index)
+        if ((mins[others] < high) & (maxs[others] > low)).all(1).any():
+            return False
+    return True
+
+
 def get_winding_number(points: Sequence[Vect2 | Vect3]) -> float:
     total_angle = 0
     for p1, p2 in adjacent_pairs(points):
@@ -384,125 +424,3 @@ def cross2d(a: Vect2 | Vect2Array, b: Vect2 | Vect2Array) -> Vect2 | Vect2Array:
         return a[:, 0] * b[:, 1] - a[:, 1] * b[:, 0]
     else:
         return a[0] * b[1] - b[0] * a[1]
-
-
-def tri_area(
-    a: Vect2,
-    b: Vect2,
-    c: Vect2
-) -> float:
-    return 0.5 * abs(
-        a[0] * (b[1] - c[1]) +
-        b[0] * (c[1] - a[1]) +
-        c[0] * (a[1] - b[1])
-    )
-
-
-def is_inside_triangle(
-    p: Vect2,
-    a: Vect2,
-    b: Vect2,
-    c: Vect2
-) -> bool:
-    """
-    Test if point p is inside triangle abc
-    """
-    crosses = np.array([
-        cross2d(p - a, b - p),
-        cross2d(p - b, c - p),
-        cross2d(p - c, a - p),
-    ])
-    return bool(np.all(crosses > 0) or np.all(crosses < 0))
-
-
-def norm_squared(v: VectN | List[float]) -> float:
-    return sum(x * x for x in v)
-
-
-# TODO, fails for polygons drawn over themselves
-def earclip_triangulation(verts: Vect3Array | Vect2Array, ring_ends: list[int]) -> list[int]:
-    """
-    Returns a list of indices giving a triangulation
-    of a polygon, potentially with holes
-
-    - verts is a numpy array of points
-
-    - ring_ends is a list of indices indicating where
-    the ends of new paths are
-    """
-
-    rings = [
-        list(range(e0, e1))
-        for e0, e1 in zip([0, *ring_ends], ring_ends)
-    ]
-    epsilon = 1e-6
-
-    def is_in(point, ring_id):
-        return abs(abs(get_winding_number([i - point for i in verts[rings[ring_id]]])) - 1) < epsilon
-
-    def ring_area(ring_id):
-        ring = rings[ring_id]
-        s = 0
-        for i, j in zip(ring[1:], ring):
-            s += cross2d(verts[i], verts[j])
-        return abs(s) / 2
-
-    # Points at the same position may cause problems
-    for i in rings:
-        if len(i) < 2:
-            continue
-        verts[i[0]] += (verts[i[1]] - verts[i[0]]) * epsilon
-        verts[i[-1]] += (verts[i[-2]] - verts[i[-1]]) * epsilon
-
-    # First, we should know which rings are directly contained in it for each ring
-
-    right = [max(verts[rings[i], 0]) for i in range(len(rings))]
-    left = [min(verts[rings[i], 0]) for i in range(len(rings))]
-    top = [max(verts[rings[i], 1]) for i in range(len(rings))]
-    bottom = [min(verts[rings[i], 1]) for i in range(len(rings))]
-    area = [ring_area(i) for i in range(len(rings))]
-
-    # The larger ring must be outside
-    rings_sorted = list(range(len(rings)))
-    rings_sorted.sort(key=lambda x: area[x], reverse=True)
-
-    def is_in_fast(ring_a, ring_b):
-        # Whether a is in b
-        return reduce(op.and_, (
-            left[ring_b] <= left[ring_a] <= right[ring_a] <= right[ring_b],
-            bottom[ring_b] <= bottom[ring_a] <= top[ring_a] <= top[ring_b],
-            is_in(verts[rings[ring_a][0]], ring_b)
-        ))
-
-    chilren = [[] for i in rings]
-    ringenum = ProgressDisplay(
-        enumerate(rings_sorted),
-        total=len(rings),
-        leave=False,
-        ascii=True if platform.system() == 'Windows' else None,
-        dynamic_ncols=True,
-        desc="SVG Triangulation",
-        delay=3,
-    )
-    for idx, i in ringenum:
-        for j in rings_sorted[:idx][::-1]:
-            if is_in_fast(i, j):
-                chilren[j].append(i)
-                break
-
-    res = []
-
-    # Then, we can use earcut for each part
-    used = [False] * len(rings)
-    for i in rings_sorted:
-        if used[i]:
-            continue
-        v = rings[i]
-        ring_ends = [len(v)]
-        for j in chilren[i]:
-            used[j] = True
-            v += rings[j]
-            ring_ends.append(len(v))
-        res += [v[i] for i in earcut(verts[v, :2], ring_ends)]
-
-    return res
