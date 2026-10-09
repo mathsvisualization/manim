@@ -1487,6 +1487,75 @@ class Triangle(RegularPolygon):
 
 
 class ArrowTip(Triangle):
+    """
+    A triangular arrow tip that supports multiple tip styles.
+
+    The arrow tip is derived from ``Triangle`` and can be customized
+    by its orientation, dimensions, fill properties, and tip style.
+    Depending on ``tip_style``, the tip can have a triangular shape,
+    an inner-smooth shape, or a dot-like shape.
+
+    Parameters
+    ----------
+    angle : float
+        Rotation angle of the arrow tip in radians.
+    width : float
+        Width of the arrow tip before applying any style-specific
+        modifications.
+    length : float
+        Length of the arrow tip before applying any style-specific
+        modifications.
+    fill_opacity : float
+        Opacity of the arrow tip's fill, where 0 is fully transparent
+        and 1 is fully opaque.
+    fill_color : ManimColor
+        Color used to fill the arrow tip.
+    stroke_width : float
+        Width of the outline drawn around the arrow tip. A value of
+        0 disables the outline.
+    tip_style : int
+        Style of the arrow tip:
+
+        - 0: Standard triangular tip.
+        - 1: Inner-smooth tip, modified by stretching and shifting
+          one of its points.
+        - 2: Dot-like tip, constructed using a ``Dot`` object.
+
+    **kwargs
+        Additional keyword arguments passed to the parent ``Triangle``
+        constructor.
+
+    Examples
+    --------
+    Create a standard triangular arrow tip::
+
+        tip = ArrowTip()
+
+    Create a rotated arrow tip with custom dimensions::
+
+        tip = ArrowTip(
+            angle=PI / 4,
+            width=0.2,
+            length=0.3,
+            fill_color=BLUE,
+        )
+
+    Create an inner-smooth arrow tip::
+
+        tip = ArrowTip(tip_style=1)
+
+    Create a dot-like arrow tip::
+
+        tip = ArrowTip(tip_style=2)
+
+    See Also
+    --------
+    Triangle
+        The triangular Mobject used as the base class.
+    Dot
+        The Mobject used to construct the dot-like tip.
+    """
+
     def __init__(
         self,
         angle: float = 0,
