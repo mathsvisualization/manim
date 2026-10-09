@@ -282,6 +282,72 @@ class Intersection(VMobject):
 
 
 class Exclusion(VMobject):
+    """
+    Create a VMobject representing the symmetric difference of multiple shapes.
+
+    The exclusion operation retains the regions covered by an odd
+    number of the input VMobjects. For two shapes, this means retaining
+    the regions belonging to either shape but not to both.
+
+    When more than two VMobjects are provided, the operation is
+    applied successively using the exclusive OR (XOR) of their paths.
+
+    At least two VMobjects must be provided. The resulting geometry
+    is stored in the new VMobject.
+
+    Parameters
+    ----------
+    *vmobjects : VMobject
+        Two or more VMobjects whose paths are combined using the
+        symmetric difference operation. Regions shared by an even
+        number of input shapes are excluded from the final result.
+    **kwargs
+        Additional keyword arguments passed to the parent ``VMobject``
+        constructor, including supported styling options.
+
+    Raises
+    ------
+    ValueError
+        If fewer than two VMobjects are provided.
+
+    Examples
+    --------
+    Exclude the overlapping region of two circles::
+
+        circle1 = Circle().shift(LEFT * 0.5)
+        circle2 = Circle().shift(RIGHT * 0.5)
+        exclusion = Exclusion(circle1, circle2)
+
+    Apply exclusion to multiple shapes::
+
+        exclusion = Exclusion(
+            Circle(),
+            Square(),
+            Triangle(),
+            color=BLUE,
+        )
+
+    Notes
+    -----
+    For two input shapes, the result contains the regions belonging
+    to either shape but not to their intersection.
+
+    For multiple shapes, the XOR operation is applied successively.
+    Consequently, the final result depends on whether a point belongs
+    to an odd or even number of input regions.
+
+    See Also
+    --------
+    Union
+        Combines the regions covered by multiple VMobjects.
+    Intersection
+        Retains the regions shared by all input VMobjects.
+    Difference
+        Subtracts one VMobject's region from another.
+    VMobject
+        Base class for vectorized objects.
+    """
+
     def __init__(self, *vmobjects: VMobject, **kwargs):
         if len(vmobjects) < 2:
             raise ValueError("At least 2 mobjects needed for Exclusion.")
