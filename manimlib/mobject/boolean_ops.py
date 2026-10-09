@@ -50,6 +50,77 @@ def _convert_skia_path_to_vmobject(
 
 
 class Union(VMobject):
+    """
+    Create a vectorized shape representing the union of multiple VMobjects.
+
+    The union combines the filled regions of the input VMobjects into
+    a single VMobject using path Boolean operations. Overlapping regions
+    are merged, and the resulting geometry is stored in the new object.
+
+    At least two VMobjects must be provided. The input objects are
+    converted to Skia paths, which are combined using a union operation,
+    and the resulting path is converted back into a VMobject.
+
+    Parameters
+    ----------
+    *vmobjects : VMobject
+        Two or more VMobjects whose filled regions are to be combined.
+        Their paths are used to compute the geometric union.
+    **kwargs
+        Additional keyword arguments passed to the parent ``VMobject``
+        constructor. These may include supported styling options such
+        as ``color``, ``stroke_width``, ``fill_color``, and
+        ``fill_opacity``.
+
+    Raises
+    ------
+    ValueError
+        If fewer than two VMobjects are provided.
+
+    Examples
+    --------
+    Combine two overlapping circles::
+
+        circle1 = Circle().shift(LEFT * 0.5)
+        circle2 = Circle().shift(RIGHT * 0.5)
+        union = Union(circle1, circle2)
+
+    Combine multiple shapes::
+
+        union = Union(
+            Circle(),
+            Square(),
+            Triangle(),
+            color=BLUE,
+        )
+
+    Use the resulting shape in a scene::
+
+        union = Union(
+            Circle().shift(LEFT),
+            Square().shift(RIGHT),
+        )
+        self.add(union)
+
+    Notes
+    -----
+    The union operates on the paths of the input VMobjects. The result
+    is a new VMobject containing the combined geometry rather than a
+    group of the original objects.
+
+    The appearance of the resulting object depends on its geometry
+    and the styling applied to the resulting VMobject.
+
+    See Also
+    --------
+    VMobject
+        Base class for vectorized objects.
+    Intersection
+        Boolean operation that retains the overlapping regions.
+    Difference
+        Boolean operation that subtracts one shape from another.
+    """
+
     def __init__(self, *vmobjects: VMobject, **kwargs):
         if len(vmobjects) < 2:
             raise ValueError("At least 2 mobjects needed for Union.")
