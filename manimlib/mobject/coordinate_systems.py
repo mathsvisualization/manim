@@ -917,6 +917,137 @@ class NumberPlane(Axes):
         line_to_number_direction=DL,
     )
 
+    """
+    A two-dimensional coordinate plane consisting of coordinate axes and
+    a background grid of lines parallel to the x- and y-axes.
+
+    ``NumberPlane`` extends ``Axes`` by adding background grid lines.
+    These lines are divided into two groups: primary background lines
+    and faded lines, with their appearance controlled independently
+    through style dictionaries.
+
+    Parameters
+    ----------
+    x_range
+        Range specification for the x-axis. Defaults to
+        ``(-8.0, 8.0, 1.0)``.
+
+    y_range
+        Range specification for the y-axis. Defaults to
+        ``(-4.0, 4.0, 1.0)``.
+
+    background_line_style
+        Dictionary of style properties applied to the primary background
+        lines. Defaults to a blue stroke with width 2 and full opacity.
+
+    faded_line_style
+        Dictionary of style properties applied to the faded background
+        lines. Defaults to stroke width 1 and opacity 0.25. If
+        ``stroke_color`` is omitted, the color is inherited from
+        ``background_line_style``.
+
+    faded_line_ratio
+        Number of faded lines between consecutive primary lines.
+        A value of 4 places one primary line for every five grid-line
+        positions, with the remaining positions assigned to faded lines.
+
+    make_smooth_after_applying_functions
+        Stored as a configuration attribute indicating whether
+        smoothing should be used after applying functions. Defaults
+        to ``True``.
+
+    **kwargs
+        Additional keyword arguments forwarded to ``Axes.__init__``,
+        including axis ranges, axis configuration dictionaries, and
+        axis dimensions.
+
+    Attributes
+    ----------
+    background_line_style
+        Style dictionary used for the primary background lines.
+
+    faded_line_style
+        Style dictionary used for the faded background lines.
+
+    faded_line_ratio
+        Ratio controlling the spacing of primary and faded grid lines.
+
+    make_smooth_after_applying_functions
+        Configuration flag stored by the instance.
+
+    background_lines
+        ``VGroup`` containing the primary background grid lines.
+
+    faded_lines
+        ``VGroup`` containing the faded background grid lines.
+
+    Notes
+    -----
+    The background grid is initialized by ``init_background_lines``.
+    The ``get_lines`` method generates line groups parallel to both
+    coordinate axes. ``get_lines_parallel_to_axis`` spaces these lines
+    using the corresponding axis's tick step and unit-coordinate mapping.
+
+    The grid groups are added behind the existing axes using
+    ``add_to_back``, keeping the grid visually behind foreground objects.
+
+    ``get_x_unit_size`` returns the x-axis unit size.
+    Despite its name, ``get_y_unit_size`` also returns the x-axis unit
+    size in this implementation.
+
+    ``get_vector`` creates an ``Arrow`` from the coordinate origin to
+    the point specified by the given coordinates, with ``buff=0``.
+
+    ``prepare_for_nonlinear_transform`` inserts additional curves into
+    family members when needed and enables their
+    ``make_smooth_after_applying_functions`` attribute. It returns
+    the same ``NumberPlane`` instance.
+
+    Examples
+    --------
+    Create a number plane with default settings:
+
+    >>> plane = NumberPlane()
+
+    Customize the coordinate ranges:
+
+    >>> plane = NumberPlane(
+    ...     x_range=(-6, 6, 1),
+    ...     y_range=(-3, 3, 1),
+    ... )
+
+    Customize the background grid styles:
+
+    >>> plane = NumberPlane(
+    ...     background_line_style={
+    ...         "stroke_color": BLUE_D,
+    ...         "stroke_width": 2,
+    ...         "stroke_opacity": 1,
+    ...     },
+    ...     faded_line_style={
+    ...         "stroke_width": 1,
+    ...         "stroke_opacity": 0.2,
+    ...     },
+    ...     faded_line_ratio=3,
+    ... )
+
+    Create an arrow representing a coordinate vector:
+
+    >>> plane = NumberPlane()
+    >>> vector = plane.get_vector([2, 1])
+
+    Prepare the plane for a nonlinear transformation:
+
+    >>> plane = NumberPlane()
+    >>> plane.prepare_for_nonlinear_transform()
+
+    See Also
+    --------
+    Axes
+    CoordinateSystem
+    NumberLine
+    """
+
     def __init__(
         self,
         x_range: RangeSpecifier = (-8.0, 8.0, 1.0),
