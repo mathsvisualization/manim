@@ -1143,6 +1143,128 @@ class NumberPlane(Axes):
 
 
 class ComplexPlane(NumberPlane):
+    """
+    A coordinate plane for visualizing complex numbers.
+
+    ``ComplexPlane`` extends ``NumberPlane`` by interpreting the horizontal
+    axis as the real axis and the vertical axis as the imaginary axis.
+    Complex numbers are mapped to scene points using their real and
+    imaginary components, and scene points can be converted back to
+    complex numbers.
+
+    The class also provides methods for obtaining default complex
+    coordinate values and adding coordinate labels, including labels
+    that use ``i`` for the imaginary unit.
+
+    Parameters
+    ----------
+    **kwargs
+        Keyword arguments forwarded to ``NumberPlane.__init__``.
+        These include axis ranges, grid styling, axis configurations,
+        and other inherited plane settings.
+
+    Methods
+    -------
+    number_to_point(number)
+        Convert a complex number or real value into a scene point.
+        The real component determines the horizontal coordinate, and
+        the imaginary component determines the vertical coordinate.
+
+    n2p(number)
+        Abbreviation for ``number_to_point``.
+
+    point_to_number(point)
+        Convert a scene point into a complex number by retrieving its
+        coordinates and combining them as ``complex(x, y)``.
+
+    p2n(point)
+        Abbreviation for ``point_to_number``.
+
+    get_unit_size()
+        Return the unit size of the x-axis.
+
+    get_default_coordinate_values(skip_first=True)
+        Obtain default coordinate values from the x- and y-axis tick
+        ranges. The x-axis values are included directly, while nonzero
+        y-axis values are converted to purely imaginary numbers.
+        The ``skip_first`` argument is accepted but does not affect
+        the implementation of this method.
+
+    add_coordinate_labels(
+        numbers=None,
+        skip_first=True,
+        font_size=36,
+        **kwargs
+    )
+        Create and add labels for the specified complex numbers.
+        If ``numbers`` is omitted, use the default coordinate values.
+        Labels are placed on the x-axis or y-axis according to whether
+        the real or imaginary component has the greater absolute value.
+
+    Attributes
+    ----------
+    coordinate_labels
+        ``VGroup`` containing the coordinate-label mobjects created by
+        ``add_coordinate_labels``.
+
+    Notes
+    -----
+    For a complex number z = x + yi, the mapping is equivalent to
+    ``coords_to_point(x, y)``. Conversely, ``point_to_number`` retrieves
+    the plane coordinates and returns ``complex(x, y)``.
+
+    When adding coordinate labels, numbers whose imaginary component
+    has a greater absolute value than their real component are labeled
+    using the y-axis and ``unit_tex="i"``. Other numbers use the x-axis.
+    This means that numbers with equal absolute real and imaginary
+    components are assigned to the x-axis.
+
+    The ``skip_first`` argument of ``add_coordinate_labels`` is used
+    when obtaining default values, but the current implementation of
+    ``get_default_coordinate_values`` always slices the first x- and
+    y-axis tick values regardless of the argument's value.
+
+    Examples
+    --------
+    Create a complex plane:
+
+    >>> plane = ComplexPlane()
+
+    Map a complex number to a scene point:
+
+    >>> point = plane.n2p(2 + 3j)
+
+    Convert a scene point back to a complex number:
+
+    >>> z = plane.p2n(plane.n2p(2 + 3j))
+    >>> print(z)
+    (2+3j)
+
+    Get the default coordinate values:
+
+    >>> plane = ComplexPlane()
+    >>> values = plane.get_default_coordinate_values()
+
+    Add labels for selected complex numbers:
+
+    >>> plane = ComplexPlane()
+    >>> plane.add_coordinate_labels([1, 2, 1j, 2j])
+
+    Customize the label font size:
+
+    >>> plane = ComplexPlane()
+    >>> plane.add_coordinate_labels(
+    ...     numbers=[1, 2, 1j, 2j],
+    ...     font_size=30,
+    ... )
+
+    See Also
+    --------
+    NumberPlane
+    Axes
+    CoordinateSystem
+    """
+
     def number_to_point(self, number: complex | float | np.array) -> Vect3:
         return self.coords_to_point(np.real(number), np.imag(number))
 
