@@ -384,6 +384,168 @@ class TracedPath(VMobject):
 
 
 class TracingTail(TracedPath):
+    """
+    Create a trailing path that follows a moving Mobject or point.
+
+    TracingTail is a specialized subclass of ``TracedPath`` that
+    creates a trail behind a moving object or a point returned by
+    a callable. Unlike a basic traced path, it initializes its
+    recorded points with repeated copies of the current position,
+    allowing the trail to exist immediately instead of starting
+    as an empty path.
+
+    The stroke width and opacity can vary along the trail, making
+    it possible to create effects such as a thick, opaque head
+    that gradually narrows and fades toward the tail.
+
+    Parameters
+    ----------
+    mobject_or_func : Mobject or Callable[[], np.ndarray]
+        The object or callable whose position should be traced.
+        If a ``Mobject`` is supplied, its ``get_center`` method is
+        used to obtain its current position. Otherwise, the argument
+        is treated as a callable that returns a point as a NumPy array.
+    time_traced : float
+        Duration of the trail to retain, in seconds. The trail follows
+        the most recent portion of the object's trajectory over this
+        time interval.
+    stroke_color : ManimColor
+        Color of the trail's stroke.
+    stroke_width : float or Iterable[float]
+        Stroke width configuration passed to ``TracedPath``.
+        A scalar specifies a uniform width, while an iterable can
+        specify varying widths along the path. The default ``(0, 3)``
+        is intended to create a width gradient from one end of the
+        trail to the other.
+    stroke_opacity : float or Iterable[float]
+        Stroke opacity configuration passed to ``TracedPath``.
+        A scalar specifies uniform opacity, while an iterable can
+        specify varying opacity along the trail. The default ``(0, 1)``
+        is intended to create a fade between transparent and opaque.
+    **kwargs
+        Additional keyword arguments passed through ``TracedPath``
+        to the parent ``VMobject`` constructor.
+
+    Examples
+    --------
+    Create a tail following a moving Dot::
+
+        dot = Dot(RIGHT)
+        tail = TracingTail(dot)
+
+        self.add(tail, dot)
+        dot.add_updater(
+            lambda m, dt: m.shift(RIGHT * dt)
+        )
+
+    Trace circular motion::
+
+        dot = Dot(RIGHT)
+        tail = TracingTail(
+            dot,
+            time_traced=2,
+            stroke_color=BLUE,
+        )
+
+        self.add(tail, dot)
+        dot.add_updater(
+            lambda m, dt: m.rotate(
+                dt,
+                about_point=ORIGIN,
+            )
+        )
+
+    Customize the width and opacity of the tail::
+
+        dot = Dot()
+        tail = TracingTail(
+            dot,
+            time_traced=1.5,
+            stroke_color=YELLOW,
+            stroke_width=(0, 5),
+            stroke_opacity=(0, 1),
+        )
+
+        self.add(tail, dot)
+        dot.add_updater(
+            lambda m, dt: m.shift(
+                RIGHT * dt + UP * dt
+            )
+        )
+
+    Trace a point supplied by a callable::
+
+        tracker = ValueTracker(0)
+
+        def get_moving_point():
+            t = tracker.get_value()
+            return np.array([
+                np.cos(t),
+                np.sin(t),
+                0,
+            ])
+
+        tail = TracingTail(
+            get_moving_point,
+            time_traced=3,
+            stroke_color=GREEN,
+        )
+
+        self.add(tail)
+        self.play(
+            tracker.animate.set_value(TAU),
+            run_time=4,
+        )
+
+    Create a short, fast-moving tail::
+
+        dot = Dot()
+        tail = TracingTail(
+            dot,
+            time_traced=0.4,
+            stroke_color=RED,
+            stroke_width=(0, 4),
+            stroke_opacity=(0, 1),
+        )
+
+        self.add(tail, dot)
+        dot.add_updater(
+            lambda m, dt: m.shift(RIGHT * 3 * dt)
+        )
+
+    Notes
+    -----
+    This class inherits the path-updating behavior and stroke styling
+    from ``TracedPath``. The supplied callable is sampled as the scene
+    updates, and the resulting positions are used to construct the
+    visible trail.
+
+    When a Mobject is provided, its center is traced rather than its
+    entire outline or boundary.
+
+    The initial point history is populated using the current position
+    of the traced point. The number of initial samples is calculated
+    as::
+
+        int(time_traced / self.time_per_anchor)
+
+    The ``time_per_anchor`` value is inherited from ``TracedPath``.
+    If it is not supplied through ``kwargs``, the inherited default
+    is used.
+
+    The actual retained trail duration can be approximate because
+    the parent class updates its point history using frame time.
+
+    See Also
+    --------
+    TracedPath
+        Base class that records and displays a point's trajectory.
+    Mobject
+        Base class for objects that can be positioned and animated.
+    ValueTracker
+        Utility for animating a numerical value over time.
+    """
+
     def __init__(
         self,
         mobject_or_func: Mobject | Callable[[], np.ndarray],
