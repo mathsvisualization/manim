@@ -16,6 +16,97 @@ if TYPE_CHECKING:
 
 
 class AnimatedBoundary(VGroup):
+    """
+    Animate a moving, multicolored outline along a VMobject's boundary.
+
+    The animation uses copies of the supplied VMobject to create a
+    growing boundary segment and a fading boundary segment. The stroke
+    color cycles through the specified colors, while the stroke width
+    of the fading segment decreases over time.
+
+    The animation is updated automatically using an updater. The
+    ``cycle_rate`` controls how quickly the animation progresses, and
+    ``back_and_forth`` determines whether the growing segment alternates
+    between drawing from the beginning and drawing from the end.
+
+    Parameters
+    ----------
+    vmobject : VMobject
+        The VMobject whose boundary is animated. Copies of this object
+        are used to display the growing and fading boundary segments.
+    colors : List[ManimColor]
+        Sequence of colors used by the animation. The colors are cycled
+        through as the animation progresses.
+    max_stroke_width : float
+        Maximum stroke width used for the animated boundary.
+    cycle_rate : float
+        Rate at which the animation progresses through its cycles.
+        Larger values make the animation progress more quickly.
+    back_and_forth : bool
+        Whether the growing boundary alternates its drawing direction
+        between the beginning and the end of the VMobject. If ``True``,
+        alternate cycles draw from opposite ends; otherwise, drawing
+        starts from the beginning each cycle.
+    draw_rate_func : Callable[[float], float]
+        Rate function used to control the progress of the growing
+        boundary segment. Receives a value between 0 and 1 and returns
+        the transformed progress value.
+    fade_rate_func : Callable[[float], float]
+        Rate function used to control the fading of the previous
+        boundary segment. Receives a value between 0 and 1 and returns
+        the transformed progress value.
+    **kwargs
+        Additional keyword arguments passed to the parent ``VGroup``
+        constructor.
+
+    Examples
+    --------
+    Create an animated boundary around a circle::
+
+        circle = Circle()
+        boundary = AnimatedBoundary(circle)
+
+    Customize the boundary colors and stroke width::
+
+        boundary = AnimatedBoundary(
+            Square(),
+            colors=[BLUE, GREEN, YELLOW],
+            max_stroke_width=5,
+        )
+
+    Make the animation progress more quickly::
+
+        boundary = AnimatedBoundary(
+            Circle(),
+            cycle_rate=1.0,
+        )
+
+    Disable the alternating drawing direction::
+
+        boundary = AnimatedBoundary(
+            Square(),
+            back_and_forth=False,
+        )
+
+    Notes
+    -----
+    The animation is driven by an updater that advances the internal
+    time accumulator and updates the partial boundary copies on each
+    frame. Add the ``AnimatedBoundary`` instance to a scene to display
+    the animation.
+
+    The input VMobject is stored as ``vmobject`` and is not replaced
+    by the animated copies. The copies are stored in
+    ``boundary_copies``.
+
+    See Also
+    --------
+    VGroup
+        Base class used to group the animated boundary objects.
+    VMobject
+        Vectorized object whose boundary is animated.
+    """
+
     def __init__(
         self,
         vmobject: VMobject,
