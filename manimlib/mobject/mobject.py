@@ -2340,6 +2340,131 @@ class Point(Mobject):
 
 
 class _AnimationBuilder:
+    """
+    Builds an animation from chained method calls on a target copy of a Mobject.
+
+    _AnimationBuilder implements the machinery behind method-based animation
+    syntax such as ``mobject.animate.shift(RIGHT).scale(2)``. It generates a
+    target for the original mobject, records method calls made through attribute
+    access, collects optional animation arguments, and builds an animation
+    object from the recorded operations.
+
+    Methods decorated with an animation override can supply a custom animation
+    instead of being recorded as ordinary target-method calls. However, chaining
+    is not supported when an overridden animation is involved.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The mobject to animate. Its target is generated during initialization
+        and is used to apply the requested methods without directly applying
+        those method calls to the original mobject at recording time.
+
+    Attributes
+    ----------
+    mobject : Mobject
+        The original mobject being animated.
+    overridden_animation : Animation or None
+        Custom animation produced by a method marked with ``_override_animate``.
+        When set, build() returns this animation instead of constructing a
+        _MethodAnimation.
+    is_chaining : bool
+        Indicates whether a method has been accessed and recorded through the
+        builder. Used to reject unsupported chaining with overridden animations.
+    methods : list[Callable]
+        Bound methods obtained from the generated target and recorded for the
+        eventual _MethodAnimation.
+    anim_args : dict
+        Keyword arguments forwarded to the _MethodAnimation constructor when
+        build() is called.
+    can_pass_args : bool
+        Tracks whether animation arguments may still be supplied. Initially
+        True and set to False after set_anim_args() succeeds.
+
+    Methods
+    -------
+    __getattr__(method_name)
+        Looks up the named attribute on the generated target. Records the
+        resulting method and returns a wrapper that applies supplied arguments
+        to that method and returns this builder for chaining. If the method
+        has an animation override, invokes the override to create a custom
+        animation instead.
+    __call__(**kwargs)
+        Passes keyword arguments to set_anim_args() and returns this builder.
+    __dir__()
+        Extends the builder's attribute listing with public attributes of the
+        original mobject to improve interactive autocompletion.
+    set_anim_args(**kwargs)
+        Stores animation-level keyword arguments for the animation constructor.
+        Raises ValueError if arguments have already been supplied or argument
+        passing is otherwise disabled.
+    build()
+        Returns the custom overridden animation if one has been created;
+        otherwise constructs and returns a _MethodAnimation using the original
+        mobject, recorded methods, and stored animation arguments.
+
+    Notes
+    -----
+    - This is an internal helper class used by the animation builder interface,
+      not typically instantiated directly by scene code.
+    - Initialization calls ``mobject.generate_target()``. Ordinary methods
+      accessed through the builder are looked up on ``mobject.target`` and
+      applied to that target when the returned wrapper is called.
+    - Method calls are recorded as bound methods, so their effects are applied
+      to the generated target during the recording process. The original
+      mobject is passed separately to _MethodAnimation when build() runs.
+    - Attribute lookup is delegated to the target. Accessing an attribute that
+      does not exist on the target raises the corresponding AttributeError.
+    - The implementation does not verify that every accessed attribute is
+      callable. The returned wrapper attempts to invoke the retrieved value
+      when called.
+    - Animation overrides are detected through the ``_override_animate``
+      attribute on a method. An override receives the original mobject along
+      with the supplied positional and keyword arguments.
+    - If an overridden animation is created, build() returns it directly.
+      The stored ordinary method list and animation arguments are not used to
+      construct a _MethodAnimation in that case.
+    - Chaining an overridden animation with other methods is explicitly
+      unsupported and raises NotImplementedError. The check also rejects
+      accessing an overridden method after chaining has already started.
+    - set_anim_args() accepts animation-level configuration such as
+      ``run_time``, ``time_span``, ``rate_func``, ``lag_ratio``, ``path_arc``,
+      and ``path_func``, depending on the animation constructor's supported
+      arguments.
+    - Animation arguments can be passed only once. A second call to
+      set_anim_args() raises ValueError, even if the second call supplies no
+      keyword arguments.
+    - The __call__ method accepts keyword arguments only. It does not directly
+      accept positional animation arguments.
+    - build() imports _MethodAnimation locally to avoid requiring that import
+      at module initialization time.
+
+    Examples
+    --------
+    Use the public animation interface to record chained transformations::
+
+        square = Square()
+        self.play(square.animate.shift(RIGHT).scale(2))
+
+    Specify animation-level arguments::
+
+        self.play(
+            square.animate.shift(UP).scale(0.5)(run_time=2)
+        )
+
+    Build an animation explicitly when working with the internal builder::
+
+        builder = _AnimationBuilder(square)
+        builder.shift(RIGHT).scale(2)
+        animation = builder.build()
+
+    See Also
+    --------
+    Mobject
+    Animation
+    _MethodAnimation
+    """
+
     def __init__(self, mobject: Mobject):
         self.mobject = mobject
         self.overridden_animation = None
