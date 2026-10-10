@@ -25,6 +25,248 @@ if TYPE_CHECKING:
 
 
 class NumberLine(Line):
+    """
+    A one-dimensional number line with configurable ticks, labels,
+    and an optional tip.
+
+    NumberLine represents a numerical interval as a geometric line.
+    It provides conversions between numerical values and points in
+    space, making it useful for plotting values, positioning objects,
+    and creating number-line visualizations.
+
+    Parameters
+    ----------
+    x_range
+        Numerical range specified as (x_min, x_max) or
+        (x_min, x_max, step). Defaults to (-8, 8, 1).
+        The first two values define the numerical interval, while
+        the optional third value determines tick spacing and the
+        default spacing of number labels.
+
+    color
+        Color of the number line and its tick marks.
+        Defaults to DEFAULT_LIGHT_COLOR.
+
+    stroke_width
+        Stroke width of the line. Tick marks inherit the line's
+        style when created.
+
+    unit_size
+        Geometric distance corresponding to one numerical unit.
+        Applied by scaling the line when width is not provided.
+
+    width
+        Optional total geometric width of the line. When provided
+        and truthy, it takes precedence over unit_size.
+
+    include_ticks
+        Whether to create and add tick marks during initialization.
+
+    tick_size
+        Half-length parameter used to construct each tick.
+        A tick extends by this amount in both directions before
+        being rotated to match the line's angle.
+
+    longer_tick_multiple
+        Multiplier applied to tick_size for values listed in
+        big_tick_numbers.
+
+    tick_offset
+        Stored as an attribute but not used by the shown
+        implementation to position tick marks.
+
+    big_tick_spacing
+        Optional spacing used to generate big_tick_numbers
+        across the numerical range. When provided, it takes
+        precedence over the explicit big_tick_numbers list.
+
+    big_tick_numbers
+        Numerical values whose ticks should be longer.
+        Defaults to an empty list.
+
+    include_numbers
+        Whether to add numerical labels during initialization.
+
+    line_to_number_direction
+        Direction in which number labels are placed relative
+        to their corresponding points. Defaults to DOWN.
+
+    line_to_number_buff
+        Distance between the line and its number labels.
+        Defaults to MED_SMALL_BUFF.
+
+    include_tip
+        Whether to add a tip to the line. When enabled, the tip
+        inherits the line's stroke color and stroke width.
+
+    tip_config
+        Configuration dictionary copied and stored for the tip.
+        Defaults to a width and length of 0.25 each.
+
+    decimal_number_config
+        Default configuration for DecimalNumber labels.
+        Defaults to zero decimal places and font size 36.
+
+    numbers_to_exclude
+        Optional list of values to omit when automatically
+        generating number labels.
+
+    **kwargs
+        Additional keyword arguments forwarded to Line.
+
+    Attributes
+    ----------
+    x_range
+        Original numerical range specification.
+    x_min, x_max
+        Lower and upper numerical bounds.
+    x_step
+        Tick spacing, taken from x_range or defaulting to 1.
+    tick_size
+        Base tick size.
+    longer_tick_multiple
+        Scale factor for longer ticks.
+    tick_offset
+        Stored tick offset value; unused by the shown methods.
+    big_tick_numbers
+        Values whose tick marks are longer.
+    line_to_number_direction
+        Default label direction.
+    line_to_number_buff
+        Default label spacing.
+    include_tip
+        Whether a tip was requested.
+    tip_config
+        Copy of the supplied tip configuration.
+    decimal_number_config
+        Copy of the default decimal-label configuration.
+    numbers_to_exclude
+        Values excluded from automatically generated labels.
+    ticks
+        VGroup of tick marks, created when add_ticks is called.
+    numbers
+        VGroup of numerical labels, created when add_numbers
+        is called.
+
+    Methods
+    -------
+    get_tick_range()
+        Return numerical values at which ticks should be placed.
+    add_ticks()
+        Create and add tick marks to the line.
+    get_tick(x, size=None)
+        Create a single tick at a numerical value.
+    get_tick_marks()
+        Return the stored tick-mark group.
+    number_to_point(number)
+        Convert numerical values into points on the line.
+    point_to_number(point)
+        Project points onto the line and convert their positions
+        into numerical values.
+    n2p(number)
+        Abbreviation for number_to_point.
+    p2n(point)
+        Abbreviation for point_to_number.
+    get_unit_size()
+        Return geometric length per numerical unit.
+    get_number_mobject(x, ...)
+        Create a DecimalNumber label for a value.
+    add_numbers(x_values=None, ...)
+        Create and add numerical labels.
+
+    Notes
+    -----
+    - The line is initially constructed from x_min * RIGHT to
+      x_max * RIGHT, then scaled or resized and centered.
+    - If width is truthy, set_width(width) is used; otherwise,
+      the line is scaled by unit_size.
+    - Tick marks are positioned using number_to_point, so they
+      follow the line's current geometric position and direction.
+    - Values in big_tick_numbers receive longer ticks according
+      to longer_tick_multiple.
+    - When big_tick_spacing is supplied, big tick values are
+      generated with numpy.arange, starting at x_min.
+    - get_tick_range excludes x_max when include_tip is True,
+      and can include x_max when include_tip is False, provided
+      the step lands on that endpoint.
+    - number_to_point maps values linearly across the numerical
+      interval. Values outside the interval extrapolate beyond
+      the endpoints rather than being clamped.
+    - point_to_number uses projection onto the line's direction.
+      A point need not lie exactly on the line to produce a value.
+    - get_unit_size measures the current geometric line length
+      divided by the numerical interval. It can differ from the
+      original unit_size after subsequent transformations.
+    - add_numbers defaults to get_tick_range. Its excluding
+      argument uses ordinary value membership, not approximate
+      floating-point comparison.
+    - decimal_number_config supplies default label settings.
+      Additional keyword arguments passed to get_number_mobject
+      are recursively merged with those defaults.
+    - tick_offset is stored but does not affect tick placement
+      in the implementation shown here.
+
+    Examples
+    --------
+    Create a basic number line::
+
+        number_line = NumberLine()
+
+    Create a number line with custom bounds and tick spacing::
+
+        number_line = NumberLine(
+            x_range=(-5, 5, 0.5),
+            unit_size=0.8,
+            include_ticks=True,
+        )
+
+    Highlight selected tick values::
+
+        number_line = NumberLine(
+            x_range=(-4, 4, 1),
+            big_tick_numbers=[-4, 0, 4],
+            longer_tick_multiple=2,
+        )
+
+    Add number labels while excluding zero::
+
+        number_line = NumberLine(
+            x_range=(-5, 5, 1),
+            include_numbers=True,
+            numbers_to_exclude=[0],
+        )
+
+    Convert a number into a point in space::
+
+        number_line = NumberLine()
+        point = number_line.number_to_point(3)
+        dot = Dot(point)
+
+    Use the shorthand conversion methods::
+
+        point = number_line.n2p(2)
+        value = number_line.p2n(point)
+
+    Add labels later with custom formatting::
+
+        number_line = NumberLine(include_numbers=False)
+        labels = number_line.add_numbers(
+            x_values=[-2, 0, 2],
+            font_size=30,
+        )
+
+    See Also
+    --------
+    Axes
+        Coordinate axes for two-dimensional plots.
+    NumberPlane
+        A plane with coordinate grid lines.
+    DecimalNumber
+        Numerical labels used by the number line.
+    Line
+        The geometric line class from which NumberLine inherits.
+    """
+
     def __init__(
         self,
         x_range: RangeSpecifier = (-8, 8, 1),
