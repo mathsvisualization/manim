@@ -1607,6 +1607,85 @@ class Dodecahedron(VGroup3D):
 
 
 class Prismify(VGroup3D):
+    """
+    Creates a three-dimensional prism-like object by extruding a vectorized
+    mobject along a specified direction.
+
+    Prismify inherits from :class:`VGroup3D`. It uses the input mobject as the
+    base, constructs side walls between adjacent anchor points, and creates a
+    translated copy of the base as the opposite face. The resulting faces are
+    grouped into a single three-dimensional mobject group.
+
+    Parameters
+    ----------
+    vmobject : VMobject
+        Vectorized mobject used as the base profile. Its anchor points define
+        the edges from which the side walls are constructed.
+    depth : float, optional
+        Distance by which the base profile is extruded along ``direction``.
+        Defaults to ``1.0``.
+    direction : ndarray or array-like, optional
+        Direction vector along which the extrusion occurs. Defaults to ``IN``.
+        The vector is multiplied by ``depth`` to obtain the extrusion offset.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`VGroup3D`.
+
+    Notes
+    -----
+    - The extrusion displacement is calculated as ``depth * direction``.
+    - A copy of the original mobject is added as the first face.
+    - The base's anchor points are obtained using ``get_anchors()``.
+    - ``adjacent_pairs(points)`` supplies consecutive anchor-point pairs used
+      to construct the side walls.
+    - Each wall is a ``VMobject`` that matches the original mobject's style.
+    - The wall's four corners are defined by the two original points and their
+      translated counterparts.
+    - A translated copy of the original mobject forms the opposite face.
+    - The opposite face has its point order reversed, which can affect its
+      orientation and rendering.
+    - All generated faces are passed to ``VGroup3D`` as a single group.
+    - The implementation assumes straight edges between adjacent anchor points.
+      Curved boundaries are not explicitly approximated by curved side walls.
+    - The code does not explicitly close an open profile or validate the input
+      geometry, depth, or direction vector.
+    - The resulting object is a collection of surfaces, not necessarily a
+      watertight volumetric mesh.
+
+    Examples
+    --------
+    Extrude a square along the default direction::
+
+        square = Square()
+        prism = Prismify(square, depth=2)
+        self.add(prism)
+
+    Extrude a triangle with a custom direction::
+
+        triangle = Triangle()
+        prism = Prismify(
+            triangle,
+            depth=1.5,
+            direction=RIGHT,
+        )
+        self.add(prism)
+
+    Pass additional group options::
+
+        prism = Prismify(
+            Square(),
+            depth=2,
+            direction=OUT,
+            shading=(0.3, 0.4, 0.2),
+        )
+        self.add(prism)
+
+    See Also
+    --------
+    VGroup3D
+    VMobject
+    adjacent_pairs
+    """
+
     def __init__(self, vmobject, depth=1.0, direction=IN, **kwargs):
         # At the moment, this assume stright edges
         vect = depth * direction
