@@ -466,6 +466,74 @@ class NumberLine(Line):
 
 
 class UnitInterval(NumberLine):
+    """
+    A specialized NumberLine for representing the unit interval.
+
+    UnitInterval inherits from NumberLine and provides defaults
+    for the interval [0, 1], with closely spaced ticks and longer
+    ticks at the endpoints. It is useful for visualizing normalized
+    values, proportions, and parameters between zero and one.
+
+    Parameters
+    ----------
+    x_range
+        Numerical range specified as (x_min, x_max) or
+        (x_min, x_max, step). Defaults to (0, 1, 0.1).
+    unit_size
+        Geometric distance corresponding to one numerical unit.
+        Defaults to 10, making the default interval relatively wide.
+    big_tick_numbers
+        Values whose tick marks should be longer.
+        Defaults to [0, 1].
+    decimal_number_config
+        Configuration dictionary for DecimalNumber labels.
+        Defaults to one decimal place.
+    **kwargs
+        Additional keyword arguments forwarded to NumberLine.
+
+    Notes
+    -----
+    - All supplied parameters are forwarded to NumberLine.
+    - The default interval has tick spacing of 0.1 and longer
+      ticks at both endpoints.
+    - The default unit_size is 10, but the final geometric size
+      may be affected by other inherited options such as width.
+    - Features such as tick marks, number labels, and line tips
+      follow the behavior and defaults of NumberLine.
+
+    Examples
+    --------
+    Create a default unit interval::
+
+        interval = UnitInterval()
+
+    Customize the tick spacing::
+
+        interval = UnitInterval(
+            x_range=(0, 1, 0.2),
+            big_tick_numbers=[0, 0.5, 1],
+        )
+
+    Display numerical labels::
+
+        interval = UnitInterval(
+            include_numbers=True,
+            numbers_to_exclude=[0.5],
+        )
+
+    Convert a normalized value to a point::
+
+        interval = UnitInterval()
+        point = interval.number_to_point(0.75)
+
+    See Also
+    --------
+    NumberLine
+        Parent class providing tick, label, and coordinate methods.
+    Axes
+        Coordinate axes for plotting functions.
+    """
+
     def __init__(
         self,
         x_range: RangeSpecifier = (0, 1, 0.1),
