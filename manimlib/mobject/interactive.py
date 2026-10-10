@@ -1038,6 +1038,196 @@ class LinearNumberSlider(ControlMobject):
 
 
 class ColorSliders(Group):
+    """
+    An interactive color picker built from RGB and alpha sliders.
+
+    ColorSliders combines four LinearNumberSlider controls to select the
+    red, green, blue, and alpha components of a color. The RGB sliders use
+    integer values from 0 to 255, while the alpha slider uses values from
+    0 to 1.
+
+    A preview rectangle displays the selected color and opacity. A
+    checkerboard background is placed behind the preview to make
+    transparency easier to distinguish from opaque colors.
+
+    Parameters
+    ----------
+    sliders_kwargs : dict, default={}
+        Additional keyword arguments passed to each LinearNumberSlider.
+        The component-specific values for ``value``, ``min_value``,
+        ``max_value``, and ``step`` are supplied internally. Avoid passing
+        duplicate keys through this dictionary.
+
+    rect_kwargs : dict, default={"width": 2.0, "height": 0.5, "stroke_opacity": 1.0}
+        Keyword arguments passed to the Rectangle used for the color preview.
+        The same dimensions are used to construct the checkerboard background.
+
+    background_grid_kwargs : dict, default={"colors": [GREY_A, GREY_C], "single_square_len": 0.1}
+        Configuration for the checkerboard background. ``colors`` supplies
+        the alternating square colors, and ``single_square_len`` determines
+        the approximate size of each square.
+
+    sliders_buff : float, default=MED_LARGE_BUFF
+        Vertical spacing between the four sliders.
+
+    default_rgb_value : int, default=255
+        Initial value for each RGB slider. The default of 255 initializes
+        the preview to white.
+
+    default_a_value : int, default=1
+        Initial value for the alpha slider. The default of 1 represents
+        full opacity.
+
+    **kwargs
+        Additional keyword arguments forwarded to Group.
+
+    Attributes
+    ----------
+    sliders_kwargs : dict
+        Configuration passed to each LinearNumberSlider.
+
+    rect_kwargs : dict
+        Configuration for the selected-color preview rectangle.
+
+    background_grid_kwargs : dict
+        Configuration for the checkerboard background.
+
+    sliders_buff : float
+        Vertical spacing between sliders.
+
+    default_rgb_value : int
+        Initial value assigned to the red, green, and blue sliders.
+
+    default_a_value : int
+        Initial value assigned to the alpha slider.
+
+    r_slider : LinearNumberSlider
+        Slider controlling the red component, with a range of 0 to 255
+        and a step of 1.
+
+    g_slider : LinearNumberSlider
+        Slider controlling the green component, with a range of 0 to 255
+        and a step of 1.
+
+    b_slider : LinearNumberSlider
+        Slider controlling the blue component, with a range of 0 to 255
+        and a step of 1.
+
+    a_slider : LinearNumberSlider
+        Slider controlling opacity, with a range of 0 to 1 and a step of 0.04.
+
+    sliders : Group
+        Group containing the four sliders, arranged vertically.
+
+    selected_color_box : Rectangle
+        Preview rectangle whose fill color and opacity are updated from
+        the current slider values.
+
+    background : VGroup
+        Checkerboard grid behind the color preview.
+
+    Methods
+    -------
+    get_background()
+        Constructs and returns the checkerboard background.
+
+    set_value(r, g, b, a)
+        Sets all four slider values.
+
+    get_value()
+        Returns an array containing normalized red, green, blue, and alpha
+        components.
+
+    get_picked_color()
+        Returns the selected RGB color as a hexadecimal string.
+
+    get_picked_opacity()
+        Returns the selected alpha value as a float.
+
+    Examples
+    --------
+    Create a color picker with its default settings::
+
+        color_picker = ColorSliders()
+        self.add(color_picker)
+
+    Set the selected color to red with full opacity::
+
+        color_picker = ColorSliders()
+        color_picker.set_value(255, 0, 0, 1)
+        self.add(color_picker)
+
+    Set a semi-transparent purple color::
+
+        color_picker = ColorSliders()
+        color_picker.set_value(128, 0, 255, 0.5)
+
+        hex_color = color_picker.get_picked_color()
+        opacity = color_picker.get_picked_opacity()
+
+        print(hex_color)
+        print(opacity)
+
+    Read the normalized RGBA components::
+
+        color_picker = ColorSliders()
+        color_picker.set_value(255, 128, 0, 1)
+
+        rgba = color_picker.get_value()
+        # Array containing normalized red, green, blue, and alpha values.
+
+    Customize the preview dimensions and slider spacing::
+
+        color_picker = ColorSliders(
+            rect_kwargs={
+                "width": 3.0,
+                "height": 0.75,
+                "stroke_opacity": 1.0,
+            },
+            sliders_buff=0.5,
+        )
+        self.add(color_picker)
+
+    Notes
+    -----
+    - The red, green, and blue sliders each use a range of 0 to 255 with
+      an increment of 1. The alpha slider uses a range of 0 to 1 with an
+      increment of 0.04.
+    - Each slider handle is colored to identify its component: red, green,
+      blue, or a black-to-white gradient for alpha.
+    - The preview rectangle has an updater that calls ``get_picked_color``
+      and ``get_picked_opacity`` to refresh its fill color and opacity.
+    - The checkerboard is generated using Square objects arranged into a
+      grid. Its squares alternate through the supplied ``colors`` sequence.
+    - The grid dimensions are calculated from the preview dimensions and
+      ``single_square_len``. The number of columns is increased by one when
+      it is even, producing an odd number of columns.
+    - ``get_value`` divides the RGB components by 255 and leaves alpha
+      unchanged, returning an array in the order ``(r, g, b, a)``.
+    - ``get_picked_color`` converts the normalized RGB components to a
+      hexadecimal string using ``rgb_to_hex``. Alpha is handled separately
+      by ``get_picked_opacity``.
+    - ``set_value`` updates each slider sequentially. Each component must
+      satisfy the corresponding slider's allowed range.
+    - The preview and checkerboard group is fixed in the camera frame
+      before the complete group is arranged vertically with the sliders.
+    - The alpha slider's default step of 0.04 does not divide the interval
+      from 0 to 1 into an integer number of equal steps. The exact reachable
+      values depend on the slider's quantization logic.
+    - The shown return annotation ``np.ndarary`` appears to be a typo;
+      the method actually returns a NumPy array, so ``np.ndarray`` would
+      be the appropriate annotation.
+
+    See Also
+    --------
+    LinearNumberSlider
+        Draggable numeric slider used to select each color component.
+    Group
+        Groups multiple Mobjects into a single composite object.
+    rgb_to_hex
+        Converts RGB components into a hexadecimal color representation.
+    """
+
     def __init__(
         self,
         sliders_kwargs: dict = {},
