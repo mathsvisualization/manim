@@ -123,6 +123,114 @@ class Fade(Transform):
 
 
 class FadeIn(Fade):
+    """
+    Animates a Mobject into view by transitioning it from a modified starting
+    state to its original appearance.
+
+    FadeIn extends Fade. It creates a copy of the original Mobject as the target,
+    then constructs a starting Mobject that is fully transparent, inversely
+    scaled by the configured scale factor, and shifted in the opposite direction
+    to the configured shift vector.
+
+    The animation interpolates from this starting state toward the target using
+    the transformation behavior inherited from Transform.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The object to animate into view.
+
+    shift : np.ndarray, optional
+        Vector describing the direction and distance from which the object
+        starts moving toward its target. Defaults to ORIGIN, so no positional
+        shift is applied.
+
+    scale : float, optional
+        Scale factor used to determine the starting object's size. Defaults to 1.
+        The starting Mobject is scaled by 1.0 / scale.
+
+    **kwargs
+        Additional keyword arguments forwarded through Fade to Transform.
+
+    Attributes
+    ----------
+    shift_vect : np.ndarray
+        Inherited from Fade. Stores the requested shift vector.
+
+    scale_factor : float
+        Inherited from Fade. Stores the scale factor used to construct the
+        starting Mobject.
+
+    Methods
+    -------
+    create_target()
+        Returns a copy of the original Mobject. This copy represents the target
+        appearance of the animation.
+
+    create_starting_mobject()
+        Creates the starting state by calling the parent implementation,
+        setting its opacity to zero, scaling it by the reciprocal of
+        scale_factor, and shifting it by the negative of shift_vect.
+
+    Notes
+    -----
+    - The target is a copy of the original Mobject.
+    - The starting Mobject has zero opacity.
+    - The starting scale is determined by 1.0 / scale_factor.
+    - The starting position is offset by -shift_vect.
+    - The actual transition between the starting state and target is handled by
+      the inherited Transform implementation.
+    - A scale_factor of zero causes division by zero when the starting Mobject
+      is constructed, so it should not be used.
+
+    Examples
+    --------
+    Example 1: Fade in a circle with default settings.
+
+        >>> animation = FadeIn(circle)
+
+    The circle starts transparent and transitions toward its original appearance.
+    Because the default shift is ORIGIN and scale is 1, no additional starting
+    offset or size change is applied.
+
+    Example 2: Fade in while moving upward.
+
+        >>> animation = FadeIn(circle, shift=UP)
+
+    The starting Mobject is shifted by -UP, so it begins below its target and
+    moves toward the original position during the transformation.
+
+    Example 3: Fade in while scaling up.
+
+        >>> animation = FadeIn(circle, scale=0.5)
+
+    The starting Mobject is scaled by 1 / 0.5 = 2, so it starts at twice the
+    target's scale and transitions toward the target.
+
+    Example 4: Combine shifting and scaling.
+
+        >>> animation = FadeIn(
+        ...     circle,
+        ...     shift=RIGHT,
+        ...     scale=0.5,
+        ...     run_time=2,
+        ... )
+
+    The starting Mobject is transparent, shifted left by the RIGHT vector, and
+    scaled to twice its target size. It then transitions toward the target over
+    the requested runtime.
+
+    These examples illustrate construction only; circle must be a defined
+    Mobject, and direction vectors such as UP and RIGHT must be available.
+
+    See Also
+    --------
+    Fade
+    FadeOut
+    Transform
+    Mobject
+    """
+
     def create_target(self) -> Mobject:
         return self.mobject.copy()
 
