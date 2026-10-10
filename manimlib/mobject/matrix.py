@@ -410,6 +410,113 @@ class Matrix(VMobject):
 
 
 class DecimalMatrix(Matrix):
+    """
+    A specialized Matrix that renders every entry as a DecimalNumber.
+
+    DecimalMatrix extends Matrix to display numerical matrix entries with
+    configurable decimal precision and formatting. Unlike the base Matrix,
+    which converts entries according to their types, DecimalMatrix overrides
+    element_to_mobject() so every entry is passed to DecimalNumber.
+
+    Parameters
+    ----------
+    matrix : FloatMatrixType
+        Two-dimensional iterable of floating-point values used to construct
+        the matrix. The original input is stored in ``float_matrix``.
+    num_decimal_places : int, default=2
+        Number of decimal places displayed by each DecimalNumber, unless
+        overridden through ``decimal_config``.
+    decimal_config : dict, default={}
+        Additional keyword arguments passed to each DecimalNumber. These
+        arguments are combined with ``num_decimal_places``; if this dictionary
+        contains a ``num_decimal_places`` key, its value overrides the
+        explicit ``num_decimal_places`` argument.
+    **config
+        Additional keyword arguments forwarded to the parent Matrix
+        constructor, such as spacing, bracket buffers, target height,
+        alignment, and ellipsis indices.
+
+    Attributes
+    ----------
+    float_matrix : FloatMatrixType
+        Reference to the input matrix supplied during initialization.
+    mob_matrix : VMobjectMatrixType
+        Nested list of DecimalNumber mobjects created for the matrix entries.
+    elements : list of VMobject
+        Flat list of matrix entry mobjects, inherited from Matrix.
+    rows : VGroup
+        Group of matrix rows, inherited from Matrix.
+    columns : VGroup
+        Group of matrix columns, inherited from Matrix.
+    brackets : VGroup
+        Group containing the matrix's left and right brackets, inherited
+        from Matrix.
+    ellipses : list of VMobject
+        Entry mobjects visually replaced by ellipses, inherited from Matrix.
+
+    Methods
+    -------
+    element_to_mobject(element, **decimal_config)
+        Constructs and returns a DecimalNumber for the supplied element using
+        the provided decimal formatting configuration.
+
+    Notes
+    -----
+    - All entries are passed to DecimalNumber, regardless of their original
+      type. The input should therefore contain values supported by
+      DecimalNumber.
+    - The matrix layout, bracket construction, row and column access,
+      coloring, copying, and ellipsis behavior are inherited from Matrix.
+    - ``float_matrix`` stores the original input reference; it is not a
+      defensive copy.
+    - The ``decimal_config`` dictionary is expanded into a new dictionary
+      together with ``num_decimal_places`` before being passed to Matrix.
+      A ``num_decimal_places`` key inside ``decimal_config`` takes precedence
+      over the separate argument.
+    - The default ``decimal_config`` is a mutable dictionary. Avoid modifying
+      it in place to prevent shared-default side effects.
+    - The ``FloatMatrixType`` annotation indicates the expected input type,
+      but runtime validation is not performed explicitly by this class.
+
+    Examples
+    --------
+    Create a matrix with two decimal places::
+
+        matrix = DecimalMatrix([
+            [1.234, 5.678],
+            [9.876, 2.345],
+        ])
+
+        self.add(matrix)
+
+    Specify a different precision::
+
+        matrix = DecimalMatrix(
+            [
+                [1.23456, 5.67891],
+                [9.87654, 2.34567],
+            ],
+            num_decimal_places=3,
+        )
+
+    Pass additional DecimalNumber configuration::
+
+        matrix = DecimalMatrix(
+            [
+                [1.25, 2.5],
+                [3.75, 4.0],
+            ],
+            num_decimal_places=1,
+            decimal_config={"include_sign": True},
+        )
+
+    See Also
+    --------
+    Matrix
+    DecimalNumber
+    FloatMatrixType
+    """
+
     def __init__(
         self,
         matrix: FloatMatrixType,
