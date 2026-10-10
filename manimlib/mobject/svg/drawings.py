@@ -172,6 +172,79 @@ class Exmark(TexTextFromPresetString):
 
 
 class Lightbulb(SVGMobject):
+    """
+    An SVG-based lightbulb mobject for visually representing ideas, insights,
+    creativity, or a source of illumination in a ManimGL scene.
+
+    Lightbulb inherits from SVGMobject and loads the SVG asset identified by
+    the class attribute file_name = "lightbulb". It exposes convenient
+    parameters for controlling the symbol's height, color, stroke width, and
+    fill opacity.
+
+    After initializing the SVG mobject, the constructor calls insert_n_curves(25)
+    to increase the number of curves in its vector geometry. This can provide
+    additional curve segments for operations that work on the mobject's paths,
+    depending on the underlying SVGMobject implementation.
+
+    Parameters
+    ----------
+    height : float, optional
+        Desired height of the lightbulb mobject. Defaults to 1.0.
+
+    color : ManimColor, optional
+        Color applied to the SVG mobject. Defaults to YELLOW.
+
+    stroke_width : float, optional
+        Width of the SVG outlines. Defaults to 3.0.
+
+    fill_opacity : float, optional
+        Opacity of the SVG fill. Defaults to 0.0, making the fill fully
+        transparent under the usual opacity convention.
+
+    **kwargs
+        Additional keyword arguments forwarded to SVGMobject.
+
+    Class Attributes
+    ----------------
+    file_name : str
+        Set to "lightbulb", identifying the SVG asset loaded by the parent
+        class. The actual file resolution depends on SVGMobject's asset-loading
+        implementation.
+
+    Examples
+    --------
+    Create a default lightbulb:
+
+        bulb = Lightbulb()
+        self.add(bulb)
+
+    Change its size and color:
+
+        bulb = Lightbulb(height=2.0, color=YELLOW)
+        self.add(bulb)
+
+    Use a transparent fill with a visible outline:
+
+        bulb = Lightbulb(
+            height=1.5,
+            color=BLUE,
+            stroke_width=4.0,
+            fill_opacity=0.0,
+        )
+        self.add(bulb)
+
+    Notes
+    -----
+    - Lightbulb is an SVG-based vector mobject, not a raster image.
+    - The availability and appearance of the graphic depend on the SVG asset
+      referenced by file_name.
+    - insert_n_curves(25) modifies the vector geometry after initialization.
+      Its exact effect depends on how SVGMobject implements curve subdivision.
+    - A fill_opacity of 0.0 makes the fill transparent; it does not by itself
+      guarantee that every part of the SVG is outline-only, since the SVG's
+      paths and inherited styling also affect rendering.
+    """
+
     file_name = "lightbulb"
 
     def __init__(
