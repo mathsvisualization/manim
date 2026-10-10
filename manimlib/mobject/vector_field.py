@@ -1038,6 +1038,112 @@ class StreamLines(VGroup):
 
 
 class AnimatedStreamLines(VGroup):
+    """
+    Animate streamlines by repeatedly showing moving flashes along them.
+
+    Each streamline receives a VShowPassingFlash animation that loops
+    continuously. The animations start at randomized time offsets to create
+    a staggered flow effect.
+
+    Parameters
+    ----------
+    stream_lines
+        StreamLines object containing the paths to animate. Each line must
+        have a virtual_time attribute specifying its animation duration.
+    lag_range
+        Maximum initial delay applied randomly to each line. Defaults to 4.
+    rate_multiple
+        Multiplier controlling animation speed. Each animation's runtime is
+        line.virtual_time / rate_multiple. Defaults to 1.0.
+    line_anim_config
+        Additional configuration passed to VShowPassingFlash.
+        Defaults to linear rate_func and time_width=1.0.
+    **kwargs
+        Additional keyword arguments passed to VGroup.
+
+    Attributes
+    ----------
+    stream_lines
+        The original StreamLines object being animated.
+
+    Examples
+    --------
+    Example 1: Animate a rotational vector field.
+
+        axes = Axes(
+            x_range=(-4, 4, 1),
+            y_range=(-4, 4, 1),
+        )
+
+        def rotational_field(coords):
+            x, y = coords.T
+            return np.column_stack((-y, x))
+
+        stream_lines = StreamLines(
+            rotational_field,
+            axes,
+            density=1,
+            solution_time=4,
+            color_by_magnitude=False,
+            stroke_color=BLUE,
+        )
+
+        animated_lines = AnimatedStreamLines(
+            stream_lines,
+            lag_range=3,
+            rate_multiple=1,
+        )
+
+        self.add(axes, animated_lines)
+        self.wait(5)
+
+    Flashes travel along the streamlines, producing the appearance of
+    continuous motion around the origin.
+
+    Example 2: Increase the animation speed.
+
+        animated_lines = AnimatedStreamLines(
+            stream_lines,
+            rate_multiple=2,
+        )
+
+        self.add(animated_lines)
+
+    A larger rate_multiple reduces each animation's runtime, making the
+    flashes cycle more quickly.
+
+    Example 3: Customize the passing-flash appearance.
+
+        animated_lines = AnimatedStreamLines(
+            stream_lines,
+            line_anim_config={
+                "rate_func": linear,
+                "time_width": 0.3,
+            },
+        )
+
+        self.add(animated_lines)
+
+    The smaller time_width narrows the visible portion of each passing
+    flash, creating shorter moving highlights.
+
+    Notes
+    -----
+    Each line's animation is initialized and begun during construction.
+    Its time offset is randomized between -lag_range and 0.
+
+    During updates, line.time increases by dt. Negative times delay the
+    start of the corresponding flash. Once active, the animation progress
+    wraps around its runtime, causing the flash to repeat.
+
+    The class adds an updater that calls update(dt) each frame.
+
+    Returns
+    -------
+    AnimatedStreamLines
+        A VGroup containing the animated flash mobjects.
+    """
+
     def __init__(
         self,
         stream_lines: StreamLines,
