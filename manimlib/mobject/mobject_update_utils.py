@@ -213,12 +213,77 @@ def turn_animation_into_updater(
     **kwargs
 ) -> Mobject:
     """
-    Add an updater to the animation's mobject which applies
-    the interpolation and update functions of the animation
+    Convert an Animation into a continuously updated mobject.
 
-    If cycle is True, this repeats over and over.  Otherwise,
-    the updater will be popped uplon completion
+    The animation's interpolation and update functions are applied
+    by an updater attached to its mobject, allowing the animation
+    to progress alongside other scene updates.
+
+    Parameters
+    ----------
+    animation
+        The Animation whose behavior will be driven by an updater.
+    cycle
+        If True, repeat the animation by wrapping its progress back
+        to the beginning. If False, stop and remove the updater
+        when the animation completes. Defaults to False.
+    **kwargs
+        Additional keyword arguments passed to
+        ``animation.update_rate_info``.
+
+    Returns
+    -------
+    Mobject
+        The animation's mobject, with the updater attached.
+
+    Notes
+    -----
+    - The animation is initialized with ``begin()``, and its
+      ``total_time`` is reset to zero.
+    - Each update computes progress from ``total_time / run_time``
+      and interpolates the animation accordingly.
+    - When ``cycle=False``, progress is clamped to the interval
+      [0, 1]. On completion, ``finish()`` is called and the updater
+      removes itself.
+    - When ``cycle=True``, progress wraps using the modulo
+      operation, creating a repeating animation.
+    - The updater advances ``total_time`` using the frame's
+      time delta (dt).
+    - This function returns the original animation mobject rather
+      than a separate Animation object.
+
+    Examples
+    --------
+    Convert an animation into an updater that runs once::
+
+        square = Square()
+        anim = square.animate.shift(RIGHT * 2)
+        turn_animation_into_updater(anim)
+
+    Make an animation repeat continuously::
+
+        dot = Dot()
+        anim = dot.animate.shift(RIGHT * 2)
+        turn_animation_into_updater(anim, cycle=True)
+
+    Run the animation alongside other scene activity::
+
+        square = Square()
+        turn_animation_into_updater(
+            square.animate.rotate(PI),
+            cycle=True,
+        )
+        self.add(square)
+        self.wait(5)
+
+    See Also
+    --------
+    always
+        Apply a method to a mobject on every update.
+    always_redraw
+        Recreate a mobject on every update.
     """
+
     mobject = animation.mobject
     animation.update_rate_info(**kwargs)
     animation.suspend_mobject_updating = False
