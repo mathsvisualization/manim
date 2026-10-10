@@ -596,6 +596,102 @@ class Cylinder(Surface):
 
 
 class Cone(Cylinder):
+    """
+    A three-dimensional conical surface parameterized by an angular coordinate
+    and a vertical coordinate.
+
+    Cone inherits from :class:`Cylinder` and overrides its parameterization
+    to make the radius decrease linearly as the vertical parameter increases.
+    The default parameter range produces a cone with its base at the bottom
+    and its apex at the top.
+
+    Parameters
+    ----------
+    u_range : Tuple[float, float], optional
+        Range of the angular parameter ``u`` in radians. Defaults to
+        ``(0, TAU)``, covering a complete revolution around the cone's axis.
+    v_range : Tuple[float, float], optional
+        Range of the vertical parameter ``v``. Defaults to ``(0, 1)``,
+        extending from the base to the apex.
+    *args
+        Additional positional arguments forwarded to ``Cylinder``.
+    **kwargs
+        Additional keyword arguments forwarded to ``Cylinder``, including
+        supported options such as ``resolution``, ``height``, ``radius``,
+        and ``axis``.
+
+    Attributes
+    ----------
+    Inherited from Cylinder
+        ``height``, ``radius``, and ``axis`` are initialized by the parent
+        class when supplied through ``args`` or ``kwargs``.
+
+    Methods
+    -------
+    uv_func(u, v)
+        Maps the angular parameter ``u`` and vertical parameter ``v`` to a
+        point on the cone's initial parameterized surface.
+
+    Notes
+    -----
+    - The parameterization implemented by ``uv_func()`` is
+
+      ``x = (1 - v) * cos(u)``
+
+      ``y = (1 - v) * sin(u)``
+
+      ``z = v``
+
+    - At ``v = 0``, the cross-section has unit radius and lies at ``z = 0``.
+    - At ``v = 1``, the radius becomes zero, producing the apex at ``z = 1``.
+    - For values between 0 and 1, the radius decreases linearly according
+      to ``1 - v``.
+    - The default ``u_range`` creates a complete cone. A smaller range
+      creates only a portion of its curved surface.
+    - The inherited ``Cylinder.init_points()`` applies radius scaling,
+      depth stretching, and axis alignment after generating the parameterized
+      points.
+    - Because the parent scales the geometry by ``radius``, the parameterized
+      base radius is initially 1 before that scaling.
+    - This class constructs only the curved lateral surface; it does not
+      explicitly create a filled circular base.
+    - The implementation does not validate parameter ranges or dimensions.
+
+    Examples
+    --------
+    Create a cone with default settings::
+
+        cone = Cone()
+        self.add(cone)
+
+    Create a taller cone with a wider base::
+
+        cone = Cone(
+            height=3,
+            radius=1.5,
+        )
+        self.add(cone)
+
+    Create a partial cone::
+
+        cone = Cone(
+            u_range=(0, PI),
+            v_range=(0, 1),
+        )
+        self.add(cone)
+
+    Orient the cone along another axis::
+
+        cone = Cone(axis=RIGHT, height=2)
+        self.add(cone)
+
+    See Also
+    --------
+    Cylinder
+    Surface
+    SurfaceMesh
+    """
+
     def __init__(
         self,
         u_range: Tuple[float, float] = (0, TAU),
