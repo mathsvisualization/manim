@@ -78,6 +78,49 @@ if TYPE_CHECKING:
 
 
 class Checkmark(TexTextFromPresetString):
+    """
+    A preset LaTeX text mobject that displays a checkmark symbol.
+
+    Checkmark inherits from TexTextFromPresetString and uses the LaTeX command
+    R"\ding{51}" to render a checkmark. Its default color is GREEN, making it
+    suitable for indicating correctness, completion, approval, or a successful
+    condition in a scene.
+
+    The class provides a convenient alternative to manually creating a text
+    mobject containing the checkmark command. Since the symbol and default color
+    are defined as class attributes, instances use this preset configuration
+    unless the inherited implementation or supplied arguments override it.
+
+    Class Attributes
+    ----------------
+    tex : str
+        LaTeX command R"\ding{51}", used to render the checkmark symbol.
+
+    default_color : ManimColor
+        Defaults to GREEN.
+
+    Example
+    -------
+        check = Checkmark()
+        self.add(check)
+
+    Display a checkmark beside a statement:
+
+        statement = TexText("Correct")
+        check = Checkmark()
+        check.next_to(statement, RIGHT)
+        self.add(statement, check)
+
+    Notes
+    -----
+    - The symbol is rendered through the inherited TexTextFromPresetString
+      implementation.
+    - Rendering the dingbat symbol depends on the required LaTeX package and
+      the availability of the corresponding symbol in the TeX environment.
+    - GREEN is the default color; the final appearance may depend on inherited
+      color-handling behavior and constructor arguments.
+    """
+
     tex: str = R"\ding{51}"
     default_color: ManimColor = GREEN
 
