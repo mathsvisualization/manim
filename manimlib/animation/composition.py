@@ -359,6 +359,149 @@ class AnimationGroup(Animation):
 
 
 class Succession(AnimationGroup):
+    """
+    Plays a sequence of animations one after another.
+
+    `Succession` is a subclass of `AnimationGroup` designed for sequential
+    animation playback. Instead of progressing all child animations according
+    to overlapping time intervals, it activates one animation at a time and
+    advances to the next as the overall interpolation progresses.
+
+    By default, `Succession` uses a `lag_ratio` of 1.0, which schedules each
+    animation to begin when the previous animation ends. It overrides the
+    animation lifecycle and interpolation methods to initialize, update, finish,
+    and switch between the active child animation as needed.
+
+    Parameters
+    ----------
+    *animations : Animation
+        Animation objects to execute in sequence. These are passed to
+        `AnimationGroup`, which prepares the animations and calculates their
+        scheduled timing information.
+
+    lag_ratio : float, default=1.0
+        Timing ratio forwarded to `AnimationGroup`. A value of 1.0 schedules
+        animations sequentially without overlap. Other values alter the scheduled
+        start times calculated by the parent class, although `Succession` still
+        activates only one child animation at a time.
+
+    **kwargs
+        Additional keyword arguments forwarded to `AnimationGroup`, such as
+        `run_time`, `group`, `group_type`, `time_span`, and other animation
+        configuration options.
+
+    Attributes
+    ----------
+    animations : list[Animation]
+        Prepared child animations inherited from `AnimationGroup`, in the order
+        they will be considered during sequential playback.
+
+    active_animation : Animation
+        The child animation currently active. It is assigned in `begin` and
+        updated whenever interpolation advances to a different child animation.
+
+    Methods
+    -------
+    begin()
+        Asserts that at least one child animation exists, selects the first
+        animation as `active_animation`, and calls its `begin` method.
+
+    finish()
+        Calls `finish` on the currently active child animation.
+
+    update_reference_mobjects(dt, frame_rate=None)
+        Updates reference mobjects belonging to the active child animation only.
+        Other animations are not updated because they have not necessarily begun
+        and may not yet have initialized their starting or target mobjects.
+
+    interpolate(alpha)
+        Converts the group's normalized interpolation value to a time-spanned
+        alpha, then uses `integer_interpolate` to determine the active animation
+        index and its local interpolation value.
+
+        If the selected animation differs from `active_animation`, the previous
+        animation is finished, the newly selected animation is begun, and
+        `active_animation` is updated. The selected animation is then interpolated
+        using its local alpha.
+
+    Notes
+    -----
+    - `Succession` inherits animation preparation, timing construction, group
+      creation, and other configuration behavior from `AnimationGroup`.
+    - Its default `lag_ratio=1.0` produces sequential timing in the parent
+      class's timing schedule.
+    - Only one child animation is treated as active at a time. When the selected
+      animation changes, the previous active animation is finished before the
+      next one begins.
+    - Reference mobject updates are delegated only to the active animation.
+      This avoids updating animations whose starting or target mobjects may not
+      yet have been initialized.
+    - `begin` uses an assertion to require at least one child animation. Creating
+      an empty `Succession` may therefore succeed during construction but fail
+      when `begin` is called.
+    - `interpolate` relies on `integer_interpolate` to map the overall progress
+      across the number of child animations. Exact boundary behavior depends on
+      that helper's implementation.
+    - Although `lag_ratio` is forwarded to `AnimationGroup`, the active animation
+      is selected using an evenly divided index interval through
+      `integer_interpolate`, rather than by directly consulting
+      `anims_with_timings`.
+    - `finish` finishes only the current active animation; it does not explicitly
+      call `finish` on every child animation.
+    - The parent `AnimationGroup` constructor determines the group's overall
+      duration. An explicit `run_time` or `time_span` can therefore affect how
+      the overall alpha maps onto the succession's child animations.
+
+    Examples
+    --------
+    Play animations one after another:
+
+    >>> succession = Succession(
+    ...     Create(Circle()),
+    ...     Create(Square()),
+    ...     Create(Triangle()),
+    ... )
+    >>> self.play(succession)
+
+    Specify the total duration:
+
+    >>> succession = Succession(
+    ...     FadeIn(Circle()),
+    ...     FadeOut(Circle()),
+    ...     run_time=4,
+    ... )
+    >>> self.play(succession)
+
+    Pass a custom lag ratio:
+
+    >>> succession = Succession(
+    ...     Create(Circle()),
+    ...     Create(Square()),
+    ...     lag_ratio=1.0,
+    ... )
+    >>> self.play(succession)
+
+    Use a succession inside a scene:
+
+    >>> circle = Circle()
+    >>> square = Square()
+    >>> self.play(
+    ...     Succession(
+    ...         FadeIn(circle),
+    ...         circle.animate.shift(RIGHT),
+    ...         FadeOut(circle),
+    ...         FadeIn(square),
+    ...     )
+    ... )
+
+    See Also
+    --------
+    Animation
+    AnimationGroup
+    LaggedStart
+    integer_interpolate
+    """
+
     def __init__(
         self,
         *animations: Animation,
