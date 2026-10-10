@@ -875,6 +875,40 @@ class VideoSeries(VGroup):
 
 
 class Clock(VGroup):
+    """
+    A simple analog clock made from a circle, tick marks, and two hands.
+
+    Parameters
+    ----------
+    stroke_color : ManimColor, optional
+        Color of the clock outline, tick marks, and hands. Defaults to WHITE.
+    stroke_width : float, optional
+        Stroke width of the clock components. Defaults to 3.0.
+    hour_hand_height : float, optional
+        Length of the hour hand. Defaults to 0.3.
+    minute_hand_height : float, optional
+        Length of the minute hand. Defaults to 0.6.
+    tick_length : float, optional
+        Base length of each tick mark. Every third tick is twice as long.
+        Defaults to 0.1.
+    **kwargs
+        Additional arguments accepted by VGroup.
+
+    Attributes
+    ----------
+    ticks : VGroup
+        The twelve tick marks around the clock face.
+    hour_hand : Line
+        The shorter hand, initially pointing upward.
+    minute_hand : Line
+        The longer hand, initially pointing upward.
+
+    Notes
+    -----
+    This class creates the clock's visual components only. It does not
+    automatically track or display the current time.
+    """
+
     def __init__(
         self,
         stroke_color: ManimColor = WHITE,
