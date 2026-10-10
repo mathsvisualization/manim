@@ -524,6 +524,196 @@ class Speedometer(VMobject):
 
 
 class Laptop(VGroup):
+    """
+    A three-dimensional laptop model composed of a base, keyboard, hinged screen,
+    and hinge-axis indicator.
+
+    Laptop inherits from VGroup and constructs a stylized laptop using ManimGL
+    vector mobjects. The base is created from a VCube and reshaped according to
+    the requested body dimensions. A grid of square mobjects represents the
+    keyboard, while a thin screen plate supports a black rectangular screen.
+
+    The screen plate is positioned at the back of the laptop body and rotated
+    around its bottom edge to represent an open laptop. The open angle can be
+    customized to create different screen positions.
+
+    The assembled laptop is stored as a group, allowing it to be positioned,
+    scaled, rotated, and animated as a single object. References to the screen,
+    screen plate, and hinge-axis indicator are also exposed for individual
+    manipulation.
+
+    Parameters
+    ----------
+    width : float, optional
+        Target width of the laptop body after its initial dimensions have been
+        applied. Defaults to 3. The body is resized to this width while
+        preserving the proportions established by its preceding stretch
+        operations.
+
+    body_dimensions : Tuple[float, float, float], optional
+        Initial scale dimensions applied to the VCube along its three coordinate
+        axes, in x-, y-, and z-dimension order. Defaults to (4.0, 3.0, 0.05).
+        These values determine the base's proportions before its width is set
+        to the requested width.
+
+    screen_thickness : float, optional
+        Thickness used when reshaping the screen plate along the z-axis.
+        Defaults to 0.01. The implementation calculates a stretch factor by
+        dividing this value by body_dimensions[2].
+
+    keyboard_width_to_body_width : float, optional
+        Ratio between the keyboard's target width and the laptop body's width.
+        Defaults to 0.9.
+
+    keyboard_height_to_body_height : float, optional
+        Ratio between the keyboard's target height and the laptop body's height.
+        Defaults to 0.5.
+
+    screen_width_to_screen_plate_width : float, optional
+        Scale factor applied to the screen rectangle relative to the screen
+        plate's width. Defaults to 0.9.
+
+    key_color_kwargs : dict, optional
+        Keyword arguments passed to each Square used to construct the keyboard
+        keys. Defaults to a dictionary with stroke_width=0, fill_color=BLACK,
+        and fill_opacity=1. These settings produce solid black keys without
+        visible outlines under the usual rendering conventions.
+
+    fill_opacity : float, optional
+        Accepted as a constructor parameter, with a default of 1.0. In this
+        implementation, the value is not explicitly applied to the body, screen,
+        keyboard, or other generated components.
+
+    stroke_width : float, optional
+        Accepted as a constructor parameter, with a default of 0.0. In this
+        implementation, the value is not explicitly applied to the generated
+        components as a general stroke-width setting.
+
+    body_color : ManimColor, optional
+        Fill color applied to the final submobject in the sorted body geometry.
+        Defaults to GREY_B.
+
+    shaded_body_color : ManimColor, optional
+        Fill color initially applied to the body geometry. Defaults to GREY.
+        The body is sorted by the z-coordinate of its points before the final
+        submobject receives body_color.
+
+    open_angle : float, optional
+        Angle, in radians, through which the screen plate is rotated around the
+        RIGHT axis at its bottom edge. Defaults to pi / 4, or 45 degrees.
+
+    **kwargs
+        Additional keyword arguments forwarded to VGroup initialization.
+
+    Attributes
+    ----------
+    screen_plate : VGroup or VMobject
+        The copied body geometry used as the laptop's screen frame or plate.
+        The screen rectangle is added to this object before the plate is rotated.
+
+    screen : Rectangle
+        Black rectangular mobject representing the laptop display. It is exposed
+        separately so it can be recolored, replaced, or otherwise manipulated.
+
+    axis : Line
+        A black line drawn between the body's upper-left-front and
+        upper-right-front corners. It serves as a visual indicator of the
+        laptop's hinge axis.
+
+    Construction
+    ------------
+    1. Create a unit VCube and stretch it along each coordinate dimension using
+       body_dimensions.
+    2. Set the body's width to width, then apply the shaded body fill color.
+    3. Sort the body's submobjects according to their point z-coordinates and
+       apply body_color to the final submobject.
+    4. Copy the body to create the screen plate.
+    5. Construct a keyboard from four rows of Square mobjects. Alternate row
+       lengths between 12 and 11 keys, arrange the keys horizontally, and arrange
+       the rows vertically.
+    6. Resize the keyboard using the width and height ratios, position it just
+       above the body, and add it to the body group.
+    7. Adjust the screen plate's thickness, create a black Rectangle, and fit
+       the rectangle to the plate before applying the screen width ratio.
+    8. Position the screen in front of the plate, add it to the plate, and place
+       the plate at the back edge of the body.
+    9. Rotate the plate around its bottom edge by open_angle to represent the
+       open display.
+    10. Create the hinge-axis Line and add the body, screen plate, and axis to
+        the Laptop group.
+
+    Examples
+    --------
+    Create a laptop using the default dimensions:
+
+        laptop = Laptop()
+        self.add(laptop)
+
+    Create a wider laptop:
+
+        laptop = Laptop(width=4.0)
+        self.add(laptop)
+
+    Customize the screen opening angle:
+
+        laptop = Laptop(open_angle=PI / 3)
+        self.add(laptop)
+
+    Customize the body and screen colors:
+
+        laptop = Laptop(
+            body_color=BLUE,
+            shaded_body_color=GREY,
+            open_angle=PI / 4,
+        )
+        self.add(laptop)
+
+    Access and manipulate the screen separately:
+
+        laptop = Laptop()
+        laptop.screen.set_fill(WHITE, opacity=1)
+        self.add(laptop)
+
+    Notes
+    -----
+    - The laptop is a stylized vector construction, not a detailed physical
+      model. Its appearance depends on the dimensions, colors, and rendering
+      behavior of the component mobjects.
+    - body_dimensions[2] must be nonzero because it is used as the denominator
+      when calculating the screen plate's thickness stretch factor.
+    - body_dimensions is expected to contain three values corresponding to the
+      three coordinate dimensions.
+    - The keyboard contains four rows with alternating counts of 12 and 11
+      square keys. It does not model a complete physical keyboard layout.
+    - The screen is a black Rectangle fitted to the screen plate before being
+      scaled to screen_width_to_screen_plate_width.
+    - The screen plate rotates around its bottom edge. The resulting orientation
+      depends on the initial geometry and the supplied open_angle.
+    - fill_opacity and stroke_width are accepted but are not explicitly applied
+      to the constructed components by this implementation.
+    - body_color is applied to body[-1] after sorting; the exact face or component
+      receiving that color depends on the submobject structure of VCube and the
+      behavior of sort().
+    - The hinge-axis indicator is added as a separate group member and is not
+      itself rotated as part of the screen-plate rotation.
+    - The body, screen plate, and axis are all included in the parent VGroup, so
+      transformations applied to the complete Laptop affect these components
+      together.
+
+    See Also
+    --------
+    VGroup
+        Groups multiple mobjects into one composite object.
+    VCube
+        Supplies the three-dimensional geometry for the laptop body.
+    Rectangle
+        Represents the laptop screen.
+    Square
+        Supplies the keyboard key geometry.
+    Line
+        Represents the hinge-axis indicator.
+    """
+
     def __init__(
         self,
         width: float = 3,
