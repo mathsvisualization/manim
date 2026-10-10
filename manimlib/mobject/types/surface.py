@@ -40,6 +40,282 @@ def norms_along_axis(vectors: Vect3Array) -> np.ndarray:
 
 
 class Surface(Mobject):
+    """
+    A parametrically defined surface represented by a two-dimensional grid
+    of three-dimensional points.
+
+    `Surface` inherits from :class:`Mobject` and represents a surface using
+    a regular grid sampled over two parameter ranges, ``u_range`` and
+    ``v_range``. Each grid point is mapped to a three-dimensional position
+    by ``uv_func(u, v)``. The GPU vertex shader uses these sampled points to
+    construct the surface mesh, expanding each grid cell into two triangles.
+
+    The class also supports grid resampling, interpolation between surfaces,
+    opacity detection, triangle sorting, normal calculation, partial surface
+    creation, and coloring based on parameter coordinates.
+
+    Parameters
+    ----------
+    color : ManimColor, optional
+        Base color used to initialize the surface. Defaults to GREY.
+    shading : Tuple[float, float, float], optional
+        Shading parameters forwarded to Mobject. Defaults to (0.3, 0.2, 0.4).
+    depth_test : bool, optional
+        Whether depth testing is enabled. Defaults to True.
+    u_range : Tuple[float, float], optional
+        Inclusive start and end values of the first surface parameter.
+        Defaults to (0.0, 1.0).
+    v_range : Tuple[float, float], optional
+        Inclusive start and end values of the second surface parameter.
+        Defaults to (0.0, 1.0).
+    resolution : Tuple[int, int], optional
+        Number of sampled points along the u and v directions, respectively.
+        Each dimension includes both endpoints. Defaults to (101, 101).
+    preferred_creation_axis : int, optional
+        Default parameter-grid axis used when creating a partial surface.
+        Defaults to 1.
+    sort_to_camera : bool, optional
+        Whether surface triangles should be sorted from farthest to nearest
+        relative to the camera when the drawing system supports this option.
+        Defaults to False.
+    **kwargs
+        Additional keyword arguments forwarded to Mobject.
+
+    Attributes
+    ----------
+    u_range : Tuple[float, float]
+        Parameter interval along the u direction.
+    v_range : Tuple[float, float]
+        Parameter interval along the v direction.
+    initial_resolution : Tuple[int, int]
+        Resolution supplied during initialization. It is used to initialize
+        the resolution uniform.
+    preferred_creation_axis : int
+        Default axis used by ``pointwise_become_partial``.
+    sort_to_camera : bool
+        Whether triangles should be sorted relative to the camera.
+    opaque : bool
+        Cached result of the most recent opacity check.
+    opaque_version : int
+        Data version associated with the cached opacity result.
+    drawing_class : type
+        Drawing implementation used for rendering: SurfaceDrawing.
+    shader_file : str
+        Shader filename used for rendering: ``surface.wgsl``.
+    verts_per_record : int
+        Number of vertices generated for each grid-point record: 6.
+    data_dtype : np.dtype
+        Structured point data containing three-dimensional positions and
+        RGBA colors.
+    uniform_dtype : np.dtype
+        Shader uniform layout containing common uniforms and the two-component
+        surface resolution.
+
+    Examples
+    --------
+    Define a simple surface using a custom parameterization:
+
+        class PlaneSurface(Surface):
+            def uv_func(self, u, v):
+                return (u, v, 0.0)
+
+        surface = PlaneSurface(
+            u_range=(-2, 2),
+            v_range=(-1, 1),
+            resolution=(20, 10),
+        )
+
+    Create a spherical surface by mapping parameters to 3D coordinates:
+
+        class SphereSurface(Surface):
+            def uv_func(self, u, v):
+                return (
+                    np.cos(u) * np.sin(v),
+                    np.sin(u) * np.sin(v),
+                    np.cos(v),
+                )
+
+        sphere = SphereSurface(
+            u_range=(0, TAU),
+            v_range=(0, PI),
+            resolution=(50, 30),
+        )
+
+    Change the sampling resolution:
+
+        surface.set_resolution((40, 40))
+
+    Resample an existing grid while interpolating its stored data:
+
+        surface.resample((60, 60))
+
+    Convert a parameter pair to a point on the sampled surface:
+
+        point = surface.uv_to_point(0.5, 0.5)
+
+    Retrieve the sampled parameter grid:
+
+        uv_grid = surface.get_uv_grid()
+
+    Check whether the stored points still form a regular grid:
+
+        if surface.has_grid():
+            print(surface.get_resolution())
+
+    Check surface opacity:
+
+        opaque = surface.is_opaque()
+        minimum_opacity = surface.min_opacity()
+
+    Calculate unit normals at sampled points:
+
+        normals = surface.get_unit_normals()
+
+    Color the surface according to its parameter coordinates:
+
+        surface.color_by_uv_function(
+            lambda u, v: interpolate_color(BLUE, RED, u)
+        )
+
+    Sort surface triangles relative to the camera:
+
+        surface.set_sort_to_camera(True)
+
+    Create a partial surface from another surface:
+
+        partial = Surface()
+        partial.pointwise_become_partial(
+            surface,
+            0.2,
+            0.8,
+            axis=1,
+        )
+
+    Methods
+    -------
+    init_uniforms()
+        Initialize shader uniforms, including the configured grid resolution.
+
+    get_resolution()
+        Return the current resolution as a pair of integers obtained from
+        the resolution uniform.
+
+    set_resolution(resolution)
+        Update the resolution uniform. The new resolution must remain
+        consistent with the number and arrangement of stored point records.
+
+    interpolate(mobject1, mobject2, alpha, path_func=straight_path)
+        Interpolate the object's data between two mobjects while preserving
+        this surface's current resolution.
+
+    uv_func(u, v)
+        Map a parameter pair to a three-dimensional point. Subclasses should
+        override this method to define their geometry.
+
+    init_points()
+        Generate the initial grid of points by evaluating ``uv_func`` over
+        the sampled parameter grid.
+
+    get_uv_grid()
+        Return an array with shape ``(nu, nv, 2)`` containing all sampled
+        parameter pairs.
+
+    uv_to_point(u, v)
+        Approximate a surface point by interpolating between nearby sampled
+        grid points corresponding to the supplied parameters.
+
+    has_grid()
+        Return whether the stored data contains exactly the expected number
+        of records for a valid grid with both resolution dimensions greater
+        than one.
+
+    resample(resolution)
+        Resample all stored floating-point fields over a grid of a different
+        resolution, then update the data and resolution uniform.
+
+    align_points(mobject)
+        Align two compatible surfaces by resampling both to the maximum
+        resolution along each axis. Otherwise, use the parent alignment
+        implementation.
+
+    min_opacity()
+        Return the minimum alpha value among all stored RGBA records, or
+        1.0 if the surface has no records.
+
+    is_opaque()
+        Return whether the surface is fully opaque, recalculating the answer
+        when the underlying point data version changes.
+
+    get_triangles()
+        Return triangle starting indices and triangle centers for sorting.
+        Handles both regular grid data and non-grid mesh data.
+
+    set_sort_to_camera(sort=True)
+        Set the camera-sorting flag on every Surface in the object's family.
+
+    always_sort_to_camera(camera=None)
+        Compatibility method that enables camera sorting. The camera argument
+        is not used.
+
+    get_unit_normals()
+        Calculate approximate unit normals at the sampled grid points using
+        finite differences along the two parameter directions.
+
+    pointwise_become_partial(smobject, a, b, axis=None)
+        Make this surface represent a partial interval of another Surface
+        along the selected grid axis.
+
+    get_partial_points_array(points, a, b, resolution, axis)
+        Produce a point array representing a partial parameter interval,
+        interpolating boundary rows or columns at the interval endpoints.
+
+    color_by_uv_function(uv_to_color)
+        Assign colors by evaluating a color function at every sampled
+        parameter pair.
+
+    Notes
+    -----
+    - The resolution is stored in shader uniforms. ``get_resolution`` reads
+      from those uniforms rather than treating ``initial_resolution`` as
+      the current resolution.
+    - For a grid with resolution ``(nu, nv)``, the surface stores ``nu * nv``
+      point records. The grid has ``(nu - 1) * (nv - 1)`` rectangular cells,
+      each expanded into two triangles by the shader.
+    - Both resolution dimensions must exceed one for ``has_grid`` to return
+      True. The stored record count must also equal ``nu * nv``.
+    - ``uv_to_point`` clamps normalized parameter coordinates to the [0, 1]
+      interval before selecting nearby grid points. It performs interpolation
+      across the sampled grid, rather than evaluating ``uv_func`` directly.
+    - ``resample`` interpolates the complete floating-point record data,
+      not only point coordinates, so associated color fields are resampled too.
+    - ``align_points`` uses the finer resolution along each axis when both
+      objects are valid grids. This avoids padding a coarser grid with
+      repeated points, which could distort the resulting mesh.
+    - ``is_opaque`` checks the minimum alpha value. A surface is considered
+      opaque only when every stored alpha value is at least 1.0. The result
+      is cached against the point-data version.
+    - ``get_triangles`` uses triangle centers rather than a fixed corner
+      for sorting, avoiding dependence on the orientation of the parameterization.
+    - For grid data, ``get_triangles`` returns two triangle centers per grid
+      cell. For non-grid data, it treats consecutive groups of three points
+      as triangles and ignores any incomplete trailing group.
+    - ``get_unit_normals`` estimates tangent directions with NumPy's gradient
+      function, takes their cross product, and normalizes the results.
+      Degenerate directions are replaced using neighboring grid directions
+      where possible.
+    - ``pointwise_become_partial`` copies the full source points when the
+      requested interval covers the entire [0, 1] range. Otherwise, it
+      updates the point field using ``get_partial_points_array``.
+    - ``get_partial_points_array`` expects an axis of 0 or 1. It interpolates
+      at the lower and upper interval boundaries while collapsing points
+      outside the selected interval toward those boundaries.
+    - ``color_by_uv_function`` evaluates its callable with two positional
+      arguments, ``u`` and ``v``, for each sampled parameter pair, despite
+      the callable annotation being written as ``Callable[[Vect2], Color]``.
+    - The default ``uv_func`` produces the flat mapping ``(u, v, 0.0)``.
+      Subclasses normally override it to define a meaningful surface.
+    """
+
     drawing_class: type = SurfaceDrawing
     shader_file: str = "surface.wgsl"
     # Points are sent as the grid they sample, and the vertex shader works out the mesh
