@@ -194,6 +194,148 @@ class Uncreate(ShowCreation):
 
 
 class DrawBorderThenFill(Animation):
+    """
+    Animates a VMobject by first tracing its outline and then transitioning it
+    to its original style and appearance.
+
+    DrawBorderThenFill extends Animation. During the first half of the animation,
+    each submobject progressively traces the outline of a copied version of the
+    original VMobject. During the second half, the traced outline transitions
+    toward the original starting mobject, restoring its original style and fill.
+
+    Parameters
+    ----------
+    vmobject : VMobject
+        The vector object to animate. The constructor asserts that this argument
+        is an instance of VMobject.
+
+    run_time : float, optional
+        Total duration of the animation in seconds. Defaults to 2.0.
+
+    rate_func : Callable[[float], float], optional
+        Function that transforms animation progress over time. Defaults to
+        double_smooth.
+
+    stroke_width : float, optional
+        Stroke width used when constructing the outline. Defaults to 2.0.
+
+    stroke_color : ManimColor or None, optional
+        Color used for the outline stroke. If None, each family member's existing
+        stroke color is used. Defaults to None.
+
+    draw_border_animation_config : dict, optional
+        Configuration dictionary stored on the animation for drawing the border.
+        Defaults to an empty dictionary. This class does not directly read its
+        contents in the supplied implementation.
+
+    fill_animation_config : dict, optional
+        Configuration dictionary stored on the animation for the fill phase.
+        Defaults to an empty dictionary. This class does not directly read its
+        contents in the supplied implementation.
+
+    **kwargs
+        Additional keyword arguments forwarded to Animation.
+
+    Attributes
+    ----------
+    sm_to_index : dict
+        Maps the hash of each submobject in the original object's family to an
+        integer state. Each entry initially has the value 0 and is changed to 1
+        when that submobject first crosses into the second interpolation phase.
+
+    stroke_width : float
+        Width assigned to the outline strokes.
+
+    stroke_color : ManimColor or None
+        Explicit outline color, or None to preserve each submobject's existing
+        stroke color.
+
+    draw_border_animation_config : dict
+        Stored border-animation configuration.
+
+    fill_animation_config : dict
+        Stored fill-animation configuration.
+
+    outline : VMobject
+        Copy of the animated object with fill opacity set to zero and outline
+        strokes configured. Created when begin() is called.
+
+    Methods
+    -------
+    begin()
+        Marks the Mobject as animating, creates the outline, initializes the
+        parent animation, and matches the animated Mobject's style to the outline.
+
+    get_outline()
+        Creates and returns a copy of the Mobject with transparent fill and
+        configured stroke styling for tracing its border.
+
+    get_all_mobjects()
+        Returns the Mobjects collected by the parent implementation, with the
+        outline appended to the returned list.
+
+    get_interpolation_ends()
+        Returns the outline and starting Mobject as the endpoints used for the
+        style-transition phase.
+
+    interpolate_submobject(submob, start, outline, alpha)
+        Divides normalized progress into two phases. The first phase progressively
+        traces the outline using pointwise_become_partial(). The second phase
+        interpolates from the outline toward the starting Mobject.
+
+    Notes
+    -----
+    - The constructor requires a VMobject, not an arbitrary Mobject.
+    - get_outline() copies the original object, sets its fill opacity to zero,
+      and configures the stroke for each family member that has points.
+    - The outline stroke uses stroke_color when provided; otherwise it uses
+      each corresponding submobject's existing stroke color.
+    - The outline stroke is placed according to the original Mobject's
+      stroke_behind setting.
+    - integer_interpolate(0, 2, alpha) selects the drawing phase or the
+      transition phase and calculates the local progress within that phase.
+    - During the first phase, pointwise_become_partial() progressively reveals
+      the outline.
+    - On the first frame of the second phase for each submobject, its data is
+      initialized from the outline before interpolation proceeds.
+    - The second phase interpolates from the outline toward the starting
+      Mobject, restoring the original appearance.
+    - get_interpolation_ends() returns (outline, starting_mobject), matching
+      the endpoint order expected by interpolate_submobject().
+    - The two configuration dictionaries are stored but are not used elsewhere
+      in the supplied class implementation.
+    - The default dictionary arguments are shared mutable objects in Python.
+      Callers should avoid mutating them unless that shared behavior is intended.
+
+    Examples
+    --------
+    Animate the outline tracing and fill transition of a vector object:
+
+        >>> animation = DrawBorderThenFill(
+        ...     square,
+        ...     run_time=2.0,
+        ...     stroke_width=3.0,
+        ... )
+
+    Specify a custom outline color:
+
+        >>> animation = DrawBorderThenFill(
+        ...     square,
+        ...     stroke_color=RED,
+        ...     stroke_width=2.5,
+        ... )
+
+    These examples illustrate construction only; square and any color constants
+    must be defined in the surrounding scene.
+
+    See Also
+    --------
+    Animation
+    VMobject
+    ShowCreation
+    Uncreate
+    """
+
     def __init__(
         self,
         vmobject: VMobject,
