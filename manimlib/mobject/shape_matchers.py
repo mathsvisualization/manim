@@ -20,6 +20,99 @@ if TYPE_CHECKING:
 
 
 class SurroundingRectangle(Rectangle):
+    """
+    A rectangle that automatically resizes and repositions itself to surround
+    a specified mobject, with a configurable buffer around its boundary.
+
+    SurroundingRectangle is useful for highlighting, emphasizing, or visually
+    grouping an object in a scene. It inherits the geometry and styling
+    capabilities of :class:`Rectangle`.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The mobject to surround. The rectangle is sized and positioned around
+        this object during initialization.
+    buff : float, optional
+        Extra spacing between the surrounded mobject and the rectangle's
+        boundary. Defaults to ``SMALL_BUFF``.
+    color : ManimColor, optional
+        The rectangle's color. Defaults to ``YELLOW``.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Rectangle`, allowing
+        other supported rectangle properties to be configured.
+
+    Attributes
+    ----------
+    mobject : Mobject
+        The object currently being surrounded.
+    buff : float
+        The buffer used when positioning and sizing the rectangle.
+
+    Methods
+    -------
+    surround(mobject, buff=None)
+        Updates the target object and adjusts the rectangle to surround it.
+        If ``buff`` is ``None``, the existing buffer is retained. Returns self.
+
+    set_buff(buff)
+        Updates the buffer and repositions and resizes the rectangle around
+        the currently stored mobject. Returns self.
+
+    Notes
+    -----
+    - The constructor immediately calls ``surround(mobject)`` to fit the
+      rectangle around the target.
+    - If the target is fixed in the frame, the rectangle is also fixed in
+      the frame using ``fix_in_frame()``.
+    - Calling ``surround()`` changes the stored target and can optionally
+      change the buffer.
+    - Calling ``set_buff()`` changes the spacing without changing the target.
+    - The class inherits other geometry and styling methods from
+      :class:`Rectangle`.
+    - SurroundingRectangle does not automatically track later transformations
+      of the target. To update the rectangle, call ``surround()`` again or
+      use an appropriate updater.
+
+    Examples
+    --------
+    Surround a text object with a yellow rectangle::
+
+        text = Tex("Hello, Manim")
+        rect = SurroundingRectangle(text)
+        self.add(text, rect)
+
+    Choose a custom buffer and color::
+
+        text = Tex("Important")
+        rect = SurroundingRectangle(
+            text,
+            buff=0.2,
+            color=RED,
+            stroke_width=3,
+        )
+        self.add(text, rect)
+
+    Change the buffer after construction::
+
+        text = Tex("Math")
+        rect = SurroundingRectangle(text, buff=0.1)
+        rect.set_buff(0.4)
+
+    Surround a different object::
+
+        first = Circle()
+        second = Square()
+        rect = SurroundingRectangle(first)
+        rect.surround(second, buff=0.2)
+
+    See Also
+    --------
+    Rectangle
+    SurroundingRectangle.surround
+    SurroundingRectangle.set_buff
+    """
+
     def __init__(
         self,
         mobject: Mobject,
