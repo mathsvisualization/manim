@@ -332,6 +332,100 @@ class Sphere(Surface):
 
 
 class Torus(Surface):
+    """
+    A three-dimensional torus surface parameterized by two angular variables.
+
+    Torus inherits from :class:`Surface` and constructs a ring-shaped surface
+    by moving a circular cross-section around a central axis. The parameter
+    ``u`` controls the position around the central ring, while ``v`` controls
+    the position around the circular cross-section.
+
+    Parameters
+    ----------
+    u_range : Tuple[float, float], optional
+        Range of the angular parameter ``u`` in radians. Defaults to
+        ``(0, TAU)``, covering a complete revolution around the central axis.
+    v_range : Tuple[float, float], optional
+        Range of the angular parameter ``v`` in radians. Defaults to
+        ``(0, TAU)``, covering the complete circular cross-section.
+    r1 : float, optional
+        Major radius: the distance from the origin to the center of the
+        circular tube's cross-section. Defaults to ``3.0``.
+    r2 : float, optional
+        Minor radius: the radius of the circular tube's cross-section.
+        Defaults to ``1.0``.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Surface`.
+
+    Attributes
+    ----------
+    r1 : float
+        Major radius of the torus.
+    r2 : float
+        Minor radius of the torus.
+
+    Methods
+    -------
+    uv_func(u, v)
+        Maps the angular parameters ``u`` and ``v`` to a three-dimensional
+        point on the torus and returns it as a NumPy array.
+
+    Notes
+    -----
+    - The torus is centered around the origin and its central axis is the
+      z-axis.
+    - The parameterization implemented by ``uv_func()`` is
+
+      ``P = (cos(u), sin(u), 0)``
+
+      ``point = (r1 - r2 * cos(v)) * P - r2 * sin(v) * OUT``
+
+    - Equivalently, its coordinates are
+
+      ``x = (r1 - r2 * cos(v)) * cos(u)``
+
+      ``y = (r1 - r2 * cos(v)) * sin(u)``
+
+      ``z = -r2 * sin(v)``
+
+    - ``u`` moves around the central ring, while ``v`` travels around the
+      tube's circular cross-section.
+    - With the default ranges, both parameters make a full revolution.
+    - The minus signs in the parameterization determine the orientation of
+      the cross-section; the resulting surface still forms a torus.
+    - For a conventional ring torus, ``r1 > r2 > 0``. The implementation
+      does not validate these values, so other choices can produce spindle,
+      self-intersecting, or degenerate surfaces.
+    - The class relies on ``Surface`` to sample the parameterization and
+      construct the surface geometry.
+
+    Examples
+    --------
+    Create a torus with the default radii::
+
+        torus = Torus()
+        self.add(torus)
+
+    Create a torus with a larger tube::
+
+        torus = Torus(r1=3, r2=1.5)
+        self.add(torus)
+
+    Create a partial torus::
+
+        torus = Torus(
+            u_range=(0, PI),
+            v_range=(0, TAU),
+        )
+        self.add(torus)
+
+    See Also
+    --------
+    Surface
+    Sphere
+    SurfaceMesh
+    """
+
     def __init__(
         self,
         u_range: Tuple[float, float] = (0, TAU),
