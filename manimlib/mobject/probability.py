@@ -342,6 +342,166 @@ class SampleSpace(Rectangle):
 
 
 class BarChart(VGroup):
+    """
+    Create a bar chart with configurable axes, tick marks, bars,
+    and optional category labels.
+
+    BarChart arranges rectangular bars to represent numerical
+    values. Bar heights are scaled relative to max_value, while
+    the axes and optional y-axis labels provide a visual reference
+    for comparing the values.
+
+    Parameters
+    ----------
+    values
+        Iterable of numerical values represented by the bars.
+    height
+        Geometric height of the y-axis and maximum bar height.
+        Defaults to 4.
+    width
+        Geometric width of the x-axis. Defaults to 6.
+    n_ticks
+        Number of y-axis intervals. The implementation creates
+        n_ticks + 1 tick marks, including both endpoints.
+    include_x_ticks
+        Whether to add tick marks along the x-axis.
+    tick_width
+        Width of each y-axis tick and half the initial x-axis
+        extension to the left of the origin.
+    tick_height
+        Height of each x-axis tick.
+    label_y_axis
+        Whether to display numerical labels beside y-axis ticks.
+    y_axis_label_height
+        Geometric height of each y-axis label.
+    max_value
+        Numerical value corresponding to the full chart height.
+        If None, the maximum of values is used.
+    bar_colors
+        Colors interpolated across the bars using
+        set_color_by_gradient. Defaults to [BLUE, YELLOW].
+    bar_fill_opacity
+        Fill opacity of each bar. Defaults to 0.8.
+    bar_stroke_width
+        Stroke width of each bar. Defaults to 3.
+    bar_names
+        Names displayed below bars. Defaults to an empty list.
+    bar_label_scale_val
+        Scale factor applied to category labels. Defaults to 0.75.
+    **kwargs
+        Additional keyword arguments forwarded to VGroup.
+
+    Attributes
+    ----------
+    height
+        Configured chart height.
+    width
+        Configured chart width.
+    n_ticks
+        Number of y-axis intervals.
+    n_ticks_x
+        Number of input values, used to determine x-axis tick count.
+    max_value
+        Value mapped to the full chart height.
+    x_axis
+        Horizontal axis, including x-axis ticks when enabled.
+    y_axis
+        Vertical axis, including y-axis ticks.
+    y_axis_labels
+        Group of y-axis labels, created when label_y_axis is True.
+    bars
+        Group of bar rectangles.
+    bar_labels
+        Group of category labels created from bar_names.
+
+    Methods
+    -------
+    add_axes()
+        Create and add the axes, tick marks, and optional y labels.
+    add_bars(values)
+        Create and add bars and their category labels.
+    change_bar_values(values)
+        Resize existing bars to represent new values.
+
+    Notes
+    -----
+    - The constructor creates the axes and bars, then centers
+      the complete VGroup.
+    - The chart height corresponds to max_value. Each bar's
+      height is calculated as value / max_value * height.
+    - Bar width is calculated as width / (2 * len(values)).
+      Bars are placed at regular intervals using this width.
+    - The bars receive colors through set_color_by_gradient.
+      Colors are interpolated across the group, rather than
+      assigned by category name.
+    - Y-axis tick positions and labels are generated using
+      evenly spaced values from zero to max_value.
+    - The implementation creates n_ticks + 1 y-axis ticks.
+    - When include_x_ticks is True, n_ticks_x + 1 x-axis ticks
+      are created, regardless of the number of bar_names.
+    - The x-axis tick-label values are calculated but are not
+      used to create labels.
+    - Category labels are created by pairing bars and bar_names
+      with zip. Extra bars or names are ignored by that pairing.
+    - The implementation places bars using a fixed offset
+      involving DOWN + LEFT * 5 before the final group is centered.
+    - change_bar_values updates only the existing bars paired
+      with the supplied values. Extra values or bars are ignored.
+      It does not update the y-axis labels or max_value.
+    - Values exceeding max_value produce bars taller than the
+      configured chart height. Negative values are not specially
+      handled.
+    - max_value must be a usable nonzero number when calculating
+      bar heights. An empty values iterable also makes automatic
+      max_value calculation or bar-width calculation invalid.
+    - Although max_value is annotated as float, None is explicitly
+      checked to enable automatic maximum selection.
+
+    Examples
+    --------
+    Create a basic bar chart::
+
+        chart = BarChart([2, 5, 3, 7], max_value=10)
+
+    Customize bar colors and category labels::
+
+        chart = BarChart(
+            [4, 8, 6],
+            max_value=10,
+            bar_colors=[BLUE, GREEN, YELLOW],
+            bar_names=["A", "B", "C"],
+        )
+
+    Include x-axis ticks::
+
+        chart = BarChart(
+            [3, 6, 9],
+            include_x_ticks=True,
+            bar_names=["First", "Second", "Third"],
+        )
+
+    Automatically determine the maximum from the data::
+
+        chart = BarChart(
+            [2, 5, 8],
+            max_value=None,
+        )
+
+    Change the bar heights after creation::
+
+        chart = BarChart([2, 4, 6], max_value=10)
+        chart.change_bar_values([5, 3, 9])
+
+    See Also
+    --------
+    Axes
+        Coordinate axes for mathematical plots.
+    Rectangle
+        Geometry used to represent each bar.
+    VGroup
+        Base group class for the chart components.
+    """
+
     def __init__(
         self,
         values: Iterable[float],
