@@ -328,4 +328,101 @@ class ExponentialValueTracker(ValueTracker):
 
 
 class ComplexValueTracker(ValueTracker):
+    """
+    A numerical tracker that stores values using NumPy's 128-bit complex
+    floating-point data type.
+
+    ComplexValueTracker inherits from :class:`ValueTracker` and overrides the
+    ``value_type`` class attribute with ``np.complex128``. This allows the
+    tracker to preserve both the real and imaginary components of complex
+    numbers while retaining the value manipulation and interpolation behavior
+    provided by the parent class.
+
+    Unlike the default ``ValueTracker``, which uses ``np.float64``, this
+    subclass can represent values of the form ``a + bj`` without discarding
+    their imaginary components during conversion to the internal NumPy array.
+
+    Attributes
+    ----------
+    value_type : type
+        NumPy data type used to store the tracked value. Set to
+        ``np.complex128``, which represents complex numbers using
+        double-precision floating-point components.
+
+    Parameters
+    ----------
+    value : float, complex, or numpy.ndarray, optional
+        Initial value to store. Inherited from :class:`ValueTracker`.
+        Defaults to ``0``. The input is converted to a NumPy array with
+        ``dtype=np.complex128``.
+    **kwargs
+        Additional keyword arguments forwarded to the parent ``ValueTracker``
+        constructor.
+
+    Notes
+    -----
+    - This class does not define its own constructor. Initialization is
+      inherited from ``ValueTracker``.
+    - The parent constructor converts the initial value into a NumPy array
+      using the subclass's ``value_type`` attribute.
+    - Both real and imaginary components are preserved when a complex value
+      is converted to ``np.complex128``.
+    - The inherited ``get_value`` method returns a scalar when the internal
+      array contains one element, or a NumPy array when it contains multiple
+      elements.
+    - The inherited ``set_value`` method updates the existing array in place.
+    - The inherited ``increment_value`` method supports adding real or
+      complex increments to the tracked value.
+    - The inherited interpolation behavior operates on the internal complex
+      array, allowing real and imaginary components to change during animation.
+    - Since ``np.complex128`` uses double-precision floating-point components,
+      it provides approximately 15–16 decimal digits of precision for each
+      component, subject to normal floating-point limitations.
+    - Complex values can be interpolated numerically, but their interpretation
+      depends on the application. Linear interpolation in the complex plane
+      does not necessarily follow a circular path or preserve magnitude.
+    - This class changes the storage dtype only; it does not automatically
+      implement polar-coordinate interpolation, magnitude tracking, or
+      phase-unwrapping behavior.
+
+    Examples
+    --------
+    Create a tracker containing a complex number::
+
+        tracker = ComplexValueTracker(2 + 3j)
+        print(tracker.get_value())  # (2+3j)
+
+    Update the real and imaginary components::
+
+        tracker.set_value(4 + 1j)
+        print(tracker.get_value())  # (4+1j)
+
+    Increment a complex value::
+
+        tracker = ComplexValueTracker(1 + 2j)
+        tracker.increment_value(3 - 1j)
+        print(tracker.get_value())  # (4+1j)
+
+    Animate a complex value::
+
+        tracker = ComplexValueTracker(1 + 0j)
+        self.play(
+            tracker.animate.set_value(0 + 1j),
+            run_time=2,
+        )
+
+    Store multiple complex values::
+
+        tracker = ComplexValueTracker(
+            np.array([1 + 1j, 2 + 3j, 4 - 2j])
+        )
+        print(tracker.get_value())
+
+    See Also
+    --------
+    ValueTracker
+    ExponentialValueTracker
+    numpy.complex128
+    """
+
     value_type: type = np.complex128
