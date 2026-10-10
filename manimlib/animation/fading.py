@@ -1170,6 +1170,120 @@ class VFadeOut(VFadeIn):
 
 
 class VFadeInThenOut(VFadeIn):
+    """
+    Fade a VMobject in and then fade it out within a single animation.
+
+    VFadeInThenOut is a subclass of VFadeIn that uses a rate function to
+    control the progression of the opacity animation. By default, it uses
+    ``there_and_back``, which moves the animation's alpha value from 0 to 1
+    and then back to 0.
+
+    Because VFadeIn interpolates stroke and fill opacity from zero toward
+    their original values, the default rate function makes the VMobject
+    gradually appear and then disappear again.
+
+    Parameters
+    ----------
+    vmobject : VMobject
+        The vector mobject whose stroke and fill opacity will be animated.
+        It fades in and then fades out according to the configured rate
+        function.
+
+    rate_func : Callable[[float], float], optional
+        The rate function that maps the animation's normalized progress to
+        an interpolation value. Defaults to ``there_and_back``, which
+        typically rises from 0 to 1 and returns to 0.
+
+    remover : bool, optional
+        Whether the animated mobject should be removed from the scene during
+        animation cleanup. Defaults to True.
+
+    final_alpha_value : float, optional
+        The final alpha value configured by the inherited Animation class.
+        Defaults to 0.5. Its exact effect depends on the parent animation
+        implementation.
+
+    **kwargs
+        Additional keyword arguments forwarded through VFadeIn to Animation.
+
+    Inherited Behavior
+    ------------------
+    VFadeInThenOut does not override ``interpolate_submobject()``. It inherits
+    VFadeIn's implementation, which interpolates each submobject's stroke and
+    fill opacity from zero toward the opacity values stored in its starting
+    state.
+
+    The rate function supplied to the parent animation determines how that
+    interpolation progresses over time.
+
+    Notes
+    -----
+    - The default ``there_and_back`` rate function produces an appearance
+      followed by a disappearance during one animation.
+    - The actual opacity progression depends on the chosen ``rate_func``.
+      A different rate function may produce a different visual result.
+    - The animation modifies stroke and fill opacity. It does not explicitly
+      animate position, scale, or color.
+    - This class is intended for VMobjects.
+    - With the default ``remover=True``, the object is configured to be
+      removed from the scene during cleanup.
+    - ``final_alpha_value`` is passed to the inherited animation setup; its
+      specific behavior is determined by the parent implementation.
+
+    Examples
+    --------
+    Example 1: Briefly reveal a circle.
+
+    >>> circle = Circle()
+    >>> scene.add(circle)
+    >>> scene.play(VFadeInThenOut(circle))
+
+    The circle gradually appears and then fades away using the default
+    ``there_and_back`` rate function.
+
+    Example 2: Control the duration.
+
+    >>> square = Square()
+    >>> scene.add(square)
+    >>> scene.play(VFadeInThenOut(square, run_time=2))
+
+    The square appears and disappears over a two-second animation.
+
+    Example 3: Keep the object in the scene after the animation.
+
+    >>> triangle = Triangle()
+    >>> scene.add(triangle)
+    >>> scene.play(VFadeInThenOut(triangle, remover=False))
+
+    The triangle fades in and out, but the animation is configured not to
+    remove it during cleanup. Its final visual state depends on the
+    interpolation and cleanup behavior of the inherited animation classes.
+
+    Example 4: Supply a custom rate function.
+
+    >>> circle = Circle()
+    >>> scene.add(circle)
+    >>> scene.play(
+    ...     VFadeInThenOut(
+    ...         circle,
+    ...         rate_func=there_and_back,
+    ...         run_time=3,
+    ...     )
+    ... )
+
+    The supplied rate function controls how the opacity interpolation
+    progresses. Here, ``there_and_back`` is specified explicitly, and the
+    animation lasts three seconds.
+
+    See Also
+    --------
+    VFadeIn
+    VFadeOut
+    Animation
+    there_and_back
+    VMobject
+    """
+
     def __init__(
         self,
         vmobject: VMobject,
