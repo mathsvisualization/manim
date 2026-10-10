@@ -310,6 +310,49 @@ def turn_animation_into_updater(
 
 
 def cycle_animation(animation: Animation, **kwargs) -> Mobject:
+    """
+    Convert an animation into a continuously repeating updater.
+
+    This is a convenience wrapper around
+    ``turn_animation_into_updater`` with ``cycle=True``.
+
+    Parameters
+    ----------
+    animation
+        The animation to repeat continuously.
+    **kwargs
+        Additional keyword arguments passed to
+        ``turn_animation_into_updater``.
+
+    Returns
+    -------
+    Mobject
+        The animation's mobject with a repeating updater attached.
+
+    Notes
+    -----
+    The animation progress wraps back to the beginning after
+    reaching its end. The updater remains attached until removed
+    or otherwise modified.
+
+    Examples
+    --------
+    Repeat a rotation animation::
+
+        square = Square()
+        cycle_animation(square.animate.rotate(TAU))
+
+    Repeat a shift animation::
+
+        dot = Dot()
+        cycle_animation(dot.animate.shift(RIGHT * 2))
+
+    See Also
+    --------
+    turn_animation_into_updater
+        Convert an animation into an updater, optionally cycling.
+    """
+
     return turn_animation_into_updater(
         animation, cycle=True, **kwargs
     )
