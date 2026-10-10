@@ -1209,6 +1209,78 @@ class Prism(Cube):
 
 
 class VGroup3D(VGroup):
+    """
+    A group of vectorized mobjects configured for three-dimensional rendering
+    with optional depth testing and surface shading.
+
+    VGroup3D inherits from :class:`VGroup`, so it can contain multiple
+    :class:`VMobject` instances and supports the usual group operations.
+    During initialization, it forwards the supplied mobjects and additional
+    keyword arguments to ``VGroup``, applies the specified shading parameters,
+    and optionally enables depth testing.
+
+    Parameters
+    ----------
+    *vmobjects : VMobject
+        Variable number of vectorized mobjects to include in the group.
+    depth_test : bool, optional
+        Whether to enable depth testing for the group. When ``True``, objects
+        are rendered with depth-aware visibility, helping determine which
+        surfaces appear in front of others. Defaults to ``True``.
+    shading : tuple of float, optional
+        Three shading coefficients passed as positional arguments to
+        ``set_shading``. Defaults to ``(0.2, 0.2, 0.2)``. Their precise
+        interpretation depends on the shading implementation.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`VGroup`.
+
+    Notes
+    -----
+    - The parent ``VGroup`` is initialized before shading is configured.
+    - The shading tuple is unpacked into ``set_shading`` using
+      ``self.set_shading(*shading)``.
+    - Depth testing is enabled only when ``depth_test`` evaluates to ``True``.
+    - Disabling depth testing skips the call to ``apply_depth_test``; it does
+      not undo depth testing that may already be configured elsewhere.
+    - Depth testing affects depth-aware rendering, while shading controls the
+      appearance of the group's surfaces.
+    - This class does not create three-dimensional geometry by itself.
+      The supplied mobjects determine the group's actual geometry.
+
+    Examples
+    --------
+    Create a group containing multiple vectorized mobjects::
+
+        group = VGroup3D(
+            sphere,
+            cube,
+        )
+        self.add(group)
+
+    Configure custom shading coefficients::
+
+        group = VGroup3D(
+            sphere,
+            cube,
+            shading=(0.3, 0.5, 0.2),
+        )
+        self.add(group)
+
+    Disable depth testing during initialization::
+
+        group = VGroup3D(
+            sphere,
+            cube,
+            depth_test=False,
+        )
+        self.add(group)
+
+    See Also
+    --------
+    VGroup
+    VMobject
+    """
+
     def __init__(
         self,
         *vmobjects: VMobject,
