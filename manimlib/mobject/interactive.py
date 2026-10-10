@@ -788,6 +788,192 @@ class Checkbox(ControlMobject):
 
 
 class LinearNumberSlider(ControlMobject):
+    """
+    A draggable slider for selecting a numeric value within a bounded interval.
+
+    LinearNumberSlider is a ControlMobject subclass that represents a
+    number using a horizontal bar and a draggable circular handle. Dragging
+    the handle updates the control's value according to its position along
+    the slider axis.
+
+    The slider maps positions on the axis linearly to values between
+    ``min_value`` and ``max_value``. Values obtained from dragging are
+    quantized to increments of ``step`` measured from ``min_value``.
+
+    Parameters
+    ----------
+    value : float, default=0
+        Initial numeric value. It must lie between ``min_value`` and
+        ``max_value``, inclusive.
+
+    value_type : type, default=np.float64
+        Numeric type associated with the value. This parameter is stored
+        but is not used to cast values in the shown implementation.
+
+    min_value : float, default=-10.0
+        Minimum permitted value and the value mapped to the left endpoint
+        of the slider axis.
+
+    max_value : float, default=10.0
+        Maximum permitted value and the value mapped to the right endpoint
+        of the slider axis.
+
+    step : float, default=1.0
+        Increment used to quantize values obtained from dragging. The
+        quantization is calculated relative to ``min_value``.
+
+    rounded_rect_kwargs : dict, default={"height": 0.075, "width": 2, "corner_radius": 0.0375}
+        Keyword arguments passed to RoundedRectangle to configure the
+        slider bar.
+
+    circle_kwargs : dict, default={"radius": 0.1, "stroke_color": GREY_A, "fill_color": GREY_A, "fill_opacity": 1.0}
+        Keyword arguments passed to Circle to configure the draggable handle.
+
+    **kwargs
+        Additional keyword arguments forwarded to ControlMobject.
+
+    Attributes
+    ----------
+    value_type : type
+        Stored numeric type parameter.
+
+    min_value : float
+        Lower bound of the slider's numeric range.
+
+    max_value : float
+        Upper bound of the slider's numeric range.
+
+    step : float
+        Increment used when quantizing values obtained from dragging.
+
+    rounded_rect_kwargs : dict
+        Configuration used to construct the slider bar.
+
+    circle_kwargs : dict
+        Configuration used to construct the circular handle.
+
+    bar : RoundedRectangle
+        Visible horizontal bar representing the slider.
+
+    slider : Circle
+        Draggable circular handle indicating the current value.
+
+    slider_axis : Line
+        Invisible line defining the slider's movement axis and endpoints.
+
+    Methods
+    -------
+    assert_value(value)
+        Raises an AssertionError if the value lies outside the permitted
+        interval.
+
+    set_value_anim(value)
+        Moves the circular handle to the position corresponding to the
+        supplied value.
+
+    slider_on_mouse_drag(mob, event_data)
+        Converts the drag position into a numeric value and updates the
+        slider.
+
+    get_value_from_point(point)
+        Projects a point onto the slider axis and returns the corresponding
+        value quantized to the nearest lower step relative to min_value.
+
+    Examples
+    --------
+    Create a slider with the default range::
+
+        slider = LinearNumberSlider()
+        self.add(slider)
+
+    Create a slider with a custom range and step size::
+
+        slider = LinearNumberSlider(
+            value=25,
+            min_value=0,
+            max_value=100,
+            step=5,
+        )
+        self.add(slider)
+
+    Customize the bar and handle appearance::
+
+        slider = LinearNumberSlider(
+            value=0,
+            min_value=-5,
+            max_value=5,
+            step=0.5,
+            rounded_rect_kwargs={
+                "width": 4,
+                "height": 0.1,
+                "corner_radius": 0.05,
+            },
+            circle_kwargs={
+                "radius": 0.12,
+                "fill_color": BLUE,
+                "stroke_color": WHITE,
+                "fill_opacity": 1,
+            },
+        )
+        self.add(slider)
+
+    Set the value programmatically::
+
+        slider = LinearNumberSlider(
+            value=0,
+            min_value=-10,
+            max_value=10,
+            step=1,
+        )
+        slider.set_value(5)
+
+        print(slider.get_value())  # 5
+
+    Notes
+    -----
+    - The constructor creates a RoundedRectangle as the visible bar and a
+      Circle as the draggable handle.
+    - The slider axis is a Line connecting the left and right bounding-box
+      points of the bar. Its opacity is set to zero, making it invisible.
+    - The handle is initially moved to the axis line before the parent
+      constructor initializes the ControlMobject.
+    - A mouse-drag listener is registered on the circular handle.
+    - The value-to-position mapping is linear:
+
+      .. math::
+
+          p = \frac{v - v_{\min}}{v_{\max} - v_{\min}}
+
+      where ``p`` is the proportion along the axis and ``v`` is the value.
+
+    - During dragging, the pointer is projected onto the slider axis using
+      ``get_closest_point_on_line``. The distance ratio along the axis is
+      then converted to a value and quantized using ``step``.
+    - The quantization formula is equivalent to taking the lower step
+      relative to ``min_value``; it does not round to the mathematically
+      nearest step.
+    - ``assert_value`` checks only the bounds. It does not validate that
+      ``step`` is positive or that the bounds differ.
+    - A positive ``step`` is expected. A zero step causes division by zero,
+      while a negative step does not provide the intended increment behavior.
+    - ``max_value`` should differ from ``min_value`` because the mapping
+      divides by their difference.
+    - The initial value is validated by the inherited ControlMobject
+      initialization only if that initialization invokes the subclass
+      validation hook.
+    - ``value_type`` is stored but does not automatically convert the
+      control's value to the requested type.
+
+    See Also
+    --------
+    ControlMobject
+        Base class for value-based visual controls.
+    ValueTracker
+        Stores a numeric value that can be read and updated.
+    EnableDisableButton
+        A Boolean control represented by a colored rectangle.
+    """
+
     def __init__(
         self,
         value: float = 0,
