@@ -536,6 +536,63 @@ class Succession(AnimationGroup):
 
 
 class LaggedStart(AnimationGroup):
+    """
+    An animation group that starts its child animations with a configurable delay
+    between consecutive animations.
+
+    LaggedStart extends AnimationGroup and forwards the supplied animations to
+    the parent class with a default lag ratio of DEFAULT_LAGGED_START_LAG_RATIO.
+    The lag ratio controls the relative timing offset between the starts of
+    consecutive animations.
+
+    Parameters
+    ----------
+    *animations
+        Variable number of Animation instances to include in the group. Their
+        start times are staggered according to the configured lag ratio.
+
+    lag_ratio : float, optional
+        Relative delay between the start times of consecutive animations.
+        Defaults to DEFAULT_LAGGED_START_LAG_RATIO. A larger value generally
+        produces more separation between animation start times, while a smaller
+        value produces more overlap. The exact timing behavior is determined by
+        AnimationGroup.
+
+    **kwargs
+        Additional keyword arguments forwarded to AnimationGroup.
+
+    Notes
+    -----
+    - LaggedStart does not define its own animation lifecycle or interpolation
+      methods. It relies on AnimationGroup for those behaviors.
+    - The child animations are passed to AnimationGroup together with the
+      selected lag_ratio.
+    - The actual animation schedule depends on the timing logic implemented by
+      AnimationGroup.
+    - Unlike a succession-style sequence, a lagged start allows animations to
+      overlap when their durations and start-time offsets permit it.
+
+    Examples
+    --------
+    Create several animations that begin one after another with some overlap:
+
+        >>> animations = [
+        ...     FadeIn(circle),
+        ...     FadeIn(square),
+        ...     FadeIn(triangle),
+        ... ]
+        >>> lagged = LaggedStart(*animations, lag_ratio=0.2)
+
+    The example illustrates construction only; the objects and animation classes
+    must be defined in the surrounding scene.
+
+    See Also
+    --------
+    AnimationGroup
+    Succession
+    Animation
+    """
+
     def __init__(
         self,
         *animations,
