@@ -810,6 +810,96 @@ class Line3D(Cylinder):
 
 
 class Disk3D(Surface):
+    """
+    A flat, circular disk represented as a parameterized three-dimensional surface.
+
+    Disk3D inherits from :class:`Surface` and constructs a disk in the XY-plane
+    using a radial parameter and an angular parameter. The generated geometry
+    is initially a unit disk and is scaled by the requested radius.
+
+    Parameters
+    ----------
+    radius : float, optional
+        Radius of the disk. Defaults to ``1``.
+    u_range : Tuple[float, float], optional
+        Range of the radial parameter ``u``. Defaults to ``(0, 1)``, spanning
+        from the center to the edge of a unit disk before scaling.
+    v_range : Tuple[float, float], optional
+        Range of the angular parameter ``v`` in radians. Defaults to
+        ``(0, TAU)``, covering a complete revolution.
+    resolution : Tuple[int, int], optional
+        Number of samples along the radial and angular parameter directions.
+        Defaults to ``(2, 100)``.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Surface`.
+
+    Methods
+    -------
+    uv_func(u, v)
+        Maps radial parameter ``u`` and angular parameter ``v`` to a point
+        in the XY-plane and returns it as a NumPy array.
+
+    Notes
+    -----
+    - The parameterization implemented by ``uv_func()`` is
+
+      ``x = u * cos(v)``
+
+      ``y = u * sin(v)``
+
+      ``z = 0``
+
+    - The parameter ``u`` controls the radial distance from the origin,
+      while ``v`` determines the angular position.
+    - With the default ranges, the surface covers a complete disk centered
+      at the origin in the XY-plane.
+    - The constructor first initializes the surface through ``Surface`` and
+      then applies ``self.scale(radius)`` to the generated geometry.
+    - The final radial extent depends on both ``radius`` and ``u_range``.
+      For example, a radial range of ``(0, 2)`` produces a disk with twice
+      the requested radius after scaling.
+    - A restricted ``v_range`` produces a partial disk sector rather than
+      a complete disk.
+    - This class creates a surface, not a separate filled polygon or a
+      disk with thickness.
+    - The implementation does not validate the radius, parameter ranges,
+      or resolution.
+
+    Examples
+    --------
+    Create a unit disk::
+
+        disk = Disk3D()
+        self.add(disk)
+
+    Create a larger disk::
+
+        disk = Disk3D(radius=2)
+        self.add(disk)
+
+    Create a partial disk sector::
+
+        disk = Disk3D(
+            radius=1.5,
+            u_range=(0, 1),
+            v_range=(0, PI),
+        )
+        self.add(disk)
+
+    Increase angular sampling density::
+
+        disk = Disk3D(
+            resolution=(5, 150),
+        )
+        self.add(disk)
+
+    See Also
+    --------
+    Surface
+    Cylinder
+    Sphere
+    """
+
     def __init__(
         self,
         radius: float = 1,
