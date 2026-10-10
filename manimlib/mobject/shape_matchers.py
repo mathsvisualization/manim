@@ -388,6 +388,91 @@ class Cross(VGroup):
 
 
 class Underline(Line):
+    """
+    A horizontal line positioned beneath a mobject to visually underline it.
+
+    Underline inherits from :class:`Line`. Its width is derived from the
+    target mobject's width and a configurable stretch factor, and it is placed
+    below the target with a configurable buffer.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The object to underline. Its width and position determine the
+        underline's dimensions and placement.
+    buff : float, optional
+        Vertical distance between the mobject and the underline. Defaults to
+        ``SMALL_BUFF``.
+    stroke_color : ManimColor, optional
+        Color of the underline. Defaults to ``DEFAULT_MOBJECT_COLOR``.
+    stroke_width : float or Sequence[float], optional
+        Stroke width or sequence of stroke widths passed to ``set_stroke()``.
+        Defaults to ``[0, 3, 3, 0]``. If a sequence is supplied, additional
+        curves are inserted based on its length before the stroke is applied.
+    stretch_factor : float, optional
+        Multiplier applied to the target mobject's width. Defaults to ``1.2``,
+        making the underline 20% wider than the target.
+    **kwargs
+        Additional keyword arguments forwarded to the :class:`Line`
+        constructor.
+
+    Attributes
+    ----------
+    Inherited from Line
+        The underline's endpoints, geometry, and stroke properties are
+        provided by the parent class.
+
+    Notes
+    -----
+    - The line is initially created from ``LEFT`` to ``RIGHT``.
+    - If ``stroke_width`` is not a scalar ``float`` or ``int``, the
+      implementation inserts ``len(stroke_width) - 2`` additional curves.
+    - The requested stroke color and width are applied before the line is
+      resized and positioned.
+    - The final width is ``mobject.get_width() * stretch_factor``.
+    - ``next_to(mobject, DOWN, buff=buff)`` positions the line below the
+      target object.
+    - The target mobject is not added to the underline, and no updater is
+      created. Later changes to the target do not automatically reposition
+      or resize the underline.
+    - A zero-width target can produce a zero-width underline. The supplied
+      stretch factor is not validated.
+
+    Examples
+    --------
+    Underline a text object::
+
+        text = Tex("Important result")
+        underline = Underline(text)
+        self.add(text, underline)
+
+    Customize the underline's appearance::
+
+        text = Tex("Theorem")
+        underline = Underline(
+            text,
+            buff=0.15,
+            stroke_color=BLUE,
+            stroke_width=4,
+            stretch_factor=1.3,
+        )
+        self.add(text, underline)
+
+    Use a multiple stroke width::
+
+        text = Tex("Definition")
+        underline = Underline(text)
+        underline.insert_n_curves(10)
+        underline.set_stroke(width=[0, 2, 2, 0])
+        self.add(text, underline)
+
+    See Also
+    --------
+    Line
+    Cross
+    SurroundingRectangle
+    """
+
     def __init__(
         self,
         mobject: Mobject,
