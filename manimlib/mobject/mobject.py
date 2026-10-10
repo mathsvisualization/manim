@@ -2673,6 +2673,87 @@ class _UpdaterBuilder:
 
 
 class _FunctionalUpdaterBuilder:
+    """
+    Provides a fluent interface for registering updaters whose method arguments
+    are evaluated dynamically on every update.
+
+    _FunctionalUpdaterBuilder works similarly to _UpdaterBuilder, but treats
+    each supplied positional and keyword argument as a zero-argument callable.
+    When the updater runs, it evaluates these callables and passes their current
+    return values to the selected method on the mobject.
+
+    This allows updater behavior to depend on changing values, such as trackers
+    or other state that can be queried through functions.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The mobject to which the generated updater functions will be attached.
+
+    Attributes
+    ----------
+    mobject : Mobject
+        The mobject that receives the registered updaters.
+
+    Methods
+    -------
+    __getattr__(method_name)
+        Returns a wrapper that registers an updater calling the named method
+        on the mobject. Positional and keyword arguments supplied to the
+        wrapper are evaluated as zero-argument callables every time the
+        updater executes. Returns this builder for chaining.
+
+    Notes
+    -----
+    - This is an internal helper for constructing functionally parameterized
+      updaters.
+    - Attribute lookup for the selected method occurs during updater execution
+      through ``getattr(m, method_name)`` rather than when the builder method
+      is first accessed.
+    - Every positional argument must be callable without arguments because
+      the updater evaluates it using ``arg()`` on each update.
+    - Every keyword argument value must likewise be a zero-argument callable.
+      Ordinary constants such as ``2`` or ``RIGHT`` will raise a TypeError
+      when the updater attempts to call them.
+    - Argument callables are evaluated on every updater invocation, so their
+      return values can change over time.
+    - Each call to a builder method registers a separate updater. Repeated
+      calls do not replace existing updaters.
+    - The registered lambda invokes the selected method on the mobject passed
+      to the updater, not by directly calling the stored ``self.mobject``.
+    - The wrapper returns this builder, allowing multiple updater registrations
+      to be chained.
+    - The implementation does not validate that the requested method exists,
+      that argument values are callable, or that their returned values match
+      the method's signature. Such errors may occur when an updater executes.
+    - Updater execution timing and behavior depend on Mobject.add_updater()
+      and the scene's update cycle.
+
+    Examples
+    --------
+    Register an updater whose displacement is computed dynamically::
+
+        builder = _FunctionalUpdaterBuilder(square)
+        builder.shift(lambda: tracker.get_value() * RIGHT)
+
+    Register a method with dynamic positional arguments::
+
+        builder.scale(lambda: scale_tracker.get_value())
+
+    Register dynamic keyword arguments::
+
+        builder.set_opacity(opacity=lambda: opacity_tracker.get_value())
+
+    In these examples, the supplied functions are evaluated on every update,
+    so changes in tracker values can affect subsequent method calls.
+
+    See Also
+    --------
+    Mobject.add_updater
+    _UpdaterBuilder
+    _AnimationBuilder
+    """
+
     def __init__(self, mobject: Mobject):
         self.mobject = mobject
 
