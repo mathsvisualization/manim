@@ -1635,14 +1635,52 @@ class ThoughtBubble(Bubble):
 
 
 class OldSpeechBubble(Bubble):
+    """
+    A speech bubble that uses the legacy speech-bubble SVG asset.
+
+    Inherits content handling, positioning, and styling from Bubble while
+    using "Bubbles_speech.svg" as its body template.
+
+    Examples
+    --------
+        bubble = OldSpeechBubble("Hello!")
+        self.add(bubble)
+    """
+
     file_name: str = "Bubbles_speech.svg"
 
 
 class DoubleSpeechBubble(Bubble):
+    """
+    A double speech bubble that uses the "Bubbles_double_speech.svg" asset.
+
+    Inherits content handling, positioning, and styling from Bubble.
+    The double-tail appearance is defined by the SVG template.
+
+    Examples
+    --------
+        bubble = DoubleSpeechBubble("Hello!")
+        self.add(bubble)
+    """
+
     file_name: str = "Bubbles_double_speech.svg"
 
 
 class OldThoughtBubble(Bubble):
+    """
+    A legacy thought bubble that uses the "Bubbles_thought.svg" asset.
+
+    The body is sorted vertically after creation. The make_green_screen()
+    method colors the final body submobject green for green-screen effects.
+
+    Examples
+    --------
+        bubble = OldThoughtBubble("Hmm...")
+        self.add(bubble)
+
+        bubble.make_green_screen()
+    """
+
     file_name: str = "Bubbles_thought.svg"
 
     def get_body(self, content: VMobject, direction: Vect3, buff: float) -> VMobject:
