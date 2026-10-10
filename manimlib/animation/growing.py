@@ -150,6 +150,107 @@ class GrowFromPoint(Transform):
 
 
 class GrowFromCenter(GrowFromPoint):
+    """
+    Animate a mobject growing from its own center into its original shape.
+
+    GrowFromCenter is a subclass of GrowFromPoint that automatically chooses
+    the center of the supplied mobject as the starting point. Instead of
+    requiring the caller to provide a position explicitly, it obtains the
+    center using ``mobject.get_center()`` and passes that point to
+    GrowFromPoint.
+
+    The inherited animation creates a starting mobject by scaling it to zero,
+    moving it to the chosen point, and transforming it into the target
+    mobject. As a result, the object appears to expand outward from its
+    center.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The object to animate. Its center is used as the point from which
+        the animation begins.
+
+    **kwargs
+        Additional keyword arguments forwarded to GrowFromPoint and then
+        to Transform. These may include options such as ``run_time`` and
+        ``point_color``.
+
+    Methods
+    -------
+    __init__(mobject: Mobject, **kwargs)
+        Obtain the center of ``mobject`` using ``get_center()`` and initialize
+        the parent GrowFromPoint animation with that center as its starting
+        point.
+
+    Inherited Behavior
+    ------------------
+    GrowFromCenter inherits the following behavior from GrowFromPoint:
+
+    - Creates a copy of the original mobject as the transformation target.
+    - Creates a starting mobject scaled to zero size.
+    - Moves the starting mobject to the chosen center point.
+    - Optionally applies ``point_color`` to the starting mobject.
+    - Uses Transform's interpolation and cleanup behavior.
+
+    Notes
+    -----
+    - The starting point is calculated when the GrowFromCenter constructor
+      runs. It is not continuously recalculated during the animation.
+    - ``get_center()`` returns the center according to the mobject's
+      geometry and bounding box.
+    - Unlike GrowFromPoint, this class does not require an explicit point
+      argument.
+    - Since ``kwargs`` are forwarded to GrowFromPoint, supported options
+      from that class can also be supplied here.
+
+    Examples
+    --------
+    Example 1: Grow a circle from its center.
+
+    >>> circle = Circle()
+    >>> scene.play(GrowFromCenter(circle))
+
+    The circle begins collapsed at its center and expands into its original
+    shape.
+
+    Example 2: Grow a square from its current position.
+
+    >>> square = Square().shift(RIGHT * 3 + UP)
+    >>> scene.play(GrowFromCenter(square))
+
+    The square grows from its own center, even though it has been shifted
+    away from the origin.
+
+    Example 3: Set a custom duration.
+
+    >>> triangle = Triangle()
+    >>> scene.play(GrowFromCenter(triangle, run_time=2))
+
+    The triangle grows from its center over two seconds.
+
+    Example 4: Specify the starting color.
+
+    >>> circle = Circle(color=BLUE)
+    >>> scene.play(
+    ...     GrowFromCenter(
+    ...         circle,
+    ...         point_color=YELLOW,
+    ...     )
+    ... )
+
+    The starting mobject is assigned yellow, while the target is a copy of
+    the original blue circle. The transformation interpolates between the
+    starting and target states.
+
+    See Also
+    --------
+    GrowFromPoint
+    Transform
+    Mobject.get_center
+    Mobject.scale
+    Mobject.move_to
+    """
+
     def __init__(self, mobject: Mobject, **kwargs):
         point = mobject.get_center()
         super().__init__(mobject, point, **kwargs)
