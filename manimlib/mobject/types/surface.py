@@ -646,6 +646,105 @@ class Surface(Mobject):
 
 
 class ParametricSurface(Surface):
+    """
+    A surface defined by a user-provided parametric function of two variables.
+
+    `ParametricSurface` inherits from :class:`Surface` and allows the surface
+    geometry to be specified by passing a callable that maps a pair of
+    parameters ``(u, v)`` to a point in three-dimensional space.
+
+    The supplied function is stored as ``passed_uv_func``. Whenever the
+    parent class samples the surface, the overridden ``uv_func`` delegates
+    the calculation to this callable.
+
+    Parameters
+    ----------
+    uv_func : Callable[[float, float], Iterable[float]]
+        Function that accepts two parameters, ``u`` and ``v``, and returns
+        an iterable of coordinates representing a point on the surface.
+        Typically, the returned coordinates are ``(x, y, z)``.
+    u_range : tuple[float, float], optional
+        Start and end values of the first parameter. Defaults to (0, 1).
+    v_range : tuple[float, float], optional
+        Start and end values of the second parameter. Defaults to (0, 1).
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Surface`, such as
+        ``resolution``, ``color``, ``shading``, ``depth_test``, and
+        ``sort_to_camera``.
+
+    Attributes
+    ----------
+    passed_uv_func : Callable[[float, float], Iterable[float]]
+        The original parametric function supplied to the constructor.
+
+    Examples
+    --------
+    Create a flat rectangular surface:
+
+        surface = ParametricSurface(
+            lambda u, v: (u, v, 0),
+            u_range=(-2, 2),
+            v_range=(-1, 1),
+        )
+
+    Create a curved surface:
+
+        surface = ParametricSurface(
+            lambda u, v: (
+                u,
+                v,
+                np.sin(u) * np.cos(v),
+            ),
+            u_range=(-PI, PI),
+            v_range=(-PI, PI),
+            resolution=(50, 50),
+        )
+
+    Create a spherical surface using angular parameters:
+
+        sphere = ParametricSurface(
+            lambda u, v: (
+                np.cos(u) * np.sin(v),
+                np.sin(u) * np.sin(v),
+                np.cos(v),
+            ),
+            u_range=(0, TAU),
+            v_range=(0, PI),
+            resolution=(60, 30),
+        )
+
+    Create a helicoidal surface:
+
+        surface = ParametricSurface(
+            lambda u, v: (
+                v * np.cos(u),
+                v * np.sin(u),
+                u,
+            ),
+            u_range=(0, TAU),
+            v_range=(0, 2),
+            resolution=(60, 30),
+        )
+
+    Notes
+    -----
+    - The callable is stored in ``passed_uv_func`` before the parent
+      constructor runs, allowing the inherited surface initialization to
+      call the overridden ``uv_func``.
+    - The overridden ``uv_func`` simply returns the result of
+      ``passed_uv_func(u, v)``. It does not perform additional coordinate
+      transformations or validate the returned coordinates.
+    - The function should return coordinates compatible with the surface's
+      three-dimensional point representation.
+    - The parameter ranges determine the interval sampled by the parent
+      class, while the ``resolution`` keyword controls how many samples
+      are taken along each parameter direction.
+    - The resulting geometry is sampled and stored as a grid. Changing the
+      callable later does not automatically regenerate the existing points;
+      the surface must be reinitialized or its points regenerated for the
+      new function to affect the geometry.
+    """
+
     def __init__(
         self,
         uv_func: Callable[[float, float], Iterable[float]],
