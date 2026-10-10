@@ -1913,6 +1913,75 @@ class Piano(VGroup):
 
 
 class Piano3D(VGroup):
+    """
+    A three-dimensional piano keyboard created by extruding the keys of a
+    Piano object into 3D prisms.
+
+    Each 2D key is converted into a 3D object using Prismify. The resulting
+    keys receive stroke styling and shading, and black keys are shifted
+    slightly forward and colored black to distinguish them from white keys.
+
+    Parameters
+    ----------
+    shading : Tuple[float, float, float], optional
+        Shading parameters applied to the 3D keys. Defaults to (1.0, 0.2, 0.2).
+    stroke_width : float, optional
+        Width of the outlines around the keys. Defaults to 0.25.
+    stroke_color : ManimColor, optional
+        Color of the key outlines. Defaults to BLACK.
+    key_depth : float, optional
+        Depth of each extruded key. Defaults to 0.1.
+    black_key_shift : float, optional
+        Distance black keys are shifted along the OUT direction.
+        Defaults to 0.05.
+    piano_2d_config : dict, optional
+        Configuration passed to Piano to control the underlying 2D keyboard.
+        Defaults to white keys colored GREY_A and key_buff set to 0.001.
+    **kwargs
+        Additional arguments passed to VGroup.
+
+    Examples
+    --------
+    Create a default 3D piano:
+
+        piano = Piano3D()
+        self.add(piano)
+
+    Customize the key depth and shading:
+
+        piano = Piano3D(
+            key_depth=0.2,
+            shading=(1.0, 0.3, 0.2),
+            black_key_shift=0.08,
+        )
+        self.add(piano)
+
+    Customize the underlying 2D keyboard:
+
+        piano = Piano3D(
+            piano_2d_config={
+                "n_white_keys": 14,
+                "total_width": 7,
+                "white_key_color": GREY_A,
+                "key_buff": 0.001,
+            }
+        )
+        self.add(piano)
+
+    Notes
+    -----
+    - The class uses Piano to generate the 2D keys, then converts each key
+      into a 3D prism with Prismify.
+    - Depth testing is enabled using apply_depth_test().
+    - Black-key detection is performed by checking whether each original
+      2D key belongs to piano_2d.black_keys.
+    - Detected black keys are shifted along OUT and explicitly colored
+      BLACK. Other key colors depend on the underlying Piano configuration
+      and the applied shading.
+    - The resulting object is a VGroup of 3D key objects; it does not
+      implement musical playback or keyboard interaction.
+    """
+
     def __init__(
         self,
         shading: Tuple[float, float, float] = (1.0, 0.2, 0.2),
