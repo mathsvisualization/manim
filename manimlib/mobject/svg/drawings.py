@@ -1450,6 +1450,136 @@ class SpeechBubble(Bubble):
 
 
 class ThoughtBubble(Bubble):
+    """
+    A thought bubble with an irregular cloud-shaped body and small trailing
+    circles to represent a character's thoughts.
+
+    ThoughtBubble inherits from Bubble and overrides get_body() to construct
+    the bubble from a rounded rectangular region, overlapping circles, and
+    a sequence of smaller circles. Random variation in the circle positions
+    and radii gives the main body an irregular, cloud-like outline.
+
+    Parameters
+    ----------
+    content : str | VMobject | None, optional
+        Content to associate with the thought bubble. Strings are converted
+        to Text objects by Bubble. If None, a transparent placeholder
+        rectangle is created using filler_shape. Defaults to None.
+    buff : float, optional
+        Spacing between the content and the surrounding rectangle.
+        Defaults to SMALL_BUFF.
+    filler_shape : Tuple[float, float], optional
+        Width and height of the placeholder rectangle used when content is
+        None. Defaults to (2.0, 1.0).
+    bulge_radius : float, optional
+        Base radius of the circles used to form the cloud-like body.
+        Defaults to 0.35.
+    bulge_overlap : float, optional
+        Controls the overlap between neighboring bulges. The spacing
+        between their centers is calculated as
+        (1 - bulge_overlap) * 2 * bulge_radius. Larger values produce
+        more overlap. Defaults to 0.25.
+    noise_factor : float, optional
+        Controls the amount of random variation in bulge placement and
+        radius. A value of 0 removes the random variation. Defaults to 0.1.
+    circle_radii : list[float], optional
+        Radii of the small circles forming the thought bubble's trailing
+        indicator. Defaults to [0.1, 0.15, 0.2].
+    **kwargs
+        Additional keyword arguments passed through Bubble to VGroup,
+        including options for direction, fill, stroke, and positioning.
+
+    Attributes
+    ----------
+    bulge_radius : float
+        Base radius used for the circles forming the cloud outline.
+    bulge_overlap : float
+        Controls how closely neighboring bulges overlap.
+    noise_factor : float
+        Amount of random variation applied to the bulge geometry.
+    circle_radii : list[float]
+        Radii of the circles used for the trailing indicator.
+    content : VMobject
+        Content managed by the parent Bubble class.
+    body : VMobject
+        Thought-bubble geometry returned by get_body(). This is a VGroup
+        containing the trailing circles and the cloud-shaped body.
+
+    Methods
+    -------
+    get_body(content, direction, buff)
+        Builds the thought bubble by surrounding the content with a
+        rectangle, placing overlapping circles along its perimeter,
+        combining those shapes with Union, and adding a trail of circles.
+        Flips the resulting group when direction[0] is positive.
+
+    Examples
+    --------
+    Create a basic thought bubble:
+
+        bubble = ThoughtBubble("Hmm...")
+        self.add(bubble)
+
+    Customize the cloud outline:
+
+        bubble = ThoughtBubble(
+            "What if?",
+            bulge_radius=0.3,
+            bulge_overlap=0.35,
+            noise_factor=0.05,
+        )
+        self.add(bubble)
+
+    Customize the trailing circles:
+
+        bubble = ThoughtBubble(
+            "Thinking",
+            circle_radii=[0.08, 0.12, 0.18],
+        )
+        self.add(bubble)
+
+    Create a thought bubble with custom content spacing:
+
+        bubble = ThoughtBubble(
+            "An interesting idea",
+            buff=0.2,
+            filler_shape=(3.0, 1.5),
+        )
+        self.add(bubble)
+
+    Position the thought bubble near a mobject:
+
+        target = Circle()
+        bubble = ThoughtBubble("A thought")
+        bubble.pin_to(target, auto_flip=True)
+        self.add(target, bubble)
+
+    Notes
+    -----
+    - The parent Bubble class handles content conversion, body styling,
+      optional content addition, and optional pinning.
+    - The main cloud is created by combining a SurroundingRectangle with
+      overlapping circles using Union.
+    - Circle centers are sampled along the rectangle's perimeter. The
+      number of samples depends on the edge lengths and the spacing
+      determined by bulge_radius and bulge_overlap.
+    - Random variation affects both the sampled positions and the radii
+      of the bulging circles. Consequently, separately created instances
+      may have slightly different outlines.
+    - The trailing circles are arranged diagonally, adjusted, and placed
+      below the cloud body. Their radii are taken from circle_radii.
+    - The current implementation uses WHITE with stroke width 2 for the
+      cloud and trailing circles. The fill styling applied by Bubble is
+      applied to the returned body group.
+    - The direction check only tests direction[0]. When it is positive,
+      the entire result is flipped; other direction components do not
+      independently control the tail's orientation.
+    - circle_radii is expected to contain at least one value because the
+      implementation uses circle_radii[0] to calculate spacing.
+    - The local variable perimeter is calculated but not subsequently
+      used in the current implementation.
+    """
+
     def __init__(
         self,
         content: str | VMobject | None = None,
