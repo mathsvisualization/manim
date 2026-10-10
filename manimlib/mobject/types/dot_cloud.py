@@ -25,6 +25,199 @@ DEFAULT_BUFF_RATIO = 0.5
 
 
 class DotCloud(PMobject):
+    """
+    A point-cloud object that renders each point as a camera-facing dot.
+
+    `DotCloud` inherits from :class:`PMobject` and extends its point-based data
+    with a radius for each point. Unlike a collection of ordinary geometric
+    circles, its dots are rendered using a GPU shader that expands each point
+    into a camera-facing quad.
+
+    Each point stores three-dimensional coordinates, a radius, and an RGBA
+    color. The shader also supports glow and anti-aliasing controls.
+
+    Parameters
+    ----------
+    points : Vect3Array, optional
+        Initial three-dimensional point coordinates. Each point represents
+        the center of a dot. Defaults to NULL_POINTS.
+    color : ManimColor, optional
+        Initial color assigned through the parent PMobject initialization.
+        Defaults to GREY_C.
+    opacity : float, optional
+        Initial opacity of the dots. Defaults to 1.0.
+    radius : float, optional
+        Initial radius assigned to every point. Defaults to
+        DEFAULT_DOT_RADIUS.
+    glow_factor : float, optional
+        Glow intensity parameter passed to the shader uniforms.
+        Defaults to 0.0.
+    anti_alias_width : float, optional
+        Width of the shader's anti-aliasing region. Defaults to 2.0.
+    **kwargs
+        Additional keyword arguments forwarded to PMobject.
+
+    Attributes
+    ----------
+    radius : float
+        Initial radius value stored during initialization. Later radius
+        changes are applied to the point data.
+    glow_factor : float
+        Initial glow factor stored during initialization.
+    anti_alias_width : float
+        Anti-aliasing width stored during initialization.
+    data_dtype : Sequence
+        Structured point-data fields containing ``point``, ``radius``,
+        and ``rgba`` values.
+    uniform_dtype : np.dtype
+        Shader uniform layout containing common uniforms, ``anti_alias_width``,
+        and ``glow_factor``.
+    shader_file : str
+        Name of the shader file used to render the dots: ``true_dot.wgsl``.
+    verts_per_record : int
+        Number of vertices generated for each point record: 6.
+
+    Examples
+    --------
+    Create a cloud of dots from explicit coordinates:
+
+        points = np.array([
+            [-1.0, 0.0, 0.0],
+            [ 0.0, 1.0, 0.0],
+            [ 1.0, 0.0, 0.0],
+        ])
+
+        cloud = DotCloud(points, color=BLUE, radius=0.05)
+
+    Create an initially empty cloud and set its points later:
+
+        cloud = DotCloud(color=RED)
+        cloud.set_points(points)
+
+    Create a regular three-dimensional grid:
+
+        cloud = DotCloud(radius=0.04)
+        cloud.to_grid(
+            n_rows=5,
+            n_cols=5,
+            n_layers=3,
+            h_buff_ratio=1.0,
+            v_buff_ratio=1.0,
+            d_buff_ratio=1.0,
+        )
+
+    Use the same spacing ratio for every dimension:
+
+        cloud.to_grid(
+            n_rows=4,
+            n_cols=4,
+            n_layers=2,
+            buff_ratio=0.5,
+        )
+
+    Adjust individual point radii:
+
+        cloud.set_radii([0.02, 0.05, 0.08])
+        radii = cloud.get_radii()
+
+    Set a uniform radius for all points:
+
+        cloud.set_radius(0.06)
+        maximum_radius = cloud.get_radius()
+
+    Scale the dot radii independently of the point positions:
+
+        cloud.scale_radii(1.5)
+
+    Change the glow factor:
+
+        cloud.set_glow_factor(0.8)
+        glow = cloud.get_glow_factor()
+
+    Scale the cloud and its radii together:
+
+        cloud.scale(2.0)
+
+    Scale the point positions without scaling the radii:
+
+        cloud.scale(2.0, scale_radii=False)
+
+    Enable 3D shading and depth testing:
+
+        cloud.make_3d(
+            reflectiveness=0.5,
+            gloss=0.1,
+            shadow=0.2,
+        )
+
+    Methods
+    -------
+    to_grid(n_rows, n_cols, n_layers=1, buff_ratio=None,
+            h_buff_ratio=1.0, v_buff_ratio=1.0, d_buff_ratio=1.0,
+            height=DEFAULT_GRID_HEIGHT)
+        Generate regularly arranged point coordinates in a grid or
+        three-dimensional lattice, optionally adjusting spacing and height.
+
+    set_radii(radii)
+        Assign radii to the points. If the number of supplied radii differs
+        from the number of points, resize_with_interpolation is used to
+        produce the required number of values.
+
+    get_radii()
+        Return the stored radius array.
+
+    set_radius(radius)
+        Assign the same radius value to every point and refresh the
+        bounding box.
+
+    get_radius()
+        Return the maximum radius in the point data.
+
+    scale_radii(scale_factor)
+        Multiply the existing radii by the supplied factor.
+
+    set_glow_factor(glow_factor)
+        Update the ``glow_factor`` shader uniform.
+
+    get_glow_factor()
+        Return the current ``glow_factor`` shader uniform.
+
+    compute_bounding_box()
+        Compute the parent bounding box and expand its minimum and maximum
+        corners by the maximum dot radius.
+
+    scale(scale_factor, scale_radii=True, **kwargs)
+        Scale the point positions using the parent implementation and,
+        by default, scale the radii as well.
+
+    make_3d(reflectiveness=0.5, gloss=0.1, shadow=0.2)
+        Set shading parameters and enable depth testing.
+
+    Notes
+    -----
+    - The radius is stored separately for each point in ``data["radius"]``.
+    - ``set_radius`` writes the supplied value to all point records, whereas
+      ``set_radii`` supports different radii for different points.
+    - ``get_radius`` returns the maximum stored radius, not an average.
+    - ``scale_radii`` changes dot sizes without directly scaling positions.
+    - The ``scale`` method scales radii by default. Set ``scale_radii=False``
+      to scale only the point positions.
+    - ``to_grid`` first creates integer grid coordinates, then adjusts the
+      point cloud's dimensions according to the requested spacing ratios.
+      If ``buff_ratio`` is provided, it overrides all three individual
+      spacing ratios.
+    - In ``to_grid``, ``height`` is applied after the dimension-based
+      rescaling when it is not None. The cloud is then centered.
+    - ``set_glow_factor`` updates the uniform directly; it does not update
+      the stored ``self.glow_factor`` attribute.
+    - ``init_uniforms`` initializes the shader uniforms from the stored
+      glow factor and anti-aliasing width.
+    - ``compute_bounding_box`` expands the bounding box using the maximum
+      radius, so it accounts for dot size beyond the point centers.
+    - Calling ``get_radius`` on an object with no point records may fail
+      because the maximum of an empty radius array is undefined.
+    """
+
     shader_file: str = "true_dot.wgsl"
     # Each dot is expanded into a camera facing quad by the vertex shader
     verts_per_record: int = 6
