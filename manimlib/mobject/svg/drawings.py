@@ -1003,6 +1003,188 @@ class ClockPassesTime(AnimationGroup):
 
 
 class Bubble(VGroup):
+    """
+    A speech bubble that surrounds text or another VMobject, with a movable
+    tip that can be positioned toward a point or another mobject.
+
+    The bubble body is loaded from an SVG asset and resized to accommodate
+    its content. The class supports custom fill and stroke styling, optional
+    content display, directional flipping, positioning, and content resizing.
+
+    Parameters
+    ----------
+    content : str | VMobject | None, optional
+        Content to associate with the bubble. A string is converted to a
+        Text object, while a VMobject is used directly. If None, a transparent
+        rectangle is created using filler_shape to determine the initial
+        bubble dimensions. Defaults to None.
+    buff : float, optional
+        Extra spacing used when calculating the bubble body's dimensions
+        around the content. Defaults to 1.0.
+    filler_shape : Tuple[float, float], optional
+        Width and height of the placeholder rectangle created when content
+        is None. Defaults to (3.0, 2.0).
+    pin_point : Vect3 | None, optional
+        Point or mobject accepted by pin_to() to position the bubble's tip.
+        If provided, the bubble is pinned during initialization. Defaults
+        to None.
+    direction : Vect3, optional
+        Direction used to orient the bubble's tip and determine its initial
+        horizontal orientation. Defaults to LEFT.
+    add_content : bool, optional
+        Whether to add the content mobject to the visible VGroup during
+        initialization. The content is still stored in self.content when
+        this is False. Defaults to True.
+    fill_color : ManimColor, optional
+        Fill color of the bubble body. Defaults to BLACK.
+    fill_opacity : float, optional
+        Fill opacity of the bubble body. Defaults to 0.8.
+    stroke_color : ManimColor, optional
+        Outline color of the bubble body. Defaults to WHITE.
+    stroke_width : float, optional
+        Outline width of the bubble body. Defaults to 3.0.
+    **kwargs
+        Additional arguments passed to VGroup.
+
+    Attributes
+    ----------
+    file_name : str
+        SVG asset used to construct the bubble body. Defaults to
+        "Bubbles_speech.svg".
+    bubble_center_adjustment_factor : float
+        Vertical adjustment factor used when positioning the body relative
+        to its content and when calculating the bubble's content center.
+        Defaults to 0.125.
+    direction : Vect3
+        Direction associated with the bubble's tip and orientation.
+    content : VMobject
+        Mobject displayed inside the bubble, or stored as its content.
+    body : VMobject
+        SVG-based speech bubble body, including its fill and outline.
+
+    Methods
+    -------
+    get_body(content, direction, buff)
+        Creates and sizes the SVG bubble body around the supplied content.
+    get_tip()
+        Returns the bubble's tip position, determined from its lower corner
+        and current direction.
+    get_bubble_center()
+        Returns the adjusted center intended for positioning content inside
+        the bubble.
+    move_tip_to(point)
+        Shifts the bubble so that its tip reaches the specified point.
+    flip(axis=UP, only_body=True, **kwargs)
+        Flips the bubble and optionally its content, updating direction
+        when the flip axis has a nonzero y component.
+    pin_to(mobject, auto_flip=False)
+        Positions the bubble's tip relative to a target mobject's bounding
+        box. Optionally flips the bubble when the target is on the opposite
+        horizontal side.
+    position_mobject_inside(mobject, buff=MED_LARGE_BUFF)
+        Resizes and positions a mobject to fit inside the bubble body.
+    add_content(mobject)
+        Positions the supplied mobject inside the bubble, stores it as
+        self.content, and returns that mobject. This method does not itself
+        add the mobject to the VGroup.
+    write(text)
+        Creates a Text object and passes it to add_content(), then returns
+        the bubble. The new text is not automatically added to the VGroup
+        by this method.
+    resize_to_content(buff=1.0)
+        Updates the body's points to match a newly calculated body shape
+        around the current content. This method currently has no explicit
+        return value.
+    clear()
+        Removes self.content from the VGroup and returns the bubble.
+        It does not reset self.content.
+
+    Examples
+    --------
+    Create a bubble containing text:
+
+        bubble = Bubble("Hello!")
+        self.add(bubble)
+
+    Create a bubble with custom styling:
+
+        bubble = Bubble(
+            "Hello!",
+            buff=0.5,
+            fill_color=BLUE_E,
+            fill_opacity=0.9,
+            stroke_color=WHITE,
+            stroke_width=2,
+        )
+        self.add(bubble)
+
+    Create an empty bubble with a chosen placeholder size:
+
+        bubble = Bubble(
+            content=None,
+            filler_shape=(4.0, 2.5),
+            direction=LEFT,
+        )
+        self.add(bubble)
+
+    Position the tip at a chosen point:
+
+        bubble = Bubble("Look here!")
+        bubble.move_tip_to(2 * LEFT + UP)
+        self.add(bubble)
+
+    Pin a bubble toward another mobject:
+
+        target = Circle()
+        bubble = Bubble("Target", direction=LEFT)
+        bubble.pin_to(target, auto_flip=True)
+        self.add(target, bubble)
+
+    Flip a bubble:
+
+        bubble = Bubble("Hello!")
+        bubble.flip(axis=UP)
+        self.add(bubble)
+
+    Replace the bubble's content:
+
+        bubble = Bubble("Old text")
+        new_text = Text("New text")
+        bubble.add_content(new_text)
+        bubble.add(new_text)
+
+    Add text using the write helper:
+
+        bubble = Bubble()
+        bubble.write("Hello!")
+        bubble.add(bubble.content)
+
+    Notes
+    -----
+    - The SVG asset must be available to SVGMobject for the bubble body
+      to render correctly.
+    - When content is None, the placeholder rectangle is transparent and
+      has no stroke; it is used to establish the initial body dimensions.
+    - The body width is calculated as the content width plus the smaller
+      of buff and content height. Its target height is 1.35 times the
+      content height plus buff.
+    - The bubble body is shifted downward by a fraction of its height to
+      account for the tip and visual placement of the SVG.
+    - The horizontal direction check in get_body() flips the SVG when
+      direction[0] is positive.
+    - pin_to() expects a target mobject because it calls get_center() and
+      get_bounding_box_point() on its argument. The pin_point annotation
+      allows a Vect3, but passing a raw coordinate vector to pin_to()
+      will not work with the current implementation.
+    - position_mobject_inside() changes the supplied mobject's size and
+      position in place.
+    - add_content() and write() position and store content but do not
+      automatically add the new content to the VGroup.
+    - resize_to_content() is marked as unfinished in the implementation.
+    - The content and body dimensions may need adjustment for unusual
+      aspect ratios, large content, or custom SVG bubble assets.
+    """
+
     file_name: str = "Bubbles_speech.svg"
     bubble_center_adjustment_factor = 0.125
 
