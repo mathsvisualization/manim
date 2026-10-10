@@ -379,6 +379,143 @@ class ControlMobject(ValueTracker):
 
 
 class EnableDisableButton(ControlMobject):
+    """
+    A clickable Boolean control that switches between enabled and disabled states.
+
+    EnableDisableButton is a ControlMobject subclass that represents a Boolean
+    value using a colored rectangle. It registers a mouse-press listener so
+    that clicking the control toggles its state.
+
+    When enabled, the rectangle uses ``enable_color``; when disabled, it uses
+    ``disable_color``. The current value is stored through the inherited
+    ValueTracker interface.
+
+    Parameters
+    ----------
+    value : bool, default=True
+        Initial state of the control. ``True`` represents enabled, and
+        ``False`` represents disabled.
+
+    value_type : np.dtype, default=np.dtype(bool)
+        NumPy data type associated with the control's value. The constructor
+        stores this parameter, but the shown implementation does not use it
+        to convert or validate values.
+
+    rect_kwargs : dict, default={"width": 0.5, "height": 0.5, "fill_opacity": 1.0}
+        Keyword arguments passed to Rectangle to configure the control's
+        visual appearance.
+
+    enable_color : ManimColor, default=GREEN
+        Fill color used when the control is enabled.
+
+    disable_color : ManimColor, default=RED
+        Fill color used when the control is disabled.
+
+    **kwargs
+        Additional keyword arguments forwarded to ControlMobject.
+
+    Attributes
+    ----------
+    value : bool
+        Stores the initial value supplied to the constructor. In this
+        implementation, this attribute is not automatically updated when
+        the inherited ValueTracker value changes.
+
+    value_type : np.dtype
+        The stored NumPy data type parameter.
+
+    rect_kwargs : dict
+        Configuration passed to the Rectangle constructor.
+
+    enable_color : ManimColor
+        Color used for the enabled state.
+
+    disable_color : ManimColor
+        Color used for the disabled state.
+
+    box : Rectangle
+        Rectangle that visually represents the control's current state.
+
+    Methods
+    -------
+    assert_value(value)
+        Checks that the supplied value is a Python bool.
+
+    set_value_anim(value)
+        Updates the rectangle's fill color to reflect the requested state.
+
+    toggle_value()
+        Switches the tracked value between True and False.
+
+    on_mouse_press(mob, event_data)
+        Toggles the control when a mouse-press event is received.
+
+    Examples
+    --------
+    Create an enabled control::
+
+        control = EnableDisableButton()
+        self.add(control)
+
+    Create a control that starts disabled::
+
+        control = EnableDisableButton(value=False)
+        self.add(control)
+
+    Customize the enabled and disabled colors::
+
+        control = EnableDisableButton(
+            value=True,
+            enable_color=BLUE,
+            disable_color=GRAY,
+        )
+        self.add(control)
+
+    Toggle the state programmatically::
+
+        control = EnableDisableButton(value=True)
+        control.toggle_value()
+
+        print(control.get_value())  # False
+
+    Set the state explicitly::
+
+        control = EnableDisableButton()
+        control.set_value(False)
+
+    Notes
+    -----
+    - The control creates a Rectangle using ``rect_kwargs`` and passes it
+      to the ControlMobject constructor as a visual submobject.
+    - ``assert_value`` uses ``isinstance(value, bool)``. Values such as
+      ``1`` and ``np.bool_(True)`` are not accepted by this check.
+    - ``set_value_anim`` changes the rectangle's fill color immediately;
+      it does not define a time-based animation.
+    - ``toggle_value`` obtains the current tracked value, negates it, and
+      calls the parent class's ``set_value`` method. This invokes the
+      validation and visual-update hooks before updating the ValueTracker.
+    - A mouse press invokes ``toggle_value`` and returns ``False`` from
+      the event callback to stop further event bubbling according to the
+      event system's dispatch rules.
+    - The constructor stores the initial value in ``self.value`` before
+      initializing the parent class. Subsequent changes update the inherited
+      tracked value; the separate ``self.value`` attribute is not explicitly
+      synchronized by the shown methods.
+    - ``value_type`` is stored for possible use by subclasses or other code,
+      but it does not perform type conversion in this implementation.
+    - Interactive clicking requires an environment that dispatches mouse
+      events to Mobjects.
+
+    See Also
+    --------
+    ControlMobject
+        Base class for value-based visual controls.
+    Button
+        Wraps a Mobject and invokes a callback on mouse press.
+    ValueTracker
+        Stores a value that can be read and updated.
+    """
+
     def __init__(
         self,
         value: bool = True,
