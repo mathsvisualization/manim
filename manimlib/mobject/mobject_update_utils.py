@@ -107,6 +107,29 @@ def f_always(method, *arg_generators, **kwargs):
 
 
 def always_redraw(func: Callable[..., Mobject], *args, **kwargs) -> Mobject:
+    """
+    Redraw a mobject on every update by recreating it with a function.
+
+    Parameters
+    ----------
+    func
+        Callable that returns a Mobject.
+    *args
+        Positional arguments passed to func on each redraw.
+    **kwargs
+        Keyword arguments passed to func on each redraw.
+
+    Returns
+    -------
+    Mobject
+        The initially created mobject, updated to match the
+        newly generated mobject on every update.
+
+    Examples
+    --------
+    >>> always_redraw(lambda: Circle().scale(tracker.get_value()))
+    """
+
     mob = func(*args, **kwargs)
     mob.add_updater(lambda m: mob.become(func(*args, **kwargs)))
     return mob
