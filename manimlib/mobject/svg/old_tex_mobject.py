@@ -18,6 +18,218 @@ if TYPE_CHECKING:
 
 
 class SingleStringTex(SVGMobject):
+    """
+    A single LaTeX expression rendered as an SVG-based mobject.
+
+    `SingleStringTex` is a subclass of `SVGMobject` that converts a LaTeX
+    expression into SVG geometry and loads the resulting paths as a Manim mobject.
+    It supports mathematical and text-mode rendering, custom LaTeX templates,
+    SVG styling, expression preprocessing, and optional left-to-right organization
+    of the generated submobjects.
+
+    Unlike a class that splits a formula into separately addressable text
+    components, `SingleStringTex` primarily represents the supplied expression
+    as one rendered LaTeX object.
+
+    Parameters
+    ----------
+    tex_string : str
+        The LaTeX expression to render.
+
+    height : float or None, default=None
+        Desired height of the resulting SVG mobject. Passed to `SVGMobject`.
+        If None, the object is scaled using `get_tex_mob_scale_factor()` multiplied
+        by `font_size`.
+
+    fill_color : ManimColor, default=DEFAULT_MOBJECT_COLOR
+        Default fill color applied to the rendered SVG geometry.
+
+    fill_opacity : float, default=1.0
+        Opacity of the fill.
+
+    stroke_width : float, default=0
+        Width of the stroke used to render the SVG paths.
+
+    svg_default : dict, default={"fill_color": DEFAULT_MOBJECT_COLOR}
+        Default SVG styling configuration. A shallow copy is stored on the
+        instance and included in its `hash_seed`.
+
+    path_string_config : dict, default={}
+        Configuration passed to `SVGMobject` for interpreting SVG path strings.
+        A shallow copy is stored on the instance, while the original argument is
+        passed to the superclass.
+
+    font_size : int, default=48
+        Font-size value used when calculating the default scale if `height` is
+        None. The actual LaTeX font setup may also depend on the template.
+
+    alignment : str, default=R"\\centering"
+        LaTeX alignment command or prefix inserted before the processed expression
+        in the generated TeX file body.
+
+    math_mode : bool, default=True
+        If True, wraps the processed expression in an `align*` environment.
+        If False, the expression is not wrapped in that environment.
+
+    organize_left_to_right : bool, default=False
+        If True, sorts the generated submobjects by their x-coordinate after
+        initialization, arranging them from left to right.
+
+    template : str, default=""
+        LaTeX template information passed to `latex_to_svg` when generating the
+        SVG representation.
+
+    additional_preamble : str, default=""
+        Additional LaTeX preamble content passed to `latex_to_svg`.
+
+    **kwargs
+        Additional keyword arguments forwarded to `SVGMobject`.
+
+    Attributes
+    ----------
+    height : float or None
+        Class-level default for the desired height. The effective value depends
+        on initialization and the behavior of `SVGMobject`.
+
+    tex_string : str
+        Original LaTeX expression supplied to the constructor.
+
+    svg_default : dict
+        Shallow copy of the SVG default styling configuration.
+
+    path_string_config : dict
+        Shallow copy of the SVG path configuration.
+
+    font_size : int
+        Font-size value used by the instance.
+
+    alignment : str
+        Alignment prefix used when constructing the TeX file body.
+
+    math_mode : bool
+        Controls whether the expression is wrapped in an `align*` environment.
+
+    organize_left_to_right : bool
+        Determines whether submobjects are sorted by horizontal position.
+
+    template : str
+        LaTeX template setting used during SVG generation.
+
+    additional_preamble : str
+        Extra LaTeX preamble content used during SVG generation.
+
+    Methods
+    -------
+    hash_seed
+        Property returning a tuple of class and expression configuration values
+        used to identify the rendering configuration.
+
+    get_svg_string_by_content(content)
+        Converts the supplied LaTeX content into an SVG string using the configured
+        template and additional preamble.
+
+    get_tex_file_body(tex_string)
+        Prepares the body of the TeX file by processing the expression, optionally
+        wrapping it in `align*`, and prepending the alignment command.
+
+    get_modified_expression(tex_string)
+        Strips surrounding whitespace and delegates expression preprocessing to
+        `modify_special_strings`.
+
+    modify_special_strings(tex)
+        Preprocesses special or incomplete LaTeX expressions to make them more
+        suitable for rendering. It inserts filler groups for selected incomplete
+        commands, handles empty input and leading line breaks, balances braces,
+        adjusts mismatched `\\left` and `\\right` delimiters, and handles
+        incomplete `array` environments.
+
+    balance_braces(tex)
+        Attempts to balance curly braces by inserting missing opening or closing
+        braces while ignoring braces immediately preceded by a backslash.
+
+    get_tex()
+        Returns the original expression stored in `tex_string`.
+
+    organize_submobjects_left_to_right()
+        Sorts the object's submobjects by their x-coordinate and returns the object.
+
+    Notes
+    -----
+    - SVG generation is performed through `latex_to_svg`, which receives the
+      content, template, and additional preamble.
+    - The `hash_seed` property includes the class name, SVG styling configuration,
+      path configuration, original expression, alignment, math-mode setting,
+      template, and additional preamble. It does not include every constructor
+      parameter, such as `font_size` or `height`.
+    - When `math_mode` is True, the processed expression is wrapped in an
+      `align*` environment. The alignment prefix is included in either mode.
+    - Expression preprocessing is intended to make certain incomplete or
+      malformed fragments more renderable; it does not guarantee that arbitrary
+      invalid LaTeX will compile successfully.
+    - `balance_braces` is a simple character-based correction. It skips a brace
+      when the immediately preceding character is a backslash; it is not a full
+      LaTeX parser.
+    - When the counts of recognized `\\left` and `\\right` delimiters differ,
+      both commands are replaced with `\\big`.
+    - If an `array` environment has only one of its matching `\\begin` or
+      `\\end` markers, the processed expression is replaced with an empty string.
+    - If `organize_left_to_right` is enabled, submobjects are sorted by their
+      x-coordinate after the superclass initialization has completed.
+
+    Examples
+    --------
+    Render a basic mathematical expression:
+
+    >>> expression = SingleStringTex(r"x^2 + y^2 = z^2")
+    >>> self.add(expression)
+
+    Render an expression with a specified font size:
+
+    >>> expression = SingleStringTex(
+    ...     r"\\frac{a}{b}",
+    ...     font_size=60,
+    ... )
+    >>> self.add(expression)
+
+    Set a specific height:
+
+    >>> expression = SingleStringTex(
+    ...     r"\\int_0^1 x^2\\,dx",
+    ...     height=2,
+    ... )
+    >>> self.add(expression)
+
+    Use text mode instead of wrapping the expression in `align*`:
+
+    >>> expression = SingleStringTex(
+    ...     r"Hello, World!",
+    ...     math_mode=False,
+    ... )
+    >>> self.add(expression)
+
+    Organize generated submobjects from left to right:
+
+    >>> expression = SingleStringTex(
+    ...     r"a+b=c",
+    ...     organize_left_to_right=True,
+    ... )
+    >>> self.add(expression)
+
+    Inspect the original expression:
+
+    >>> expression = SingleStringTex(r"e^{i\\pi}+1=0")
+    >>> print(expression.get_tex())
+    e^{i\\pi}+1=0
+
+    See Also
+    --------
+    SVGMobject
+    Tex
+    TexText
+    latex_to_svg
+    get_tex_mob_scale_factor
+    """
+
     height: float | None = None
 
     def __init__(
