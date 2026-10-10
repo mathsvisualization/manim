@@ -243,6 +243,117 @@ class FadeIn(Fade):
 
 
 class FadeOut(Fade):
+    """
+    Animates a Mobject out of view by transitioning it toward a transparent,
+    shifted, and scaled target state.
+
+    FadeOut extends Fade. It creates a copy of the original Mobject, makes the
+    copy fully transparent, shifts it by the configured shift vector, and scales
+    it by the configured scale factor. The inherited Transform behavior then
+    interpolates the original Mobject toward this target state.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The object to animate out of view.
+
+    shift : Vect3, optional
+        Vector describing the displacement applied to the target Mobject.
+        Defaults to ORIGIN, meaning no positional shift.
+
+    remover : bool, optional
+        Whether the animation should remove the Mobject from the scene when it
+        finishes. Defaults to True.
+
+    final_alpha_value : float, optional
+        Final alpha value used by the parent animation implementation.
+        Defaults to 0.0. The supplied code forwards this value to Fade/Transform.
+
+    **kwargs
+        Additional keyword arguments forwarded through Fade to Transform.
+
+    Attributes
+    ----------
+    shift_vect : np.ndarray
+        Inherited from Fade. Stores the shift vector applied to the target.
+
+    scale_factor : float
+        Inherited from Fade. Stores the scale factor applied to the target.
+
+    Methods
+    -------
+    create_target()
+        Creates a copy of the original Mobject, sets its opacity to zero, shifts
+        it by shift_vect, scales it by scale_factor, and returns the resulting
+        target Mobject.
+
+    Notes
+    -----
+    - The original Mobject is copied before its target state is modified.
+    - The target's opacity is set to zero, making it fully transparent.
+    - The target is shifted by shift_vect.
+    - The target is scaled by scale_factor.
+    - The actual transition from the original state to the target is handled by
+      the inherited Transform implementation.
+    - With the default remover=True, the animation is configured to remove the
+      Mobject from the scene when it finishes.
+    - Setting remover=False disables that automatic removal behavior.
+    - The scale parameter defaults to 1 in Fade, so FadeOut does not change the
+      target's scale unless a different value is supplied.
+    - final_alpha_value is passed to the parent implementation; its precise
+      effect depends on the implementation of Fade and Transform.
+
+    Examples
+    --------
+    Example 1: Fade out a circle without moving or scaling it.
+
+        >>> animation = FadeOut(circle)
+
+    The target is a transparent copy at the same position and scale. By default,
+    the original Mobject is removed from the scene when the animation finishes.
+
+    Example 2: Fade out while moving to the right.
+
+        >>> animation = FadeOut(circle, shift=RIGHT)
+
+    The target copy is shifted by RIGHT while becoming transparent.
+
+    Example 3: Fade out while shrinking.
+
+        >>> animation = FadeOut(circle, scale=0.5)
+
+    The target copy is scaled to half its original size and made transparent.
+
+    Example 4: Keep the Mobject in the scene after the animation.
+
+        >>> animation = FadeOut(circle, remover=False)
+
+    The animation is configured not to remove the Mobject automatically when it
+    finishes.
+
+    Example 5: Combine displacement and scaling.
+
+        >>> animation = FadeOut(
+        ...     circle,
+        ...     shift=UP,
+        ...     scale=0.5,
+        ...     run_time=2,
+        ... )
+
+    The target is transparent, shifted upward, and scaled to half its original
+    size.
+
+    These examples illustrate construction only; circle must be a defined
+    Mobject, and direction vectors such as RIGHT and UP must be available.
+
+    See Also
+    --------
+    Fade
+    FadeIn
+    Transform
+    Mobject
+    """
+
     def __init__(
         self,
         mobject: Mobject,
