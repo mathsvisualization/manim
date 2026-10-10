@@ -197,6 +197,94 @@ class BulletedList(VGroup):
 
 
 class TexTextFromPresetString(TexText):
+    """
+    Create a `TexText` object from a predefined LaTeX string.
+
+    `TexTextFromPresetString` is a convenience subclass of :class:`TexText` that
+    obtains its text from the class-level `tex` attribute instead of requiring
+    the text to be passed as a positional argument during initialization.
+
+    It also defines a class-level default color, `default_color`, which is used
+    when the caller does not explicitly provide a `color` keyword argument.
+    All remaining keyword arguments are forwarded to the parent `TexText`
+    constructor.
+
+    This class is useful as a base class for specialized text objects whose
+    content and default color are predefined by subclasses.
+
+    Class Attributes
+    ----------------
+    tex : str, default=""
+        The predefined LaTeX text string rendered by the object. Subclasses can
+        override this attribute to provide their own default content.
+
+    default_color : ManimColor, default=DEFAULT_MOBJECT_COLOR
+        The color applied when no explicit `color` argument is provided during
+        initialization. Subclasses can override this attribute to customize their
+        default color.
+
+    Parameters
+    ----------
+    **kwargs
+        Keyword arguments forwarded to `TexText`, such as `font_size`, `alignment`,
+        `template`, `isolate`, and other supported text-rendering options.
+
+        The `color` keyword argument is handled separately. If present, its value
+        is removed from `kwargs` and passed to `TexText`. If absent, `self.default_color`
+        is used instead.
+
+    Methods
+    -------
+    __init__(**kwargs)
+        Initialize the object using the predefined `self.tex` string.
+
+        The constructor calls `TexText.__init__()` with `self.tex` as the text
+        content. It extracts `color` from the supplied keyword arguments, falling
+        back to `self.default_color` when necessary, and forwards the remaining
+        arguments to the parent constructor.
+
+    Examples
+    --------
+    Define a subclass with preset text:
+
+    >>> class Greeting(TexTextFromPresetString):
+    ...     tex = "Hello, World!"
+
+    >>> greeting = Greeting()
+
+    Define a subclass with a custom default color:
+
+    >>> class RedLabel(TexTextFromPresetString):
+    ...     tex = "Important"
+    ...     default_color = RED
+
+    >>> label = RedLabel()
+
+    Override the default color for a particular instance:
+
+    >>> label = RedLabel(color=BLUE)
+
+    Pass additional text-rendering options:
+
+    >>> class FormulaLabel(TexTextFromPresetString):
+    ...     tex = r"x^2 + y^2 = z^2"
+    ...     default_color = GREEN
+
+    >>> formula = FormulaLabel(font_size=36)
+
+    Notes
+    -----
+    - The class does not define its own text-rendering pipeline; it relies on
+      the inherited `TexText` implementation.
+    - The `tex` and `default_color` attributes are accessed through `self`, so
+      subclass-level overrides determine the content and default color.
+    - An explicitly supplied `color` takes precedence over `default_color`.
+    - Because `color` is removed from `kwargs` using `pop()`, it is passed to
+      the parent constructor only once.
+    - The base class defaults to an empty string for `tex`. Subclasses will
+      generally override this attribute to provide meaningful content.
+    """
+
     tex: str = ""
     default_color: ManimColor = DEFAULT_MOBJECT_COLOR
 
