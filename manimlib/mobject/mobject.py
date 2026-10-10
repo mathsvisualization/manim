@@ -2591,6 +2591,75 @@ class Updater(object):
 
 
 class _UpdaterBuilder:
+    """
+    Provides a fluent interface for attaching method-based updaters to a Mobject.
+
+    _UpdaterBuilder allows methods to be selected dynamically and converted into
+    updaters. Calling a method exposed through the builder registers an updater
+    that invokes the corresponding method on the mobject each time the updater
+    runs, forwarding the arguments supplied when the builder method was called.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The mobject to which the generated updater functions will be attached.
+
+    Attributes
+    ----------
+    mobject : Mobject
+        The mobject that receives the registered updaters.
+
+    Methods
+    -------
+    __getattr__(method_name)
+        Returns a wrapper that registers an updater calling the named method
+        on the mobject. The wrapper accepts positional and keyword arguments
+        for that method and returns this builder for chaining.
+
+    Notes
+    -----
+    - This is an internal helper intended to support a fluent updater interface.
+    - Attribute names are resolved dynamically when the updater executes, using
+      ``getattr(m, method_name)``. The method is not looked up on the mobject
+      when the builder attribute is first accessed.
+    - The supplied method arguments are captured by the updater closure and
+      reused on every updater invocation.
+    - Each call to a builder method adds a separate updater. Calling the same
+      method multiple times does not replace previously registered updaters.
+    - The registered updater calls the selected method on the mobject passed
+      to the updater function, rather than explicitly referring to
+      ``self.mobject`` inside the lambda.
+    - The wrapper returns the builder, allowing multiple updater registrations
+      to be chained.
+    - The implementation does not validate that the requested attribute exists
+      or is callable. Errors can occur later when the updater runs.
+    - The updater's behavior and execution frequency depend on the underlying
+      Mobject.add_updater() implementation and the scene's update cycle.
+
+    Examples
+    --------
+    Register an updater that shifts a mobject upward on each update::
+
+        builder = _UpdaterBuilder(square)
+        builder.shift(UP)
+
+    Register a method with arguments::
+
+        builder.rotate(PI / 4)
+
+    Chain multiple updater registrations::
+
+        builder.shift(UP).rotate(PI / 4)
+
+    Each call registers another updater; the example does not create a single
+    combined updater.
+
+    See Also
+    --------
+    Mobject.add_updater
+    _AnimationBuilder
+    """
+
     def __init__(self, mobject: Mobject):
         self.mobject = mobject
 
