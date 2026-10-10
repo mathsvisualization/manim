@@ -773,6 +773,162 @@ class TimeVaryingVectorField(VectorField):
 
 
 class StreamLines(VGroup):
+    """
+    Generate and style streamlines for a vector field.
+
+    Each streamline is obtained by numerically integrating the vector field
+    from a sampled starting coordinate and drawing the resulting trajectory
+    as a smooth VMobject. Lines can be repeated with random offsets and
+    colored according to the vector field's magnitude.
+
+    Parameters
+    ----------
+    func
+        Vectorized function mapping an array of coordinates to an array
+        of corresponding vectors.
+    coordinate_system
+        Coordinate system used to convert between coordinate-space values
+        and scene-space points.
+    density
+        Sampling density used to generate starting coordinates. Defaults to 1.0.
+    n_repeats
+        Number of times to repeat the sampled starting coordinates.
+        Defaults to 1.
+    noise_factor
+        Magnitude of random offsets applied to starting coordinates.
+        If None, it is derived from the x-axis unit size and density.
+    solution_time
+        Integration duration for each streamline. Defaults to 3.
+    dt
+        Time interval between numerical solution samples. Defaults to 0.05.
+    arc_len
+        Stored configuration value for streamline arc length; it is not
+        currently used in the implementation.
+    max_time_steps
+        Stored configuration value for the maximum number of time steps;
+        it is not currently used in the implementation.
+    n_samples_per_line
+        Stored configuration value for samples per line; it is not
+        currently used in the implementation.
+    cutoff_norm
+        Stored configuration value for a vector-norm cutoff; it is not
+        currently used in the implementation.
+    stroke_width
+        Stroke width used when styling the streamlines. Defaults to 1.0.
+    stroke_color
+        Uniform stroke color when color_by_magnitude is False.
+    stroke_opacity
+        Stroke opacity. Defaults to 1.
+    color_by_magnitude
+        Whether to color each streamline according to vector magnitudes.
+        Defaults to True.
+    magnitude_range
+        Minimum and maximum magnitudes used for color mapping.
+        Defaults to (0, 2.0).
+    taper_stroke_width
+        Whether to taper each streamline's stroke width at both ends.
+        Defaults to False.
+    color_map
+        Name of the colormap used when coloring by magnitude.
+        Defaults to "3b1b_colormap".
+    **kwargs
+        Additional keyword arguments passed to VGroup.
+
+    Attributes
+    ----------
+    func
+        Vectorized function defining the vector field.
+    coordinate_system
+        Coordinate system used to generate and display streamlines.
+    submobjects
+        Generated streamline VMobjects. Each line stores solution_time
+        in its virtual_time attribute.
+
+    Examples
+    --------
+    Example 1: Draw streamlines for a rotational vector field.
+
+        axes = Axes(
+            x_range=(-4, 4, 1),
+            y_range=(-4, 4, 1),
+        )
+
+        def rotational_field(coords):
+            x, y = coords.T
+            return np.column_stack((-y, x))
+
+        streamlines = StreamLines(
+            rotational_field,
+            axes,
+            density=1,
+            solution_time=4,
+            dt=0.05,
+            color_by_magnitude=False,
+            stroke_color=BLUE,
+        )
+
+        self.add(axes, streamlines)
+
+    The vectors circulate around the origin, producing curved streamlines.
+
+    Example 2: Color streamlines by vector magnitude.
+
+        def radial_field(coords):
+            return coords
+
+        streamlines = StreamLines(
+            radial_field,
+            axes,
+            density=1.5,
+            solution_time=2,
+            color_by_magnitude=True,
+            magnitude_range=(0, 4),
+            color_map="3b1b_colormap",
+            stroke_width=1.5,
+        )
+
+        self.add(streamlines)
+
+    Colors are determined by the magnitude of the vector field evaluated
+    along each streamline.
+
+    Example 3: Add repeated, slightly offset streamlines.
+
+        streamlines = StreamLines(
+            rotational_field,
+            axes,
+            density=1,
+            n_repeats=3,
+            noise_factor=0.05,
+            solution_time=3,
+            taper_stroke_width=True,
+        )
+
+        self.add(streamlines)
+
+    Each repetition samples the same coordinate grid with random offsets.
+    With taper_stroke_width enabled, the stroke narrows toward both ends.
+
+    Notes
+    -----
+    Starting coordinates are generated using get_sample_coords().
+    Random offsets are applied independently to each sampled coordinate
+    for every repetition.
+
+    The function is integrated using ode_solution_points(). The resulting
+    coordinate trajectories are converted to scene-space points and drawn
+    with set_points_smoothly().
+
+    The arc_len, max_time_steps, n_samples_per_line, and cutoff_norm
+    arguments are stored as attributes but do not currently affect the
+    line-generation process in this implementation.
+
+    Returns
+    -------
+    StreamLines
+        A VGroup containing the generated and styled streamline objects.
+    """
+
     def __init__(
         self,
         func: Callable[[VectArray], VectArray],
