@@ -838,6 +838,26 @@ class VideoIcon(SVGMobject):
 
 
 class VideoSeries(VGroup):
+    """
+    A horizontal group of video icons with a color gradient.
+
+    Parameters
+    ----------
+    num_videos : int, optional
+        Number of VideoIcon objects to create. Defaults to 11.
+    gradient_colors : Sequence[ManimColor], optional
+        Colors used to create the gradient across the icons.
+    width : float, optional
+        Target width of the entire group. Defaults to FRAME_WIDTH - MED_LARGE_BUFF.
+    **kwargs
+        Additional arguments passed to VGroup.
+
+    Examples
+    --------
+        videos = VideoSeries()
+        videos = VideoSeries(num_videos=5, gradient_colors=[BLUE_B, BLUE_D])
+    """
+
     def __init__(
         self,
         num_videos: int = 11,
