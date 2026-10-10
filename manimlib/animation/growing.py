@@ -374,6 +374,101 @@ class GrowFromEdge(GrowFromPoint):
 
 
 class GrowArrow(GrowFromPoint):
+    """
+    Animate an Arrow growing outward from its starting point.
+
+    GrowArrow is a subclass of GrowFromPoint specialized for Arrow objects.
+    Instead of requiring an explicit starting position, it obtains the
+    arrow's start point using ``arrow.get_start()`` and passes that point
+    to GrowFromPoint.
+
+    The inherited animation creates a starting version of the arrow, scales
+    it to zero size, moves it to the arrow's starting point, and transforms
+    it into the original arrow. This makes the arrow appear to extend
+    outward from its tail toward its tip.
+
+    Parameters
+    ----------
+    arrow : Arrow
+        The arrow to animate. Its starting point determines where the
+        animation begins.
+
+    **kwargs
+        Additional keyword arguments forwarded to GrowFromPoint and then
+        to Transform. These may include ``run_time`` and ``point_color``.
+
+    Methods
+    -------
+    __init__(arrow: Arrow, **kwargs)
+        Get the arrow's starting point with ``arrow.get_start()`` and
+        initialize GrowFromPoint using that point.
+
+    Inherited Behavior
+    ------------------
+    GrowArrow inherits the animation setup from GrowFromPoint:
+
+    - Creates a copy of the arrow as the transformation target.
+    - Creates a starting mobject scaled to zero size.
+    - Moves the starting mobject to the arrow's starting point.
+    - Optionally applies ``point_color`` to the starting mobject.
+    - Uses the interpolation and cleanup behavior inherited from Transform.
+
+    Notes
+    -----
+    - This class is intended for Arrow objects.
+    - The starting point is obtained when the constructor runs.
+    - The arrow's start point is the tail of the arrow; the tip is its
+      endpoint.
+    - The actual appearance during interpolation depends on the arrow's
+      geometry and the behavior inherited from Transform.
+
+    Examples
+    --------
+    Example 1: Grow an arrow from its tail.
+
+    >>> arrow = Arrow(LEFT, RIGHT)
+    >>> scene.play(GrowArrow(arrow))
+
+    The arrow begins at its tail and grows toward its tip.
+
+    Example 2: Grow an upward arrow.
+
+    >>> arrow = Arrow(DOWN, UP)
+    >>> scene.play(GrowArrow(arrow, run_time=2))
+
+    The arrow extends upward from its starting point over two seconds.
+
+    Example 3: Grow an arrow at a shifted position.
+
+    >>> arrow = Arrow(LEFT, RIGHT).shift(UP * 2)
+    >>> scene.play(GrowArrow(arrow))
+
+    The arrow grows from its own start point, even though it has been
+    shifted away from its original position.
+
+    Example 4: Specify the starting color.
+
+    >>> arrow = Arrow(LEFT, RIGHT, color=BLUE)
+    >>> scene.play(
+    ...     GrowArrow(
+    ...         arrow,
+    ...         point_color=YELLOW,
+    ...     )
+    ... )
+
+    The starting mobject is assigned yellow, while the target is a copy of
+    the original blue arrow. The transformation interpolates between the
+    starting and target states.
+
+    See Also
+    --------
+    GrowFromPoint
+    GrowFromCenter
+    GrowFromEdge
+    Arrow
+    Arrow.get_start
+    """
+
     def __init__(self, arrow: Arrow, **kwargs):
         point = arrow.get_start()
         super().__init__(arrow, point, **kwargs)
