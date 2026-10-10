@@ -2158,6 +2158,100 @@ class DieFace(VGroup):
 
 
 class Dartboard(VGroup):
+    """
+    A dartboard composed of colored annular sectors and a two-layer bullseye.
+
+    The dartboard is constructed from three concentric bands of annular sectors.
+    Each band is divided into ``n_sectors`` equal angular sections, with colors
+    alternating according to the supplied color sequence. The complete set of
+    segments is rotated by half a sector angle so that the boundaries are
+    offset from the default angular orientation.
+
+    Two concentric circles form the bullseye at the center: a green outer circle
+    and a smaller red inner circle. Both circles have fully opaque fills and no
+    visible strokes.
+
+    The entire dartboard is scaled by the class-level ``radius`` value after
+    construction.
+
+    Class Attributes
+    ----------------
+    radius : float
+        The scale factor applied to the completed dartboard. Default is 3.
+        This controls the overall size of the board, rather than directly
+        specifying the outer radius of each annular sector.
+    n_sectors : int
+        The number of angular sectors in each annular band. Default is 20.
+
+    Parameters
+    ----------
+    **kwargs
+        Additional keyword arguments passed to :class:`VGroup`.
+
+    Attributes
+    ----------
+    bullseye : Circle
+        A reference to the innermost red circle of the bullseye. This is the
+        second circle in the ``bullseyes`` group.
+
+    Structure
+    ---------
+    The dartboard contains three groups of annular sectors, followed by the
+    two bullseye circles.
+
+    The annular bands are configured as follows:
+        - Main region: inner radius 0, outer radius 1, alternating GREY_B
+          and GREY_E.
+        - Inner ring: inner radius 0.5, outer radius 0.55, alternating
+          GREEN_E and RED_E.
+        - Outer ring: inner radius 0.95, outer radius 1, alternating
+          GREEN_E and RED_E.
+
+    Each band uses the same number of sectors. The sector colors repeat
+    cyclically, so the two-color patterns alternate around the board.
+
+    Notes
+    -----
+    The sector geometry is initially constructed with radii between 0 and 1,
+    then the completed group is scaled by ``self.radius``. With the default
+    configuration, the main region therefore has an outer radius of 3.
+
+    The bullseye circles have radii 0.07 and 0.035 before the final scaling.
+    Consequently, their displayed radii are also multiplied by ``self.radius``.
+
+    The class-level attributes can be overridden in a subclass or changed on
+    the class before constructing an instance. The constructor does not expose
+    separate ``radius`` or ``n_sectors`` keyword parameters.
+
+    Examples
+    --------
+    Create a standard dartboard:
+
+    >>> board = Dartboard()
+    >>> board.radius
+    3
+    >>> board.n_sectors
+    20
+
+    Access the inner red bullseye:
+
+    >>> board = Dartboard()
+    >>> board.bullseye
+
+    Create a board with a different number of sectors by subclassing:
+
+    >>> class SmallSectorDartboard(Dartboard):
+    ...     n_sectors = 12
+    ...     radius = 2
+    ...
+    >>> board = SmallSectorDartboard()
+
+    Add the dartboard to a scene:
+
+    >>> board = Dartboard()
+    >>> self.add(board)
+    """
+
     radius = 3
     n_sectors = 20
 
