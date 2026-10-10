@@ -139,6 +139,111 @@ class SurroundingRectangle(Rectangle):
 
 
 class BackgroundRectangle(SurroundingRectangle):
+    """
+    A rectangle designed to provide a filled background behind a mobject.
+
+    BackgroundRectangle inherits from :class:`SurroundingRectangle` and is
+    commonly used to improve text readability, highlight content, or place
+    a translucent background behind objects. By default, it uses the camera's
+    background color, has no visible stroke, and has a partially opaque fill.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The mobject to surround with the background rectangle.
+    color : ManimColor or None, optional
+        The background rectangle's color. If ``None``, uses
+        ``manim_config.camera.background_color``.
+    stroke_width : float, optional
+        Stroke width passed to the parent constructor. Defaults to ``0``.
+        The overridden ``set_style()`` method forces the stroke width to zero.
+    stroke_opacity : float, optional
+        Stroke opacity passed to the parent constructor. Defaults to ``0``.
+        The overridden ``set_style()`` method does not preserve this setting.
+    fill_opacity : float, optional
+        Initial fill opacity. Defaults to ``0.75``. This value is also stored
+        as ``original_fill_opacity``.
+    buff : float, optional
+        Extra spacing around the target mobject. Defaults to ``0``, so the
+        rectangle closely fits the target.
+    **kwargs
+        Additional keyword arguments forwarded through
+        :class:`SurroundingRectangle` to :class:`Rectangle`.
+
+    Attributes
+    ----------
+    original_fill_opacity : float
+        The fill opacity provided during initialization. Used by
+        ``pointwise_become_partial()`` to calculate the opacity of a partial
+        representation.
+
+    Methods
+    -------
+    pointwise_become_partial(mobject, a, b)
+        Sets the fill opacity to ``b * original_fill_opacity`` and returns
+        this object. The ``mobject`` and ``a`` arguments are not used by
+        this implementation.
+
+    set_style(stroke_color=None, stroke_width=None, fill_color=None,
+              fill_opacity=None, family=True, **kwargs)
+        Applies a fixed style through ``VMobject.set_style()``: black stroke
+        color, zero stroke width, and black fill color. Only the supplied
+        ``fill_opacity`` is forwarded. Other style arguments, including
+        ``stroke_color``, ``stroke_width``, ``fill_color``, ``family``, and
+        additional keyword arguments, do not change this fixed style.
+
+    get_fill_color()
+        Returns ``Color(self.color)``. This reports the object's ``color``
+        attribute converted to a ``Color`` object; it does not directly query
+        the fill color set by ``set_style()``.
+
+    Notes
+    -----
+    - If ``color`` is omitted or ``None``, the rectangle takes its initial
+      color from the configured camera background color.
+    - The default buffer is zero, unlike the nonzero default used by
+      ``SurroundingRectangle``.
+    - ``original_fill_opacity`` preserves the initialization value even if
+      the fill opacity is later changed.
+    - ``pointwise_become_partial()`` uses the parameter ``b`` as a multiplier
+      of the original opacity; it does not interpolate between ``a`` and
+      ``b`` in this implementation.
+    - The overridden ``set_style()`` intentionally restricts styling to a
+      black fill and an invisible stroke, with configurable fill opacity.
+    - Although the constructor accepts a ``color`` argument, ``get_fill_color()``
+      returns the object's ``color`` attribute, which may differ from the
+      black fill color explicitly applied by ``set_style()``.
+
+    Examples
+    --------
+    Create a background rectangle behind text::
+
+        text = Tex("Background")
+        background = BackgroundRectangle(text)
+        self.add(background, text)
+
+    Specify a color and opacity::
+
+        text = Tex("Highlighted text")
+        background = BackgroundRectangle(
+            text,
+            color=BLUE,
+            fill_opacity=0.5,
+            buff=0.1,
+        )
+        self.add(background, text)
+
+    Change the fill opacity::
+
+        background = BackgroundRectangle(Tex("Example"))
+        background.set_style(fill_opacity=0.3)
+
+    See Also
+    --------
+    SurroundingRectangle
+    Rectangle
+    """
+
     def __init__(
         self,
         mobject: Mobject,
