@@ -1480,6 +1480,86 @@ class VPrism(VCube):
 
 
 class Dodecahedron(VGroup3D):
+    """
+    A three-dimensional regular dodecahedron constructed from twelve pentagonal
+    faces and grouped into a depth-aware :class:`VGroup3D`.
+
+    A dodecahedron is a Platonic solid with twelve regular pentagonal faces,
+    thirty edges, and twenty vertices. This implementation constructs an initial
+    pair of pentagons, generates additional pairs through matrix transformations,
+    and then creates the remaining faces by reflecting the generated pentagons
+    through the origin.
+
+    Parameters
+    ----------
+    fill_color : ManimColor, optional
+        Fill color applied to the pentagonal faces. Defaults to ``BLUE_E``.
+    fill_opacity : float, optional
+        Opacity of the face fills. Defaults to ``1``.
+    stroke_color : ManimColor, optional
+        Color of the pentagon outlines. Defaults to ``BLUE_E``.
+    stroke_width : float, optional
+        Width of the pentagon outlines. Defaults to ``1``.
+    shading : tuple of float, optional
+        Three shading coefficients passed to the inherited ``VGroup3D``
+        constructor. Defaults to ``(0.2, 0.2, 0.2)``.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`VGroup3D` and
+        included in the style dictionary passed to each ``Polygon``.
+
+    Notes
+    -----
+    - The constructor creates a style dictionary containing fill, stroke,
+      shading, and additional keyword arguments.
+    - The golden ratio is calculated as ``(1 + sqrt(5)) / 2`` and used to
+      define the vertices of the initial pentagon.
+    - The vectors ``x``, ``y``, and ``z`` are obtained from the identity matrix
+      and used to construct transformation matrices.
+    - The first pentagon is defined by five three-dimensional vertex positions.
+    - The second pentagon is created by stretching the first by a factor of
+      ``-1`` along dimension 2 about the origin, then reversing its point order.
+    - These two pentagons form the initial pair along the positive x-axis.
+    - Copies of the initial pair are transformed using matrix operations to
+      produce corresponding pairs in other orientations.
+    - Each generated pentagon is copied, reflected through the origin using
+      ``apply_function``, and reversed to create the opposite-facing faces.
+    - The resulting collection contains twelve pentagons, which are passed to
+      ``VGroup3D`` for grouping, shading, and depth-testing configuration.
+    - The geometry is assembled from polygonal surface faces rather than a
+      single volumetric mesh.
+    - The implementation does not explicitly validate the styling parameters.
+
+    Examples
+    --------
+    Create a dodecahedron with the default appearance::
+
+        solid = Dodecahedron()
+        self.add(solid)
+
+    Customize the face fill and outlines::
+
+        solid = Dodecahedron(
+            fill_color=BLUE_D,
+            fill_opacity=0.9,
+            stroke_color=WHITE,
+            stroke_width=1.5,
+        )
+        self.add(solid)
+
+    Adjust the shading coefficients::
+
+        solid = Dodecahedron(
+            shading=(0.3, 0.5, 0.2),
+        )
+        self.add(solid)
+
+    See Also
+    --------
+    VGroup3D
+    Polygon
+    VCube
+    """
+
     def __init__(
         self,
         fill_color: ManimColor = BLUE_E,
