@@ -557,6 +557,162 @@ class EnableDisableButton(ControlMobject):
 
 
 class Checkbox(ControlMobject):
+    """
+    A clickable Boolean control that displays a checkmark or a cross.
+
+    Checkbox is a ControlMobject subclass that represents a Boolean value
+    using a rectangular outline and an overlaid symbol. When the value is
+    True, a checkmark is displayed; when the value is False, a cross is
+    displayed.
+
+    The control registers a mouse-press listener so that clicking it toggles
+    its value and replaces the displayed symbol accordingly.
+
+    Parameters
+    ----------
+    value : bool, default=True
+        Initial Boolean state. True displays a checkmark, while False
+        displays a cross.
+
+    value_type : np.dtype, default=np.dtype(bool)
+        NumPy data type associated with the control's value. This parameter
+        is stored but is not used for conversion in the current implementation.
+
+    rect_kwargs : dict, default={"width": 0.5, "height": 0.5, "fill_opacity": 0.0}
+        Keyword arguments passed to Rectangle to configure the checkbox outline.
+
+    checkmark_kwargs : dict, default={"stroke_color": GREEN, "stroke_width": 6}
+        Keyword arguments passed to the Line objects that form the checkmark.
+
+    cross_kwargs : dict, default={"stroke_color": RED, "stroke_width": 6}
+        Keyword arguments passed to the Line objects that form the cross.
+
+    box_content_buff : float, default=SMALL_BUFF
+        Buffer value stored by the checkbox. It is not used by the shown
+        implementation to position or size the symbols.
+
+    **kwargs
+        Additional keyword arguments forwarded to ControlMobject.
+
+    Attributes
+    ----------
+    value_type : np.dtype
+        Stored NumPy data type parameter.
+
+    rect_kwargs : dict
+        Configuration used to construct the rectangular outline.
+
+    checkmark_kwargs : dict
+        Styling configuration for the checkmark lines.
+
+    cross_kwargs : dict
+        Styling configuration for the cross lines.
+
+    box_content_buff : float
+        Stored buffer parameter.
+
+    box : Rectangle
+        Rectangular outline surrounding the checkbox symbol.
+
+    box_content : VGroup
+        Group of Line objects representing the currently displayed
+        checkmark or cross.
+
+    Methods
+    -------
+    assert_value(value)
+        Checks that the supplied value is a Python bool.
+
+    toggle_value()
+        Toggles the tracked value between True and False.
+
+    set_value_anim(value)
+        Replaces the current symbol with a checkmark or cross to reflect
+        the requested value.
+
+    on_mouse_press(mob, event_data)
+        Toggles the checkbox when it receives a mouse-press event.
+
+    get_checkmark()
+        Constructs and returns the checkmark as a VGroup.
+
+    get_cross()
+        Constructs and returns the cross as a VGroup.
+
+    Examples
+    --------
+    Create a checkbox that starts checked::
+
+        checkbox = Checkbox()
+        self.add(checkbox)
+
+    Create a checkbox that starts unchecked::
+
+        checkbox = Checkbox(value=False)
+        self.add(checkbox)
+
+    Customize the symbol colors and stroke widths::
+
+        checkbox = Checkbox(
+            value=True,
+            checkmark_kwargs={
+                "stroke_color": GREEN,
+                "stroke_width": 8,
+            },
+            cross_kwargs={
+                "stroke_color": RED,
+                "stroke_width": 8,
+            },
+        )
+        self.add(checkbox)
+
+    Toggle the checkbox programmatically::
+
+        checkbox = Checkbox(value=True)
+        checkbox.toggle_value()
+
+        print(checkbox.get_value())  # False
+
+    Set the state explicitly::
+
+        checkbox = Checkbox()
+        checkbox.set_value(False)
+
+    Notes
+    -----
+    - The constructor creates the outline and initializes the symbol based
+      on the supplied initial value.
+    - The outline and symbol are added to the control through the
+      ControlMobject constructor.
+    - The checkmark consists of two Line objects grouped into a VGroup.
+      The cross also consists of two Line objects grouped into a VGroup.
+    - Both symbols are stretched to the outline's width and height, scaled
+      by 0.5, and moved to the center of the outline.
+    - When the value changes, set_value_anim uses ``become`` to replace
+      the existing symbol's geometry with the newly constructed symbol.
+      The existing box_content object is retained as the control's submobject.
+    - The symbol update is immediate; this method does not itself create
+      a time-based animation.
+    - The value validator uses ``isinstance(value, bool)``. Integers such
+      as 0 and 1, as well as NumPy Boolean scalars, do not pass this check.
+    - The ``value_type`` and ``box_content_buff`` parameters are stored,
+      but neither affects behavior in the shown implementation.
+    - A mouse press calls toggle_value and returns False from the event
+      callback to stop further event bubbling according to the event
+      dispatcher's rules.
+    - Interactive clicking requires an environment that dispatches mouse
+      events to Mobjects.
+
+    See Also
+    --------
+    ControlMobject
+        Base class for value-based visual controls.
+    EnableDisableButton
+        A Boolean control that indicates its state using fill colors.
+    Button
+        Wraps a Mobject and invokes a callback on mouse press.
+    """
+
     def __init__(
         self,
         value: bool = True,
