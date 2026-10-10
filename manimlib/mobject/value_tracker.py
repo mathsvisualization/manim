@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class ValueTracker(Mobject):
     """
-    Not meant to be displayed.  Instead the position encodes some
+    Not meant to be displayed. Instead the position encodes some
     number, often one which another animation or continual_animation
     uses for its update function, and by treating it as a mobject it can
     still be animated and manipulated just like anything else.
@@ -23,7 +23,159 @@ class ValueTracker(Mobject):
     The value is held here rather than among the uniforms, which are floats laid out
     to match what a shader expects, since a tracker's value may be complex, or an
     array of any length, and never reaches a shader in any case.
+
+    ValueTracker is a :class:`Mobject` that stores a numerical value independently
+    of its visual geometry. It is useful for controlling animations, tracking
+    changing quantities, and providing values to updater functions. Although it
+    is not intended to be displayed, it can be animated and manipulated through
+    the normal mobject animation system.
+
+    The stored value is represented internally as a NumPy array. This allows the
+    tracker to hold a scalar, a complex number, or an array of values, depending
+    on the configured ``value_type``. Its interpolation behavior operates directly
+    on the internal representation, allowing subclasses to customize how values
+    are encoded and animated.
+
+    Attributes
+    ----------
+    value_type : type
+        NumPy-compatible data type used to store the tracker's value. Defaults
+        to ``np.float64``. Subclasses can override this attribute to change the
+        internal value representation.
+    value : numpy.ndarray
+        Internal array containing the tracked value. It is initialized from the
+        supplied value after applying ``listify`` and converting to ``value_type``.
+
+    Parameters
+    ----------
+    value : float, complex, or numpy.ndarray, optional
+        Initial value to store. Defaults to ``0``. The value is converted into
+        a NumPy array using ``value_type``.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Mobject`.
+
+    Methods
+    -------
+    get_value()
+        Return the tracked value as a scalar when the internal array contains
+        one element, or as a NumPy array when it contains multiple elements.
+    set_value(value)
+        Replace the stored value in place and return the tracker itself.
+    increment_value(d_value)
+        Add a numerical increment to the current value.
+    interpolate(mobject1, mobject2, alpha, path_func=straight_path)
+        Interpolate the tracker's state between two other trackers.
+    become(mobject, match_updaters=False)
+        Adopt another tracker's state and copy its internal value array.
+
+    Notes
+    -----
+    - The tracker is not designed to render a visible object. Its primary purpose
+      is to store data that animations and updaters can read.
+    - The value is stored separately from shader uniforms because it may contain
+      complex numbers or arrays of arbitrary length, which are not necessarily
+      suitable for shader inputs.
+    - ``listify(value)`` normalizes the input before conversion to a NumPy array.
+    - The ``value_type`` class attribute defaults to ``np.float64``. With this
+      default, complex inputs may lose their imaginary component during
+      conversion, depending on NumPy's conversion behavior. A subclass or
+      alternative implementation is needed to preserve complex values reliably.
+    - ``get_value`` checks whether the internal array contains exactly one
+      element. If so, it returns the first element rather than the array itself.
+    - ``set_value`` writes into the existing array using slice assignment.
+      This preserves the array object and supports NumPy broadcasting when the
+      new value is compatible with the existing array's shape.
+    - Because ``set_value`` assigns in place, the new value must be compatible
+      with the existing array shape or broadcastable to it. It does not resize
+      the internal array.
+    - ``increment_value`` reads the current value, adds ``d_value``, and stores
+      the result through ``set_value``. It returns ``None``.
+    - ``interpolate`` first delegates to ``Mobject.interpolate`` to interpolate
+      the inherited mobject state. It then interpolates the internal ``value``
+      arrays directly, rather than using the potentially scalar-returning
+      ``get_value`` method.
+    - The ``alpha`` argument typically represents interpolation progress:
+      ``0`` corresponds to the first tracker and ``1`` to the second, with
+      intermediate values representing positions between them.
+    - The ``path_func`` parameter is forwarded to the parent interpolation
+      method. The tracked numerical value is interpolated separately using
+      the module-level ``interpolate`` function.
+    - Interpolating the stored representation directly allows subclasses to
+      encode their values in a custom way and define how that representation
+      changes during animation.
+    - ``become`` first delegates to the parent implementation, then replaces
+      ``self.value`` with a copy of the other tracker's array. Using ``copy``
+      prevents both trackers from sharing the same value-array object.
+    - ``set_value`` returns ``self``, allowing method chaining. ``interpolate``
+      and ``become`` also return ``self``; ``increment_value`` does not.
+    - The implementation does not explicitly validate numerical finiteness,
+      input dimensionality, or compatibility between the trackers being
+      interpolated.
+    - Since ``value`` is a NumPy array, callers should use ``get_value`` and
+      ``set_value`` when possible rather than replacing or mutating the internal
+      array without considering its shape and dtype.
+
+    Examples
+    --------
+    Create a tracker initialized to zero::
+
+        tracker = ValueTracker()
+        print(tracker.get_value())  # 0.0
+
+    Set and retrieve a value::
+
+        tracker.set_value(3.5)
+        print(tracker.get_value())  # 3.5
+
+    Increment the current value::
+
+        tracker.increment_value(2)
+        print(tracker.get_value())  # 5.5
+
+    Animate a tracker and use its value in an updater::
+
+        tracker = ValueTracker(0)
+        dot = Dot()
+
+        dot.add_updater(
+            lambda mob: mob.set_x(tracker.get_value())
+        )
+        self.add(dot)
+        self.play(tracker.animate.set_value(3), run_time=2)
+        dot.clear_updaters()
+
+    Track multiple values with an array::
+
+        tracker = ValueTracker(np.array([1.0, 2.0, 3.0]))
+        tracker.set_value(np.array([4.0, 5.0, 6.0]))
+        print(tracker.get_value())
+
+    Interpolate between two trackers manually::
+
+        start = ValueTracker(0)
+        end = ValueTracker(10)
+        tracker = ValueTracker(0)
+
+        tracker.interpolate(start, end, 0.5)
+        print(tracker.get_value())  # 5.0
+
+    Subclass the tracker to use a different storage dtype::
+
+        class ComplexValueTracker(ValueTracker):
+            value_type = np.complex128
+
+        tracker = ComplexValueTracker(1 + 2j)
+        print(tracker.get_value())
+
+    See Also
+    --------
+    Mobject
+    ValueTracker
+    interpolate
+    straight_path
+    listify
     """
+
     value_type: type = np.float64
 
     def __init__(
