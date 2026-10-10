@@ -762,6 +762,128 @@ class TexMatrix(Matrix):
 
 
 class MobjectMatrix(Matrix):
+    """
+    Constructs a visual matrix from an existing group of mobjects.
+
+    MobjectMatrix extends Matrix to arrange the elements of a VGroup into a
+    rectangular grid. Instead of converting entries into text or numerical
+    mobjects, it returns each supplied VMobject unchanged, preserving its
+    existing geometry and styling.
+
+    The number of rows and columns can be specified explicitly or inferred
+    from the number of mobjects in the input group.
+
+    Parameters
+    ----------
+    group : VGroup
+        Group containing the mobjects to arrange into a matrix. The elements
+        are read in their existing order, row by row.
+    n_rows : int or None, default=None
+        Number of rows in the resulting matrix. If omitted, it is inferred
+        from the number of mobjects and ``n_cols``. If both dimensions are
+        omitted, the integer square root of the number of mobjects is used.
+    n_cols : int or None, default=None
+        Number of columns in the resulting matrix. If omitted, it is inferred
+        by integer division of the number of mobjects by ``n_rows``.
+    height : float, default=4.0
+        Target height passed to the parent Matrix constructor. The parent
+        uses this value to resize its row group before creating brackets.
+    element_alignment_corner : Vect3, default=ORIGIN
+        Alignment corner used when positioning the mobjects in the matrix grid.
+    **config
+        Additional keyword arguments forwarded to Matrix, such as horizontal
+        and vertical spacing, bracket buffers, and ellipsis indices.
+        The ``height`` and ``element_alignment_corner`` values supplied
+        explicitly to MobjectMatrix override corresponding entries in this
+        dictionary.
+
+    Attributes
+    ----------
+    mob_matrix : VMobjectMatrixType
+        Nested list of the supplied mobjects arranged into rows and columns.
+    elements : list of VMobject
+        Flat list of the matrix entries, inherited from Matrix.
+    rows : VGroup
+        Group containing the row groups.
+    columns : VGroup
+        Group containing the column groups.
+    brackets : VGroup
+        Group containing the left and right matrix brackets.
+    ellipses : list of VMobject
+        Entry mobjects visually replaced by ellipsis symbols.
+
+    Methods
+    -------
+    element_to_mobject(element, **config)
+        Returns the supplied element unchanged. No conversion or additional
+        configuration is applied to individual entries.
+
+    Notes
+    -----
+    - The input group must contain at least ``n_rows * n_cols`` entries.
+      Otherwise, the constructor raises an Exception.
+    - If both dimensions are omitted, ``n_rows`` is estimated using
+      ``int(np.sqrt(n_mobs))`` and ``n_cols`` is then inferred by integer
+      division. This does not guarantee that all entries are used or that
+      the resulting dimensions form a square matrix.
+    - If only ``n_cols`` is supplied, ``n_rows`` is inferred using integer
+      division. If only ``n_rows`` is supplied, ``n_cols`` is inferred
+      similarly. Inferred dimensions may leave some input entries unused.
+    - Explicit dimensions should be positive integers. Zero dimensions can
+      cause division errors, and invalid or negative dimensions are not
+      explicitly validated.
+    - The constructor uses the first ``n_rows * n_cols`` elements of the
+      input group in row-major order. Extra elements are not included in
+      the resulting matrix.
+    - The original mobjects are reused rather than copied. The parent Matrix
+      constructor positions these objects, so their positions may change.
+    - The ``height`` parameter is forwarded to Matrix. It controls the row
+      group's target height before bracket creation rather than directly
+      setting the final height of the complete matrix.
+    - Matrix's inherited entry-conversion logic is bypassed because this
+      class overrides element_to_mobject().
+    - The input should be a VGroup whose elements are compatible with the
+      VMobject operations used by Matrix.
+
+    Examples
+    --------
+    Arrange four mobjects into a 2-by-2 matrix::
+
+        group = VGroup(
+            Circle(),
+            Square(),
+            Triangle(),
+            Dot(),
+        )
+
+        matrix = MobjectMatrix(group, n_rows=2, n_cols=2)
+        self.add(matrix)
+
+    Specify only the number of columns::
+
+        matrix = MobjectMatrix(
+            group,
+            n_cols=2,
+        )
+
+    Customize the matrix height and spacing::
+
+        matrix = MobjectMatrix(
+            group,
+            n_rows=2,
+            n_cols=2,
+            height=3.0,
+            h_buff=0.8,
+            v_buff=0.6,
+        )
+
+    See Also
+    --------
+    Matrix
+    VGroup
+    VMobject
+    """
+
     def __init__(
         self,
         group: VGroup,
