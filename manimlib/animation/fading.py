@@ -547,6 +547,147 @@ class FadeInFromPoint(FadeIn):
 
 
 class FadeTransform(Transform):
+    """
+    Transforms one Mobject into another by crossfading between their appearances.
+
+    FadeTransform extends Transform but prepares a grouped object containing the
+    source Mobject and a copy of the target Mobject. It aligns transparent
+    "ghost" copies at the beginning and ending states so the source appears to
+    fade into the target.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The original object being transformed. Its state is saved before the
+        animation begins so that it can be restored during cleanup.
+
+    target_mobject : Mobject
+        The object that should appear as the result of the transformation.
+        The supplied object is stored for completion handling, while a copy is
+        placed inside the animation's group.
+
+    stretch : bool, optional
+        Whether source.replace() may stretch the source geometry to match the
+        target geometry. Defaults to True.
+
+    dim_to_match : int, optional
+        Dimension used by source.replace() when matching the target. Defaults
+        to 1. Its exact interpretation depends on Mobject.replace().
+
+    **kwargs
+        Additional keyword arguments forwarded to Transform.
+
+    Attributes
+    ----------
+    to_add_on_completion : Mobject
+        Reference to the original target_mobject supplied to the constructor.
+
+    stretch : bool
+        Controls whether ghost objects are stretched when matched to their
+        corresponding targets.
+
+    dim_to_match : int
+        Dimension setting forwarded to Mobject.replace().
+
+    Methods
+    -------
+    begin()
+        Creates the ending Mobject, initializes the animation, prepares the
+        transparent ghost objects at both endpoints, and refreshes interpolation
+        preparation after modifying those endpoints.
+
+    ghost_to(source, target)
+        Makes source match the target's geometry according to stretch and
+        dim_to_match, copies the target's uniforms to source, and sets source's
+        opacity to zero.
+
+    get_all_mobjects()
+        Returns the grouped animated Mobject, starting Mobject, and ending
+        Mobject.
+
+    get_all_families_zipped()
+        Uses Animation.get_all_families_zipped() to obtain the zipped family
+        members used during animation processing.
+
+    get_interpolation_ends()
+        Returns starting_mobject and ending_mobject as the interpolation
+        endpoints, rather than using Transform's usual target-copy endpoint.
+
+    clean_up_from_scene(scene)
+        Runs the base Animation cleanup, removes the temporary grouped Mobject
+        from the scene, restores the original source Mobject's saved state, and
+        re-adds the original target Mobject if remover is False.
+
+    Notes
+    -----
+    - The animated Mobject passed to Transform is Group(mobject,
+      target_mobject.copy()). The original target object is not directly placed
+      in this group.
+    - The source Mobject's state is saved before the parent constructor runs.
+    - At the beginning of the animation, the starting endpoint's target copy is
+      made into a transparent ghost matching the source.
+    - At the ending endpoint, the source copy is made into a transparent ghost
+      matching the target.
+    - ghost_to() aligns geometry using replace(), copies the target's uniforms,
+      and sets the source opacity to zero.
+    - prepare_interpolation() is called again after the endpoints are modified
+      so interpolation uses their updated states.
+    - During cleanup, the grouped animation object is removed and the original
+      source Mobject is restored.
+    - The target_mobject is added to the scene during cleanup only when
+      self.remover is False, according to the supplied implementation.
+    - The precise visual result depends on Transform and Mobject's interpolation,
+      replacement, and uniform-handling behavior.
+
+    Examples
+    --------
+    Example 1: Transform a circle into a square.
+
+        >>> animation = FadeTransform(circle, square)
+
+    The animation uses a group containing the circle and a copy of the square,
+    then prepares transparent ghost objects to create the transition.
+
+    Example 2: Allow the source geometry to stretch to match the target.
+
+        >>> animation = FadeTransform(
+        ...     circle,
+        ...     square,
+        ...     stretch=True,
+        ... )
+
+    Example 3: Keep the target in the scene after cleanup.
+
+        >>> animation = FadeTransform(
+        ...     circle,
+        ...     square,
+        ...     remover=False,
+        ... )
+
+    When cleanup runs, the temporary group is removed, the original circle's
+    saved state is restored, and the original square is added to the scene.
+
+    Example 4: Set a custom runtime.
+
+        >>> animation = FadeTransform(
+        ...     circle,
+        ...     square,
+        ...     run_time=2,
+        ... )
+
+    These examples illustrate construction only; circle and square must be
+    defined Mobjects in the surrounding scene.
+
+    See Also
+    --------
+    Transform
+    Fade
+    FadeIn
+    FadeOut
+    Mobject
+    Group
+    """
+
     def __init__(
         self,
         mobject: Mobject,
