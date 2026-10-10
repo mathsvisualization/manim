@@ -1599,6 +1599,143 @@ class Textbox(ControlMobject):
 
 
 class ControlPanel(Group):
+    """
+    A draggable control panel that groups interactive controls inside a movable
+    panel, with an opener that can be repositioned to reveal or hide the panel.
+
+    The panel contains a collection of :class:`ControlMobject` instances arranged
+    vertically. Its opener can be dragged vertically, moving the panel and its
+    controls along with it. Mouse-wheel scrolling shifts the controls vertically
+    within the panel.
+
+    Parameters
+    ----------
+    *controls : ControlMobject
+        Interactive controls to place inside the panel. They are arranged
+        vertically when the controls group is initialized.
+    panel_kwargs : dict, optional
+        Keyword arguments passed to :class:`Rectangle` to construct the panel.
+        Defaults to a grey rectangle with width ``FRAME_WIDTH / 4``, height
+        ``MED_SMALL_BUFF + FRAME_HEIGHT``, full fill opacity, and no stroke.
+    opener_kwargs : dict, optional
+        Keyword arguments passed to :class:`Rectangle` to construct the panel
+        opener. Defaults to a grey rectangle with width ``FRAME_WIDTH / 8``,
+        height ``0.5``, and full fill opacity.
+    opener_text_kwargs : dict, optional
+        Keyword arguments passed to :class:`Text` to create the opener label.
+        Defaults to the text ``"Control Panel"`` with font size ``20``.
+    **kwargs
+        Additional keyword arguments passed to the parent :class:`Group`
+        constructor.
+
+    Attributes
+    ----------
+    panel_kwargs : dict
+        Configuration dictionary used to create the panel rectangle.
+    opener_kwargs : dict
+        Configuration dictionary used to create the opener rectangle.
+    opener_text_kwargs : dict
+        Configuration dictionary used to create the opener label.
+    panel : Rectangle
+        Main panel rectangle. It is initially positioned beyond the top-left
+        corner and receives mouse-scroll events.
+    panel_opener_rect : Rectangle
+        Rectangle forming the draggable panel opener.
+    panel_info_text : Text
+        Text label displayed on the opener rectangle.
+    panel_opener : Group
+        Group containing the opener rectangle and its text. Dragging this group
+        vertically repositions the panel and controls.
+    controls : Group
+        Group containing the supplied controls, arranged vertically during
+        initialization.
+
+    Methods
+    -------
+    move_panel_and_controls_to_panel_opener()
+        Repositions the panel directly above the opener rectangle and positions
+        the controls above the opener with a buffer, preserving the controls'
+        previous horizontal coordinate.
+    add_controls(*new_controls)
+        Adds controls to the controls group and repositions the panel and controls.
+    remove_controls(*controls_to_remove)
+        Removes the specified controls from the controls group and repositions
+        the panel and remaining controls.
+    open_panel()
+        Moves the opener to the bottom-left corner while preserving its current
+        horizontal coordinate, then repositions the panel and controls. Returns
+        this ControlPanel instance.
+    close_panel()
+        Moves the opener to the top-left corner while preserving its current
+        horizontal coordinate, then repositions the panel and controls. Returns
+        this ControlPanel instance.
+    panel_opener_on_mouse_drag(mob, event_data)
+        Handles dragging the opener by matching its vertical position to the
+        pointer position, then repositions the panel and controls. Returns False
+        to stop event propagation.
+    panel_on_mouse_scroll(mob, event_data)
+        Shifts the controls vertically according to the vertical scroll offset.
+        The displacement is ten times the vertical offset. Returns False to stop
+        event propagation.
+
+    Notes
+    -----
+    - The panel, opener, and controls are grouped together, and ``fix_in_frame()``
+      is called during initialization so the control panel remains fixed relative
+      to the camera frame.
+    - The panel is initially moved above the upper-left corner. The final
+      positioning of the panel and controls is determined by
+      ``move_panel_and_controls_to_panel_opener()``.
+    - ``open_panel()`` and ``close_panel()`` reposition the opener to the bottom-
+      left and top-left corners, respectively. They do not animate the transition.
+    - Dragging the opener changes its vertical position to match the pointer.
+      Its horizontal coordinate is not directly updated by the drag handler.
+    - Scrolling moves the entire controls group vertically; no clipping,
+      scrolling bounds, or automatic restoration of the controls' original
+      position is implemented in this class.
+    - ``add_controls()`` and ``remove_controls()`` update group membership and
+      reposition the panel and controls, but do not explicitly rearrange newly
+      added controls or restore their original ordering.
+    - The scroll handler uses only ``event_data["offset"][1]``. Horizontal scroll
+      offsets are ignored.
+    - The default argument dictionaries are mutable objects. Avoid modifying
+      them in place if you want to prevent shared-default side effects.
+
+    Examples
+    --------
+    Create a panel containing a checkbox and a slider::
+
+        checkbox = Checkbox(value=False)
+        slider = LinearNumberSlider(
+            value=0.5,
+            min_value=0,
+            max_value=1,
+            step=0.1,
+        )
+
+        panel = ControlPanel(checkbox, slider)
+        self.add(panel)
+
+    Move the opener to the bottom or top of the frame::
+
+        panel.open_panel()
+        panel.close_panel()
+
+    Add or remove a control after initialization::
+
+        panel.add_controls(Checkbox(value=True))
+        panel.remove_controls(checkbox)
+
+    See Also
+    --------
+    ControlMobject
+    Checkbox
+    LinearNumberSlider
+    Group
+    Rectangle
+    Text
+    """
+
     def __init__(
         self,
         *controls: ControlMobject,
