@@ -1863,6 +1863,149 @@ class CurvesAsSubmobjects(VGroup):
 
 
 class DashedVMobject(VMobject):
+    """
+    DashedVMobject
+    ==============
+
+    A VMobject that represents another VMobject as a sequence of separated
+    curve segments, creating a dashed-line effect.
+
+    DashedVMobject divides the source VMobject's parameter interval into
+    approximately equal sections and extracts a shorter subcurve from each
+    section. The extracted subcurves are added to the new object, leaving
+    gaps between consecutive dashes.
+
+    The number of dashes and the ratio between the dash length and the
+    nominal division interval are controlled by the constructor parameters.
+
+    Parameters
+    ----------
+    vmobject : VMobject
+        The source vectorized mobject whose curve will be divided into
+        separate dashes.
+    num_dashes : int, default=15
+        The requested number of dashes. If this value is greater than zero,
+        the constructor generates that many subcurves. If it is zero or
+        negative, no dash subcurves are added.
+    positive_space_ratio : float, default=0.5
+        Controls the length of each dash relative to its nominal parameter
+        interval. A value of ``0.5`` produces dashes whose parameter-space
+        length is approximately half of each interval, leaving gaps between
+        them.
+    **kwargs
+        Additional keyword arguments forwarded to the parent VMobject
+        constructor.
+
+    Initialization
+    --------------
+    The constructor performs the following operations:
+
+    1. Initializes the parent VMobject using ``super().__init__(**kwargs)``.
+    2. Checks whether ``num_dashes`` is greater than zero.
+    3. Creates ``num_dashes + 1`` evenly spaced values over the interval
+       from zero to one using ``np.linspace``.
+    4. Computes the nominal parameter interval for each dash as
+       ``1.0 / num_dashes``.
+    5. Computes the parameter-space length of each dash by multiplying
+       the nominal interval by ``positive_space_ratio``.
+    6. Rescales the interval boundary values so that the final dash ends
+       at the end of the source parameter interval.
+    7. Extracts a subcurve from the source VMobject for each starting
+       value, using ``vmobject.get_subcurve(alpha, alpha + partial_d_alpha)``.
+    8. Adds all extracted subcurves to the new object.
+    9. Matches the source object's style using
+       ``self.match_style(vmobject, recurse=False)``.
+
+    Dash Placement Mathematics
+    --------------------------
+    Let:
+
+        N = num_dashes
+        d = 1 / N
+        p = d * positive_space_ratio
+
+    Here, ``d`` is the nominal interval width and ``p`` is the length of
+    each dash in the source curve's parameter space.
+
+    The initial interval boundaries are:
+
+        alphas = np.linspace(0, 1, N + 1)
+
+    These boundaries are then divided by:
+
+        1 - d + p
+
+    The resulting starting values are used to extract the dashes over
+    parameter intervals of length ``p``.
+
+    For a positive ``positive_space_ratio`` no greater than one, the
+    rescaling arranges the dash intervals so that the last dash reaches
+    the end of the normalized parameter interval, subject to the behavior
+    of ``get_subcurve``.
+
+    The ratio controls parameter-space lengths, not necessarily physical
+    lengths along the rendered curve. For curves whose parameterization
+    does not correspond uniformly to arc length, dashes can have different
+    visible lengths even when their parameter intervals are equal.
+
+    Style Handling
+    --------------
+    After generating the dash subcurves, the constructor calls:
+
+        self.match_style(vmobject, recurse=False)
+
+    The ``recurse=False`` argument requests style matching without
+    recursively applying the operation to the entire family of children.
+    This is consistent with the implementation's comment that family
+    handling is already performed by ``get_subcurve``.
+
+    The precise style properties copied depend on the implementation of
+    ``match_style`` in the relevant ManimGL version.
+
+    Notes
+    -----
+    - The constructor extracts curve segments rather than drawing separate
+      dash shapes manually.
+    - ``num_dashes`` controls the number of extracted subcurves when it is
+      positive.
+    - If ``num_dashes`` is zero or negative, the subcurve-generation block
+      is skipped, but style matching still occurs.
+    - The constructor does not explicitly validate ``positive_space_ratio``.
+      Values outside the usual range can produce overlapping dashes,
+      unusually long intervals, invalid intervals, or other unexpected
+      results depending on ``get_subcurve``.
+    - A ratio of ``0.5`` requests dashes about half as long as their
+      nominal parameter intervals, leaving parameter-space gaps.
+    - A ratio of ``1.0`` requests full intervals, so adjacent dashes are
+      intended to meet without parameter-space gaps.
+    - The source VMobject is queried for subcurves; the implementation
+      shown does not explicitly modify its original point data.
+    - Dash geometry and visible spacing depend on the source object's
+      parameterization and the behavior of ``get_subcurve``.
+
+    Examples
+    --------
+    Create a dashed version of a line:
+
+        line = Line(LEFT, RIGHT)
+        dashed_line = DashedVMobject(line)
+
+    Increase the number of dashes:
+
+        dashed_line = DashedVMobject(line, num_dashes=30)
+
+    Change the dash-to-interval ratio:
+
+        dashed_line = DashedVMobject(
+            line,
+            num_dashes=15,
+            positive_space_ratio=0.7,
+        )
+
+    The resulting object is a VMobject containing the generated subcurves
+    and styled to match the source VMobject.
+    """
+
     def __init__(
         self,
         vmobject: VMobject,
