@@ -29,6 +29,124 @@ if TYPE_CHECKING:
 
 
 class SurfaceMesh(VGroup):
+    """
+    A wireframe mesh that visualizes the parameter-space grid of a Surface.
+
+    SurfaceMesh constructs a collection of smooth curves along the two
+    parameter directions of an existing surface. The curves are generated
+    from the surface's sampled points and unit normals, producing a mesh
+    that follows the surface geometry.
+
+    Parameters
+    ----------
+    uv_surface : Surface
+        The surface whose sampled geometry is used to construct the mesh.
+        Its resolution, points, and unit normals are queried during
+        initialization of the mesh geometry.
+    resolution : Tuple[int, int], optional
+        Number of mesh curves to generate along the two parameter directions,
+        respectively. Defaults to ``(21, 11)``. This is independent of the
+        underlying surface's sampling resolution.
+    stroke_width : float, optional
+        Width of the mesh curves. Defaults to ``1``.
+    stroke_color : ManimColor, optional
+        Color of the mesh curves. Defaults to ``GREY_A``.
+    normal_nudge : float, optional
+        Distance by which sampled surface points are displaced along their
+        unit normals before constructing the mesh. Defaults to ``1e-2``.
+        This can help offset the mesh slightly from the surface.
+    depth_test : bool, optional
+        Whether depth testing is enabled for the mesh, as passed to the
+        parent ``VGroup`` constructor. Defaults to ``True``.
+    **kwargs
+        Additional keyword arguments forwarded to ``VGroup``.
+
+    Attributes
+    ----------
+    uv_surface : Surface
+        The surface from which the mesh geometry is generated.
+    resolution : Tuple[int, int]
+        Requested number of curves in the two parameter directions.
+    normal_nudge : float
+        Normal displacement applied to sampled points.
+
+    Methods
+    -------
+    init_points()
+        Generates the mesh curves from the surface's sampled points and
+        unit normals. Creates one family of curves for each parameter
+        direction and adds them to the group.
+
+    Notes
+    -----
+    - The underlying surface resolution is obtained through
+      ``uv_surface.get_resolution()``, yielding ``(full_nu, full_nv)``.
+    - The surface's sampled points and unit normals are retrieved using
+      ``get_points()`` and ``get_unit_normals()``.
+    - Each point is displaced by ``normal_nudge * normal`` before the
+      curves are generated.
+    - Mesh indices are sampled using ``np.linspace`` and treated as
+      floating-point values. The implementation interpolates between
+      the floor and ceiling index samples to approximate intermediate
+      grid curves.
+    - The first family of curves follows the first parameter direction;
+      the second family follows the other direction through strided
+      indexing of the sampled point array.
+    - ``set_points_smoothly()`` is used to create smooth paths through
+      the interpolated points.
+    - The actual number of curves is ``resolution[0] + resolution[1]``,
+      assuming both loops complete successfully.
+    - This implementation assumes the surface's point and normal arrays
+      follow the expected grid layout, with ``full_nv`` samples per row.
+    - The mesh geometry is generated in ``init_points()``. Changing
+      ``resolution`` or ``normal_nudge`` afterward does not automatically
+      rebuild existing curves.
+    - No validation is performed for zero or negative resolution values,
+      or for compatibility between the surface's reported resolution and
+      its point and normal arrays.
+
+    Examples
+    --------
+    Create a mesh for an existing surface::
+
+        surface = Surface(
+            lambda u, v: np.array([
+                u,
+                v,
+                np.sin(u) * np.cos(v),
+            ]),
+            u_range=(-2, 2),
+            v_range=(-2, 2),
+        )
+        mesh = SurfaceMesh(surface)
+        self.add(surface, mesh)
+
+    Adjust the mesh density and appearance::
+
+        mesh = SurfaceMesh(
+            surface,
+            resolution=(30, 16),
+            stroke_width=0.5,
+            stroke_color=BLUE,
+            normal_nudge=0.02,
+        )
+        self.add(mesh)
+
+    Disable depth testing::
+
+        mesh = SurfaceMesh(
+            surface,
+            depth_test=False,
+        )
+        self.add(mesh)
+
+    See Also
+    --------
+    Surface
+    VGroup
+    VMobject
+    """
+
     def __init__(
         self,
         uv_surface: Surface,
