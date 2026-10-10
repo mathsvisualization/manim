@@ -448,6 +448,123 @@ class Torus(Surface):
 
 
 class Cylinder(Surface):
+    """
+    A three-dimensional cylindrical surface with configurable height, radius,
+    axis direction, and angular parameter ranges.
+
+    Cylinder inherits from :class:`Surface`. Its parameterization initially
+    describes a unit-radius cylinder aligned with the z-axis. During point
+    initialization, the geometry is scaled, stretched to the requested height,
+    and rotated so that its axis aligns with the specified direction.
+
+    Parameters
+    ----------
+    u_range : Tuple[float, float], optional
+        Range of the angular parameter ``u`` in radians. Defaults to
+        ``(0, TAU)``, covering a complete revolution around the cylinder.
+    v_range : Tuple[float, float], optional
+        Range of the axial parameter ``v``. Defaults to ``(-1, 1)``.
+        The default range has a length of 2 before the height transformation.
+    resolution : Tuple[int, int], optional
+        Number of samples along the ``u`` and ``v`` parameter directions.
+        Defaults to ``(101, 11)``.
+    height : float, optional
+        Requested axial length of the cylinder. Defaults to ``2``.
+    radius : float, optional
+        Radius of the cylinder. Defaults to ``1``.
+    axis : Vect3, optional
+        Vector specifying the direction to which the cylinder's original
+        z-axis is aligned. Defaults to ``OUT``.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Surface`.
+
+    Attributes
+    ----------
+    height : float
+        Requested height used when stretching the surface.
+    radius : float
+        Radius used to scale the surface.
+    axis : Vect3
+        Direction vector used to orient the cylinder.
+
+    Methods
+    -------
+    init_points()
+        Initializes the surface geometry, scales it by ``radius``, stretches
+        its depth to ``height``, and applies a matrix that aligns the z-axis
+        with ``axis``.
+
+    uv_func(u, v)
+        Maps angular parameter ``u`` and axial parameter ``v`` to a point
+        on the initial unit-radius cylinder.
+
+    Notes
+    -----
+    - The initial parameterization is
+
+      ``x = cos(u)``
+
+      ``y = sin(u)``
+
+      ``z = v``
+
+    - The ``u`` parameter determines the position around the cylinder, while
+      ``v`` determines the position along its original axis.
+    - ``init_points()`` applies transformations in this order:
+      scaling by ``radius``, stretching the depth to ``height``, and applying
+      ``z_to_vector(axis)``.
+    - Because the entire surface is first scaled by ``radius``, the subsequent
+      depth stretch determines the final axial dimension independently of the
+      initial depth scale.
+    - The default ``v_range`` has length 2, so the default height of 2 preserves
+      that axial length before accounting for the radius scaling and the
+      implementation's depth-stretch behavior.
+    - The surface is not capped by this class; it represents the curved
+      lateral surface only.
+    - The implementation does not validate ``radius``, ``height``, or ``axis``.
+      Degenerate or unusual values may produce unexpected geometry.
+    - The class relies on ``Surface`` to sample the parameterization and
+      initialize its points.
+
+    Examples
+    --------
+    Create a cylinder with default dimensions::
+
+        cylinder = Cylinder()
+        self.add(cylinder)
+
+    Create a taller, wider cylinder::
+
+        cylinder = Cylinder(
+            height=4,
+            radius=1.5,
+        )
+        self.add(cylinder)
+
+    Orient the cylinder along another axis::
+
+        cylinder = Cylinder(
+            axis=RIGHT,
+            height=3,
+        )
+        self.add(cylinder)
+
+    Create a partial cylinder::
+
+        cylinder = Cylinder(
+            u_range=(0, PI),
+            v_range=(-1, 1),
+        )
+        self.add(cylinder)
+
+    See Also
+    --------
+    Surface
+    Sphere
+    Torus
+    SurfaceMesh
+    """
+
     def __init__(
         self,
         u_range: Tuple[float, float] = (0, TAU),
