@@ -178,6 +178,29 @@ def always_rotate(
     rate: float = 20 * DEG,
     **kwargs
 ) -> Mobject:
+    """
+    Continuously rotate a mobject at a constant angular rate.
+
+    Parameters
+    ----------
+    mobject
+        The mobject to rotate.
+    rate
+        Angular rotation per unit of time, in radians. Defaults
+        to 20 * DEG.
+    **kwargs
+        Additional keyword arguments passed to ``mobject.rotate``.
+
+    Returns
+    -------
+    Mobject
+        The mobject with the updater added.
+
+    Examples
+    --------
+    >>> always_rotate(square, rate=45 * DEG)
+    """
+
     mobject.add_updater(
         lambda m, dt: m.rotate(dt * rate, **kwargs)
     )
