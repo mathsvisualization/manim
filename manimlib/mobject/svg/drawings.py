@@ -1294,6 +1294,128 @@ class Bubble(VGroup):
 
 
 class SpeechBubble(Bubble):
+    """
+    A speech bubble built from a rounded rectangle and a triangular stem.
+
+    SpeechBubble inherits from Bubble but overrides the body-generation
+    method to construct the bubble using vector geometry instead of an SVG
+    asset. The stem is formed by combining a triangle with a rounded
+    rectangle, creating a single bubble-shaped VMobject.
+
+    Parameters
+    ----------
+    content : str | VMobject | None, optional
+        Content placed inside the bubble. A string is converted into a
+        Text object by the parent Bubble class. If None, a transparent
+        placeholder rectangle is created using filler_shape. Defaults to None.
+    buff : float, optional
+        Spacing around the content when constructing the rounded rectangle.
+        Defaults to MED_SMALL_BUFF.
+    filler_shape : Tuple[float, float], optional
+        Width and height of the placeholder rectangle used when content is
+        None. Defaults to (2.0, 1.0).
+    stem_height_to_bubble_height : float, optional
+        Multiplier applied to the rounded rectangle's height to determine
+        the triangular stem's height. Defaults to 0.5.
+    stem_top_x_props : Tuple[float, float], optional
+        Two proportions specifying the stem's attachment points along the
+        rectangle's bottom edge. The first value determines the left
+        attachment point and the second determines the right attachment
+        point. Defaults to (0.2, 0.3).
+    **kwargs
+        Additional keyword arguments passed through Bubble to VGroup,
+        including options for direction, fill, stroke, and positioning.
+
+    Attributes
+    ----------
+    stem_height_to_bubble_height : float
+        Ratio used to calculate the stem height relative to the rectangle.
+    stem_top_x_props : Tuple[float, float]
+        Proportions defining where the stem attaches to the bottom edge.
+    content : VMobject
+        Content managed by the parent Bubble class.
+    body : VMobject
+        Combined rounded-rectangle and triangular-stem geometry created
+        by get_body().
+
+    Methods
+    -------
+    get_body(content, direction, buff)
+        Constructs a rounded rectangle around the content, creates a
+        triangular stem extending downward from its bottom-left region,
+        combines both shapes using Union, and optionally flips the result
+        when direction[0] is positive.
+
+    Examples
+    --------
+    Create a basic speech bubble:
+
+        bubble = SpeechBubble("Hello!")
+        self.add(bubble)
+
+    Customize the bubble's spacing and stem proportions:
+
+        bubble = SpeechBubble(
+            "Hello there!",
+            buff=0.2,
+            stem_height_to_bubble_height=0.4,
+            stem_top_x_props=(0.15, 0.35),
+        )
+        self.add(bubble)
+
+    Use a custom direction and style:
+
+        bubble = SpeechBubble(
+            "Look over here!",
+            direction=RIGHT,
+            fill_color=BLUE_E,
+            fill_opacity=0.9,
+            stroke_color=WHITE,
+            stroke_width=2,
+        )
+        self.add(bubble)
+
+    Create an empty speech bubble for later content:
+
+        bubble = SpeechBubble(
+            content=None,
+            filler_shape=(3.0, 1.5),
+        )
+        self.add(bubble)
+
+    Move the stem tip to a specific point:
+
+        bubble = SpeechBubble("Notice this")
+        bubble.move_tip_to(2 * LEFT + DOWN)
+        self.add(bubble)
+
+    Notes
+    -----
+    - The parent Bubble class handles content conversion, body styling,
+      optional content addition, and optional pinning.
+    - The body is created using SurroundingRectangle, round_corners(),
+      Polygon, and Union. Unlike Bubble's default body implementation,
+      this method does not load an SVG file.
+    - The stem is constructed from three vertices: two points interpolated
+      along the rectangle's bottom edge and a third point below its
+      bottom-left corner.
+    - The stem height is proportional to the rounded rectangle's height.
+      Increasing stem_height_to_bubble_height makes the stem longer.
+    - stem_top_x_props should normally contain two ordered proportions
+      between 0 and 1. Their values control the stem's attachment width
+      and position along the bottom edge.
+    - The current implementation always places the stem's tip below the
+      bottom-left corner, then flips the complete result when direction[0]
+      is positive. It does not independently reposition the stem for every
+      possible direction vector.
+    - insert_n_curves(20) increases the number of curves in the combined
+      geometry; it does not directly specify the number of corners or
+      the stem's height.
+    - The class inherits methods such as get_tip(), get_bubble_center(),
+      move_tip_to(), pin_to(), position_mobject_inside(), write(), and
+      clear() from Bubble.
+    """
+
     def __init__(
         self,
         content: str | VMobject | None = None,
