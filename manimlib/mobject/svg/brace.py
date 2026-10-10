@@ -258,6 +258,181 @@ class Brace(Tex):
 
 
 class BraceLabel(VMobject):
+    """
+    A mobject that combines a Brace with a text or mathematical label.
+
+    BraceLabel provides a convenient way to annotate a visual object or a group
+    of objects with a brace and a corresponding label. It combines the brace
+    geometry and the label into a single VMobject, allowing both components to
+    be positioned, displayed, and animated together.
+
+    The brace is created around the supplied target object, using the requested
+    brace direction. The label is constructed using the class-level
+    label_constructor, scaled according to label_scale, and positioned relative
+    to the brace's tip using label_buff.
+
+    By default, label_constructor is Tex, so labels are rendered as LaTeX
+    expressions. Subclasses can override label_constructor to use a different
+    label representation, provided that the resulting object supports the
+    operations expected by this class.
+
+    Parameters
+    ----------
+    obj : VMobject | list[VMobject]
+        The object or collection of objects to annotate. If a list is supplied,
+        its elements are grouped into a VGroup before the brace is constructed.
+        The brace uses this object to determine its dimensions and placement.
+
+    text : str | Iterable[str]
+        The text or mathematical expression used for the label. The value is
+        passed through listify() and expanded into positional arguments for
+        label_constructor. This allows a single string or an iterable of strings
+        to be supplied, depending on the behavior of listify().
+
+    brace_direction : np.ndarray, optional
+        The direction in which the brace is oriented relative to the target
+        object. Defaults to DOWN.
+
+    label_scale : float, optional
+        The scale factor applied to the newly constructed label. Defaults to 1.0,
+        which leaves the label at its constructor-provided size.
+
+    label_buff : float, optional
+        The spacing passed to Brace.put_at_tip() when positioning the initial
+        label. Defaults to DEFAULT_MOBJECT_TO_MOBJECT_BUFF.
+
+    **kwargs
+        Additional keyword arguments forwarded to VMobject initialization,
+        Brace construction, and label construction. These objects may interpret
+        the same keyword arguments differently.
+
+    Attributes
+    ----------
+    label_constructor : type
+        Class-level constructor used to create the label. Defaults to Tex.
+
+    brace_direction : np.ndarray
+        Direction used when constructing or replacing the brace.
+
+    label_scale : float
+        Scale factor applied when the initial label is created and when a label
+        is replaced through change_label().
+
+    label_buff : float
+        Buffer used to position the initial label relative to the brace's tip.
+        The initial constructor passes this value explicitly to put_at_tip();
+        later label replacements use put_at_tip() with its default buffer unless
+        another method or implementation changes that behavior.
+
+    brace : Brace
+        The brace associated with the annotated object.
+
+    label : VMobject
+        The label object associated with the brace. Its concrete type depends
+        on label_constructor.
+
+    Structure
+    ---------
+    BraceLabel stores the brace and label as its two submobjects, in that order.
+    The brace is available as self.brace and the label as self.label.
+
+    This organization allows the combined object to be manipulated as a single
+    mobject while still providing methods to animate, replace, or reposition
+    the individual components.
+
+    Methods
+    -------
+    creation_anim(label_anim=FadeIn, brace_anim=GrowFromCenter)
+        Returns an AnimationGroup that animates the brace and label separately.
+        The brace uses brace_anim, while the label uses label_anim. The method
+        returns the animation group rather than playing it automatically.
+
+    shift_brace(obj, **kwargs)
+        Constructs a new brace for the supplied object, positions it relative
+        to the existing label, replaces the stored brace, and returns self.
+        If obj is a list, the method attempts to create a VMobject from its
+        elements before constructing the brace. Unlike __init__(), it does not
+        explicitly reuse the stored label_buff when positioning the label.
+
+    change_label(*text, **kwargs)
+        Constructs a replacement label using label_constructor, scales it when
+        label_scale differs from 1, positions it at the current brace's tip,
+        replaces the stored label, and returns self. The replacement label is
+        positioned using put_at_tip()'s default buffer because no explicit buff
+        is passed here.
+
+    change_brace_label(obj, *text)
+        Replaces the brace using shift_brace() and then replaces the label using
+        change_label(). Returns the result of change_label(), which is self.
+        This provides a convenient way to update both the annotated object and
+        its label in sequence.
+
+    copy()
+        Creates a shallow copy of the BraceLabel instance, then independently
+        copies its brace and label and assigns those copies as the new
+        submobjects. The copied object is returned.
+
+    Examples
+    --------
+    Create a brace and a LaTeX label beneath an expression:
+
+        expression = Tex("a", "+", "b", "+", "c")
+        annotation = BraceLabel(expression, "x")
+        self.add(expression, annotation)
+
+    Annotate a group of objects:
+
+        parts = [Tex("a"), Tex("b"), Tex("c")]
+        annotation = BraceLabel(parts, "three terms")
+        self.add(*parts, annotation)
+
+    Animate the brace and label separately:
+
+        annotation = BraceLabel(expression, "x")
+        self.play(annotation.creation_anim())
+
+    Change the label:
+
+        annotation.change_label("y")
+
+    Change both the annotated object and the label:
+
+        annotation.change_brace_label(new_expression, "z")
+
+    Notes
+    -----
+    - The default label constructor is Tex. A subclass can customize the
+      representation by overriding label_constructor.
+    - The initial constructor uses listify(text), while change_label() accepts
+      positional strings directly. Their accepted input forms may therefore
+      differ.
+    - label_scale is applied when labels are initially constructed and when
+      change_label() creates a replacement. It is not automatically applied by
+      shift_brace(), which preserves the existing label.
+    - label_buff is explicitly used during initial construction. The replacement
+      and repositioning methods call put_at_tip() without passing label_buff,
+      so they use that method's default buffer.
+    - shift_brace() handles list inputs differently from __init__(): it attempts
+      VMobject(*obj) instead of grouping the elements in a VGroup. Whether this
+      is appropriate depends on the VMobject constructor and the supplied list.
+    - **kwargs is forwarded to multiple constructors in __init__(). A keyword
+      accepted by one constructor may not necessarily be accepted by another.
+    - copy() explicitly duplicates the brace and label so that these components
+      are not shared with the original object. Other attributes are initially
+      carried over through copy.copy().
+
+    See Also
+    --------
+    Brace
+        Constructs the brace and provides label-positioning helpers.
+    Tex
+        The default constructor used for mathematical labels.
+    VMobject
+        The base class for this combined annotation object.
+    AnimationGroup
+        Groups the brace and label animations into one animation.
+    """
+
     label_constructor: type = Tex
 
     def __init__(
