@@ -84,6 +84,79 @@ class ScreenRectangle(Rectangle):
 
 
 class FullScreenRectangle(ScreenRectangle):
+    """
+    A screen-sized rectangle intended to cover the entire scene frame.
+
+    ``FullScreenRectangle`` extends ``ScreenRectangle`` and uses the
+    default scene frame height to create a rectangle with the inherited
+    default aspect ratio. Its default styling produces a fully opaque,
+    filled rectangle without a visible stroke.
+
+    Parameters
+    ----------
+    height
+        Height of the rectangle in scene units. Defaults to
+        ``FRAME_HEIGHT``.
+
+    fill_color
+        Color used to fill the rectangle. Defaults to ``GREY_E``.
+
+    fill_opacity
+        Opacity of the fill, typically between 0 and 1. Defaults to 1,
+        making the fill fully opaque.
+
+    stroke_width
+        Width of the rectangle's outline. Defaults to 0, disabling
+        the visible stroke.
+
+    **kwargs
+        Additional keyword arguments forwarded through
+        ``ScreenRectangle.__init__`` to ``Rectangle.__init__``.
+        These can include other supported rectangle styling options.
+
+    Notes
+    -----
+    The rectangle's width is determined by the inherited
+    ``ScreenRectangle`` aspect ratio and the specified height:
+
+        width = aspect_ratio * height
+
+    The default aspect ratio is inherited from ``ScreenRectangle``
+    and is 16:9. The default height is ``FRAME_HEIGHT``, so the
+    result is intended to match the scene frame's dimensions under
+    the corresponding frame aspect ratio.
+
+    Examples
+    --------
+    Create a default full-screen rectangle:
+
+    >>> background = FullScreenRectangle()
+
+    Create a fully opaque black background:
+
+    >>> background = FullScreenRectangle(fill_color=BLACK)
+
+    Create a partially transparent background:
+
+    >>> background = FullScreenRectangle(
+    ...     fill_color=BLUE,
+    ...     fill_opacity=0.5,
+    ... )
+
+    Create a rectangle with a visible outline:
+
+    >>> background = FullScreenRectangle(
+    ...     fill_color=GREY_E,
+    ...     fill_opacity=1,
+    ...     stroke_width=2,
+    ... )
+
+    See Also
+    --------
+    ScreenRectangle
+    Rectangle
+    """
+
     def __init__(
         self,
         height: float = FRAME_HEIGHT,
