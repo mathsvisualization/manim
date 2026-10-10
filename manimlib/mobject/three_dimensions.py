@@ -925,6 +925,76 @@ class Disk3D(Surface):
 
 
 class Square3D(Surface):
+    """
+    A flat, square surface in the XY-plane with a configurable side length.
+
+    Square3D inherits from :class:`Surface` and defines a planar square through
+    two parameters, ``u`` and ``v``. The initial surface spans the configured
+    parameter ranges and is then scaled by half the requested side length.
+
+    Parameters
+    ----------
+    side_length : float, optional
+        Intended side length of the square when both parameter ranges have
+        their default values. Defaults to ``2.0``.
+    u_range : Tuple[float, float], optional
+        Range of the first planar parameter. Defaults to ``(-1, 1)``.
+    v_range : Tuple[float, float], optional
+        Range of the second planar parameter. Defaults to ``(-1, 1)``.
+    resolution : Tuple[int, int], optional
+        Number of samples along the two parameter directions. Defaults to
+        ``(2, 2)``.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Surface`.
+
+    Methods
+    -------
+    uv_func(u, v)
+        Maps the two parameters to a point in the XY-plane and returns it
+        as a NumPy array.
+
+    Notes
+    -----
+    - The parameterization is ``(u, v, 0)``, so the surface lies in the
+      XY-plane before any external transformations.
+    - The constructor applies ``self.scale(side_length / 2)`` after the
+      parent surface has been initialized.
+    - With the default parameter ranges, the square spans from ``-1`` to
+      ``1`` in each planar direction before scaling, producing the requested
+      side length.
+    - If custom parameter ranges are supplied, the resulting side lengths
+      also depend on those ranges; ``side_length`` acts as a scale factor
+      rather than enforcing the final dimensions independently.
+    - This class creates a planar surface, not a solid cube or a thick
+      square prism.
+
+    Examples
+    --------
+    Create a square with side length 2::
+
+        square = Square3D()
+        self.add(square)
+
+    Create a larger square::
+
+        square = Square3D(side_length=4)
+        self.add(square)
+
+    Create a square surface with denser sampling::
+
+        square = Square3D(
+            side_length=3,
+            resolution=(10, 10),
+        )
+        self.add(square)
+
+    See Also
+    --------
+    Surface
+    Disk3D
+    square_to_cube_faces
+    """
+
     def __init__(
         self,
         side_length: float = 2.0,
