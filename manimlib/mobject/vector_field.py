@@ -36,6 +36,26 @@ def get_vectorized_rgb_gradient_function(
     max_value: T,
     color_map: str
 ) -> Callable[[VectN], Vect3Array]:
+    """
+    Return a vectorized function that maps values to RGB colors.
+
+    Values are normalized to the given range, clipped to [0, 1], and
+    mapped to the colormap using linear interpolation between adjacent
+    RGB entries.
+
+    Parameters
+    ----------
+    min_value, max_value
+        Input value range.
+    color_map
+        Name of the colormap to use.
+
+    Returns
+    -------
+    Callable[[VectN], Vect3Array]
+        Function mapping an array of values to an (N, 3) RGB array.
+    """
+
     rgbs = np.array(get_colormap_list(color_map))
 
     def func(values):
@@ -59,12 +79,51 @@ def get_rgb_gradient_function(
     max_value: T,
     color_map: str
 ) -> Callable[[float], Vect3]:
+    """
+    Return a scalar RGB gradient function using a colormap.
+
+    Wraps the vectorized gradient function to accept a single value
+    and return its corresponding RGB color.
+
+    Parameters
+    ----------
+    min_value, max_value
+    Input value range.
+    color_map
+    Name of the colormap.
+
+    Returns
+    -------
+    Callable[[float], Vect3]
+    Function mapping a scalar value to an RGB color.
+    """
+
     vectorized_func = get_vectorized_rgb_gradient_function(min_value, max_value, color_map)
     return lambda value: vectorized_func(np.array([value]))[0]
 ####
 
 
 def ode_solution_points(function, state0, time, dt=0.01):
+    """
+    Compute points along the solution of an ordinary differential equation.
+
+    Parameters
+    ----------
+    function
+        Function that returns the derivative of the current state.
+    state0
+        Initial state of the system.
+    time
+        End time of integration.
+    dt
+        Time interval between evaluation points. Defaults to 0.01.
+
+    Returns
+    -------
+    np.ndarray
+        Array containing the solution states, with one state per row.
+    """
+
     solution = solve_ivp(
         lambda t, state: function(state),
         t_span=(0, time),
@@ -78,6 +137,25 @@ def move_along_vector_field(
     mobject: Mobject,
     func: Callable[[Vect3], Vect3]
 ) -> Mobject:
+    """
+    Move a mobject along a vector field using an updater.
+
+    At each frame, evaluates the vector field at the mobject's center
+    and shifts it by the resulting vector multiplied by dt.
+
+    Parameters
+    ----------
+    mobject
+        The mobject to move.
+    func
+        Function mapping a 3D position to a movement vector.
+
+    Returns
+    -------
+    Mobject
+        The same mobject with the updater attached.
+    """
+
     mobject.add_updater(
         lambda m, dt: m.shift(
             func(m.get_center()) * dt
@@ -90,6 +168,24 @@ def move_submobjects_along_vector_field(
     mobject: Mobject,
     func: Callable[[Vect3], Vect3]
 ) -> Mobject:
+    """
+    Move each submobject along a vector field using an updater.
+
+    Only moves submobjects whose centers lie within the frame bounds.
+
+    Parameters
+    ----------
+    mobject
+        The mobject containing the submobjects to move.
+    func
+        Function mapping a 3D position to a movement vector.
+
+    Returns
+    -------
+    Mobject
+        The same mobject with the updater attached.
+    """
+
     def apply_nudge(mob, dt):
         for submob in mob:
             x, y = submob.get_center()[:2]
@@ -105,6 +201,29 @@ def move_points_along_vector_field(
     func: Callable[[float, float], Iterable[float]],
     coordinate_system: CoordinateSystem
 ) -> Mobject:
+    """
+    Move the points of a mobject along a vector field.
+
+    Uses the coordinate system to convert points to coordinates,
+    evaluate the vector field, and convert the resulting vectors
+    back to scene-space displacements.
+
+    Parameters
+    ----------
+    mobject
+        The mobject whose points will be moved.
+    func
+        Function mapping coordinates to a vector.
+    coordinate_system
+        Coordinate system used to convert between coordinates
+        and scene-space points.
+
+    Returns
+    -------
+    Mobject
+        The same mobject with the updater attached.
+    """
+
     cs = coordinate_system
     origin = cs.get_origin()
 
@@ -120,6 +239,25 @@ def get_sample_coords(
     coordinate_system: CoordinateSystem,
     density: float = 1.0
 ) -> it.product[tuple[Vect3, ...]]:
+    """
+    Generate sample coordinates across a coordinate system's ranges.
+
+    Divides each range's step size by the given density and returns
+    the Cartesian product of the resulting coordinate values.
+
+    Parameters
+    ----------
+    coordinate_system
+        Coordinate system providing the coordinate ranges.
+    density
+        Sampling density multiplier. Defaults to 1.0.
+
+    Returns
+    -------
+    np.ndarray
+        Array containing all combinations of sampled coordinates.
+    """
+
     ranges = []
     for range_args in coordinate_system.get_all_ranges():
         _min, _max, step = range_args
@@ -129,6 +267,23 @@ def get_sample_coords(
 
 
 def vectorize(pointwise_function: Callable[[Tuple], Tuple]):
+    """
+    Convert a pointwise function into a vectorized function.
+
+    Applies the given function to each coordinate tuple in an array
+    and returns the results as a NumPy array.
+
+    Parameters
+    ----------
+    pointwise_function
+        Function that accepts individual coordinates as arguments.
+
+    Returns
+    -------
+    Callable[[VectArray], VectArray]
+        Function that applies pointwise_function to an array of coordinates.
+    """
+
     def v_func(coords_array: VectArray) -> VectArray:
         return np.array([pointwise_function(*coords) for coords in coords_array])
 
