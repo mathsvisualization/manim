@@ -1295,6 +1295,86 @@ class VGroup3D(VGroup):
 
 
 class VCube(VGroup3D):
+    """
+    A three-dimensional cube constructed by arranging six styled square faces
+    into a :class:`VGroup3D`.
+
+    VCube inherits from :class:`VGroup3D`. It creates a square with the requested
+    side length and visual styling, converts that square into the six faces of a
+    cube using ``square_to_cube_faces``, and initializes the group with those
+    faces. Additional keyword arguments are forwarded to both the square and
+    the resulting three-dimensional group.
+
+    Parameters
+    ----------
+    side_length : float, optional
+        Side length of the square used to construct the cube faces. Defaults
+        to ``2.0``.
+    fill_color : ManimColor, optional
+        Fill color applied to the square and forwarded to the parent group.
+        Defaults to ``BLUE_D``.
+    fill_opacity : float, optional
+        Opacity of the face fill. Defaults to ``1``.
+    stroke_width : float, optional
+        Width of the face outlines. Defaults to ``0``, which disables visible
+        stroke width unless modified by other styling behavior.
+    **kwargs
+        Additional keyword arguments forwarded to both ``Square`` and
+        ``VGroup3D``. Supported arguments depend on the respective constructors.
+
+    Notes
+    -----
+    - A ``style`` dictionary is created from the fill color, fill opacity,
+      stroke width, and additional keyword arguments.
+    - A ``Square`` of the requested side length is created using this style.
+    - ``square_to_cube_faces(face)`` generates the six faces used to form the
+      cube's surface.
+    - The generated faces are unpacked into ``VGroup3D`` as individual
+      positional mobjects.
+    - The same style dictionary is also passed to ``VGroup3D``. Consequently,
+      keyword arguments must be compatible with both the ``Square`` and
+      ``VGroup3D`` constructors.
+    - Since ``VCube`` is a group of faces, it represents the cube's surface
+      rather than a single volumetric solid mesh.
+    - Depth testing and shading are configured by the inherited ``VGroup3D``
+      constructor unless overridden through compatible keyword arguments.
+    - The implementation does not explicitly validate ``side_length``,
+      ``fill_opacity``, or ``stroke_width``.
+
+    Examples
+    --------
+    Create a cube with the default appearance::
+
+        cube = VCube()
+        self.add(cube)
+
+    Create a larger cube with a custom fill color::
+
+        cube = VCube(
+            side_length=3,
+            fill_color=GREEN,
+            fill_opacity=0.8,
+        )
+        self.add(cube)
+
+    Create a cube with visible outlines::
+
+        cube = VCube(
+            side_length=2,
+            fill_color=BLUE_D,
+            stroke_width=1,
+            stroke_color=WHITE,
+        )
+        self.add(cube)
+
+    See Also
+    --------
+    VGroup3D
+    Cube
+    Square
+    square_to_cube_faces
+    """
+
     def __init__(
         self,
         side_length: float = 2.0,
