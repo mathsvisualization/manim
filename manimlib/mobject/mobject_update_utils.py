@@ -63,7 +63,34 @@ def f_always(method, *arg_generators, **kwargs):
     More functional version of always, where instead
     of taking in args, it takes in functions which output
     the relevant arguments.
+
+    Apply a method to a mobject using dynamically generated arguments.
+
+    Parameters
+    ----------
+    method
+        Bound method of a Mobject to call on each update.
+    *arg_generators
+        Zero-argument callables that generate positional arguments
+        whenever the updater runs.
+    **kwargs
+        Keyword arguments passed unchanged to the method.
+
+    Returns
+    -------
+    Mobject
+        The mobject with the updater added.
+
+    Notes
+    -----
+    Each argument generator is evaluated on every update, while
+    keyword arguments remain fixed.
+
+    Examples
+    --------
+    >>> f_always(dot.move_to, lambda: tracker.get_value() * RIGHT)
     """
+
     assert_is_mobject_method(method)
     mobject = method.__self__
     func = method.__func__
