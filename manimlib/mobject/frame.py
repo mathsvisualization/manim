@@ -175,6 +175,67 @@ class FullScreenRectangle(ScreenRectangle):
 
 
 class FullScreenFadeRectangle(FullScreenRectangle):
+    """
+    A full-screen rectangle with a semi-transparent fill, typically used
+    to darken or fade the scene behind foreground objects.
+
+    ``FullScreenFadeRectangle`` extends ``FullScreenRectangle`` and
+    provides defaults suitable for overlay effects. By default, it uses
+    a black fill with 70% opacity and no visible outline.
+
+    Parameters
+    ----------
+    stroke_width
+        Width of the rectangle's outline. Defaults to ``0.0``, disabling
+        the visible stroke.
+
+    fill_color
+        Color used to fill the rectangle. Defaults to ``BLACK``.
+
+    fill_opacity
+        Opacity of the fill. Defaults to ``0.7``, making the rectangle
+        partially transparent.
+
+    **kwargs
+        Additional keyword arguments accepted by the constructor.
+        Note that this implementation does not forward ``kwargs`` to
+        ``FullScreenRectangle.__init__``; only ``stroke_width``,
+        ``fill_color``, and ``fill_opacity`` are passed to the parent.
+
+    Notes
+    -----
+    The rectangle inherits its dimensions and aspect ratio from
+    ``FullScreenRectangle`` and ``ScreenRectangle``. Its default
+    semi-transparent black fill is useful for placing a visual overlay
+    over a scene while keeping the underlying content visible.
+
+    Examples
+    --------
+    Create a default fade overlay:
+
+    >>> fade = FullScreenFadeRectangle()
+
+    Create a lighter overlay:
+
+    >>> fade = FullScreenFadeRectangle(
+    ...     fill_color=GREY_E,
+    ...     fill_opacity=0.4,
+    ... )
+
+    Create a more opaque colored overlay:
+
+    >>> fade = FullScreenFadeRectangle(
+    ...     fill_color=BLUE,
+    ...     fill_opacity=0.8,
+    ... )
+
+    See Also
+    --------
+    FullScreenRectangle
+    ScreenRectangle
+    Rectangle
+    """
+
     def __init__(
         self,
         stroke_width: float = 0.0,
