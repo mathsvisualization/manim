@@ -378,6 +378,81 @@ class FadeOut(Fade):
 
 
 class FadeInFromPoint(FadeIn):
+    """
+    Animates a Mobject into view from a specified point.
+
+    FadeInFromPoint extends FadeIn and configures the starting state so that
+    the Mobject begins at the supplied point and transitions toward its original
+    position. It calculates the shift vector as the difference between the
+    Mobject's center and the specified point, then passes an infinite scale
+    factor to FadeIn.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The object to animate into view.
+
+    point : Vect3
+        The point from which the object should appear. The shift vector is
+        calculated as mobject.get_center() - point.
+
+    **kwargs
+        Additional keyword arguments forwarded to FadeIn, such as run_time
+        or rate_func.
+
+    Notes
+    -----
+    - The class inherits its animation behavior from FadeIn and Fade.
+    - The shift is calculated automatically; callers do not supply shift
+      directly to this constructor.
+    - FadeIn's starting Mobject is shifted by the negative of the calculated
+      shift vector. This places its starting center at the specified point.
+    - The scale factor is set to np.inf. In FadeIn.create_starting_mobject(),
+      the starting Mobject is scaled by 1.0 / scale_factor, which evaluates to
+      zero for an infinite scale factor.
+    - A zero scale factor can be problematic for some Mobject implementations.
+      The exact visual result depends on how the underlying scaling operation
+      handles a scale of zero.
+    - This class does not define its own target or interpolation methods.
+
+    Examples
+    --------
+    Example 1: Make a circle appear from the origin.
+
+        >>> animation = FadeInFromPoint(circle, ORIGIN)
+
+    The animation calculates the displacement from the origin to the circle's
+    center and uses that to configure the starting state.
+
+    Example 2: Make a square appear from a point above it.
+
+        >>> animation = FadeInFromPoint(square, 2 * UP)
+
+    The square's starting position is configured around the point 2 * UP, then
+    the inherited FadeIn animation transitions toward the original square.
+
+    Example 3: Set a custom runtime.
+
+        >>> animation = FadeInFromPoint(
+        ...     circle,
+        ...     point=LEFT,
+        ...     run_time=2,
+        ... )
+
+    The animation is configured to begin from LEFT and use a two-second runtime.
+
+    These examples illustrate construction only; circle, square, and direction
+    vectors must be defined in the surrounding scene.
+
+    See Also
+    --------
+    FadeIn
+    FadeOut
+    Fade
+    Transform
+    Mobject
+    """
+
     def __init__(self, mobject: Mobject, point: Vect3, **kwargs):
         super().__init__(
             mobject,
