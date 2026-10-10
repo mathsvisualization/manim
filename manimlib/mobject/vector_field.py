@@ -669,6 +669,89 @@ class VectorField(VMobject):
 
 
 class TimeVaryingVectorField(VectorField):
+    """
+    Visualize a time-dependent vector field.
+
+    Extends VectorField by evaluating the vector function using the current
+    simulation time. An updater advances time and refreshes the displayed
+    vectors as the animation progresses.
+
+    Parameters
+    ----------
+    time_func
+        Function accepting an array of coordinates and a time value, returning
+        an array of vectors with corresponding shape.
+    coordinate_system
+        Coordinate system used to position and scale the vectors.
+    **kwargs
+        Additional keyword arguments forwarded to VectorField.
+
+    Attributes
+    ----------
+    time
+        Current elapsed simulation time, initialized to 0.
+
+    Examples
+    --------
+    Example 1: Create a rotating vector field.
+
+        axes = Axes(
+            x_range=(-4, 4, 1),
+            y_range=(-4, 4, 1),
+        )
+
+        def rotating_field(coords, time):
+            x, y = coords.T
+            angle = time
+            c, s = np.cos(angle), np.sin(angle)
+            return np.column_stack((
+                c * (-y) - s * x,
+                s * (-y) + c * x,
+            ))
+
+        field = TimeVaryingVectorField(
+            rotating_field,
+            axes,
+            density=1.5,
+            color=BLUE,
+        )
+
+        self.add(axes, field)
+        self.wait(5)
+
+    The function receives the sampled coordinates and the current time.
+    As time advances, the vectors are recalculated to show the evolving field.
+
+    Example 2: Create a field whose strength oscillates over time.
+
+        def oscillating_field(coords, time):
+            return np.sin(time) * coords
+
+        field = TimeVaryingVectorField(
+            oscillating_field,
+            axes,
+            density=2,
+            color=YELLOW,
+        )
+
+        self.add(field)
+        self.wait(2 * PI)
+
+    The vector magnitudes vary with sin(time), periodically changing direction
+    when the multiplier changes sign and becoming zero when sin(time) is zero.
+
+    Notes
+    -----
+    The field's time is advanced by the attached updater using the frame
+    delta time. The time_func must accept the coordinate array and current
+    time as separate arguments.
+
+    Returns
+    -------
+    TimeVaryingVectorField
+        The initialized time-dependent vector-field visualization.
+    """
+
     def __init__(
         self,
         # Takes in an array of points and a float for time
