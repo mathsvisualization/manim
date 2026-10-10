@@ -2220,6 +2220,96 @@ class Group(Mobject, Generic[SubmobjectType]):
 
 
 class Point(Mobject):
+    """
+    A minimal Mobject representing a single point in space.
+
+    Point stores one coordinate in its point data and provides location-based
+    accessors. Since a single point has no natural geometric width or height,
+    the class uses configurable artificial dimensions for bounding-box and
+    layout operations.
+
+    Parameters
+    ----------
+    location : Vect3, default=ORIGIN
+        Initial three-dimensional coordinates of the point.
+    artificial_width : float, default=1e-6
+        Artificial width returned by get_width(). This does not add geometric
+        extent to the stored point.
+    artificial_height : float, default=1e-6
+        Artificial height returned by get_height(). This does not add geometric
+        extent to the stored point.
+    **kwargs
+        Additional keyword arguments forwarded to the Mobject constructor.
+
+    Attributes
+    ----------
+    artificial_width : float
+        Artificial width reported by get_width().
+    artificial_height : float
+        Artificial height reported by get_height().
+
+    Methods
+    -------
+    get_width()
+        Returns the configured artificial width.
+    get_height()
+        Returns the configured artificial height.
+    get_location()
+        Returns a copy of the first stored point coordinate.
+    get_bounding_box_point(*args, **kwargs)
+        Returns the point's location, ignoring the supplied arguments.
+    set_location(new_loc)
+        Replaces the stored point coordinates with the supplied location and
+        returns this Point.
+
+    Notes
+    -----
+    - The point's coordinates are stored using set_points() after converting
+      the supplied location to a floating-point NumPy array with at least
+      two dimensions.
+    - get_location() returns a copy, so modifying the returned array does not
+      directly modify the point's stored coordinates.
+    - The artificial width and height are metadata used by the overridden
+      dimension accessors. They do not change the actual point coordinates.
+    - get_bounding_box_point() always returns the point's location, regardless
+      of any direction or other arguments passed to it.
+    - This class is intended to represent a location rather than a visible
+      geometric shape. Rendering visibility depends on the surrounding
+      Mobject implementation and how the point is used.
+    - The constructor does not explicitly validate the shape or length of
+      ``location``. It is expected to be compatible with the three-dimensional
+      coordinate conventions used by Manim.
+    - set_location() replaces the stored points rather than translating the
+      existing point by a displacement.
+
+    Examples
+    --------
+    Create a point at the origin::
+
+        point = Point()
+
+    Create a point at a specified location::
+
+        point = Point(np.array([2.0, 1.0, 0.0]))
+
+    Read and update its location::
+
+        location = point.get_location()
+        point.set_location(np.array([-1.0, 2.0, 0.0]))
+
+    Specify artificial dimensions for layout operations::
+
+        point = Point(
+            location=RIGHT,
+            artificial_width=0.01,
+            artificial_height=0.01,
+        )
+
+    See Also
+    --------
+    Mobject
+    """
+
     def __init__(
         self,
         location: Vect3 = ORIGIN,
