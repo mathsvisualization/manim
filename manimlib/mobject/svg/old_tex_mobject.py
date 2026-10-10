@@ -391,6 +391,205 @@ class SingleStringTex(SVGMobject):
 
 
 class OldTex(SingleStringTex):
+    """
+    A LaTeX expression split into independently accessible and styleable parts.
+
+    `OldTex` is a subclass of `SingleStringTex` that extends single-expression
+    LaTeX rendering with substring-based grouping, part selection, coloring,
+    indexing, slicing, and ordering operations.
+
+    It accepts multiple LaTeX strings, optionally separates specified substrings
+    into individual parts, joins the resulting pieces into one complete expression,
+    and reorganizes the rendered SVG submobjects so that individual parts can be
+    accessed and manipulated.
+
+    Parameters
+    ----------
+    *tex_strings : str
+        One or more LaTeX strings that form the complete expression. Each string
+        can be split into smaller pieces according to `isolate` and
+        `tex_to_color_map`.
+
+    arg_separator : str, default=""
+        String inserted between the processed pieces when constructing the full
+        LaTeX expression.
+
+    isolate : List[str], default=[]
+        Substrings that should be separated into individual pieces during
+        preprocessing. Isolated pieces can subsequently be selected and styled
+        independently.
+
+    tex_to_color_map : Dict[str, ManimColor], default={}
+        Mapping from LaTeX substrings to colors. Each key is included in the
+        isolation patterns, and the corresponding color is applied to matching
+        parts after the expression has been broken into submobjects.
+
+    **kwargs
+        Additional keyword arguments forwarded to `SingleStringTex`, including
+        rendering configuration such as `font_size`, `height`, `math_mode`,
+        `alignment`, and SVG styling options.
+
+    Attributes
+    ----------
+    tex_strings : Iterable[str]
+        Processed pieces of the original LaTeX strings after applying substring
+        isolation. These pieces are joined using `arg_separator` to construct
+        the full expression.
+
+    Methods
+    -------
+    break_up_tex_strings(tex_strings, substrings_to_isolate=[])
+        Splits each input string around the specified substrings. Uses escaped
+        regular-expression patterns to match the requested substrings literally,
+        discards empty pieces, and returns the resulting pieces as a list.
+
+    break_up_by_substrings(tex_strings)
+        Reorganizes the existing submobjects into groups corresponding to the
+        supplied LaTeX pieces. Each nonempty piece is represented by a
+        `SingleStringTex` object containing the appropriate existing submobjects.
+
+    get_parts_by_tex(tex, substring=True, case_sensitive=True)
+        Returns a `VGroup` containing direct submobjects that are instances of
+        `SingleStringTex` and whose stored LaTeX expression matches the requested
+        text according to the selected matching options.
+
+    get_part_by_tex(tex, **kwargs)
+        Returns the first part matching the specified LaTeX text, or None if no
+        matching part is found.
+
+    set_color_by_tex(tex, color, **kwargs)
+        Applies a color to every part returned by `get_parts_by_tex` and returns
+        the current object.
+
+    set_color_by_tex_to_color_map(tex_to_color_map, **kwargs)
+        Applies the specified color to each substring in a mapping by calling
+        `set_color_by_tex` for every mapping entry. Returns the current object.
+
+    index_of_part(part, start=0)
+        Returns the index of a specified direct submobject using the list
+        `index` method, starting the search at the requested index.
+
+    index_of_part_by_tex(tex, start=0, **kwargs)
+        Finds a part by its LaTeX text and returns its index, optionally starting
+        the index search at `start`.
+
+    slice_by_tex(start_tex=None, stop_tex=None, **kwargs)
+        Returns a slice of the direct submobjects beginning at the part matching
+        `start_tex` and ending immediately before the part matching `stop_tex`.
+        If `start_tex` is None, slicing begins at index zero. If `stop_tex` is
+        None, slicing continues to the end.
+
+    sort_alphabetically()
+        Sorts the direct submobjects in place using each submobject's stored
+        LaTeX expression, as returned by `get_tex`. Returns None.
+
+    set_bstroke(color=BLACK, width=4)
+        Applies a background stroke using the supplied color and width, then
+        returns the current object.
+
+    Notes
+    -----
+    - During initialization, the isolation patterns combine `isolate` entries
+      with the keys of `tex_to_color_map`.
+    - The strings are processed before being joined into `full_string`, which
+      is passed to `SingleStringTex`.
+    - After rendering, `break_up_by_substrings` reorganizes the existing
+      submobjects into groups associated with the processed pieces.
+    - When `break_up_by_substrings` receives exactly one piece, it copies the
+      current object and sets that copy as the only submobject. Otherwise, it
+      creates a `SingleStringTex` for each nonempty piece and assigns slices of
+      the existing submobjects to those groups.
+    - `get_parts_by_tex` searches only the direct submobjects of the current
+      object. It does not recursively search all descendants.
+    - With `substring=True`, a match occurs when the requested `tex` is contained
+      in a part's stored expression. With `substring=False`, the expressions must
+      be equal.
+    - With `case_sensitive=False`, matching is performed after converting both
+      strings to lowercase.
+    - `index_of_part_by_tex` assumes that `get_part_by_tex` finds a matching part.
+      If no part is found, passing the resulting None to `index_of_part` will
+      raise an error.
+    - `slice_by_tex` uses the index of the first matching part for each boundary.
+      The stop boundary is exclusive, following normal Python slicing behavior.
+    - `sort_alphabetically` changes the order of direct submobjects and does not
+      regenerate the original LaTeX expression.
+    - `set_bstroke` uses `set_stroke` with `background=True`, which creates a
+      background stroke rather than an ordinary foreground outline.
+    - The constructor uses mutable default arguments for `isolate` and
+      `tex_to_color_map`. Avoid mutating these defaults directly; explicitly
+      provide fresh lists and dictionaries when needed.
+
+    Examples
+    --------
+    Create a basic expression:
+
+    >>> equation = OldTex(r"x^2 + y^2 = z^2")
+    >>> self.add(equation)
+
+    Isolate selected substrings:
+
+    >>> equation = OldTex(
+    ...     r"x^2 + y^2 = z^2",
+    ...     isolate=["x", "y", "z"],
+    ... )
+    >>> self.add(equation)
+
+    Assign colors to selected LaTeX substrings:
+
+    >>> equation = OldTex(
+    ...     r"a + b = c",
+    ...     tex_to_color_map={
+    ...         "a": RED,
+    ...         "b": GREEN,
+    ...         "c": BLUE,
+    ...     },
+    ... )
+    >>> self.add(equation)
+
+    Retrieve every part containing a substring:
+
+    >>> equation = OldTex(
+    ...     r"x + x^2 + y",
+    ...     isolate=["x", "y"],
+    ... )
+    >>> x_parts = equation.get_parts_by_tex("x")
+    >>> self.add(x_parts)
+
+    Retrieve the first matching part:
+
+    >>> part = equation.get_part_by_tex("y")
+
+    Color a selected substring:
+
+    >>> equation.set_color_by_tex("x", YELLOW)
+
+    Get the index of a part:
+
+    >>> part = equation.get_part_by_tex("x")
+    >>> index = equation.index_of_part(part)
+
+    Slice the expression between two parts:
+
+    >>> equation = OldTex(
+    ...     r"a + b + c + d",
+    ...     isolate=["a", "b", "c", "d"],
+    ... )
+    >>> middle_parts = equation.slice_by_tex("b", "d")
+    >>> self.add(middle_parts)
+
+    Apply a background stroke:
+
+    >>> equation.set_bstroke(color=BLACK, width=4)
+
+    See Also
+    --------
+    SingleStringTex
+    SVGMobject
+    VGroup
+    Tex
+    TexText
+    """
+
     def __init__(
         self,
         *tex_strings: str,
