@@ -498,6 +498,107 @@ class BraceLabel(VMobject):
 
 
 class BraceText(BraceLabel):
+    """
+    A BraceLabel specialization that uses TexText to create text labels.
+
+    BraceText combines a brace around a target mobject with a text label positioned
+    at the brace's tip. It inherits the brace construction, label positioning,
+    animation, and replacement functionality from BraceLabel, while setting
+    label_constructor to TexText instead of the default Tex.
+
+    This class is useful for annotating diagrams, geometric constructions, and
+    mathematical expressions with ordinary text rather than labels intended
+    primarily for mathematical LaTeX notation.
+
+    The target object and brace direction determine where the brace is placed.
+    The supplied text is passed to TexText through the inherited BraceLabel
+    implementation, and the resulting label is scaled and positioned according
+    to the inherited label_scale and label_buff settings.
+
+    Class Attributes
+    ----------------
+    label_constructor : type
+        Set to TexText, which is used to construct labels. This overrides the
+        Tex constructor inherited from BraceLabel.
+
+    Parameters
+    ----------
+    obj : VMobject | list[VMobject]
+        The object or list of objects to annotate. Lists are handled by the
+        inherited BraceLabel constructor.
+
+    text : str | Iterable[str]
+        The text content used to create the label through TexText.
+
+    brace_direction : np.ndarray, optional
+        Direction in which the brace is oriented relative to the target object.
+        Defaults to DOWN, as defined by BraceLabel.
+
+    label_scale : float, optional
+        Scale factor applied to the label. Defaults to 1.0.
+
+    label_buff : float, optional
+        Spacing between the brace's tip and the initial label. Defaults to
+        DEFAULT_MOBJECT_TO_MOBJECT_BUFF.
+
+    **kwargs
+        Additional keyword arguments forwarded according to the inherited
+        BraceLabel implementation. They are passed to the base VMobject
+        initialization, Brace construction, and label construction, so they
+        must be compatible with the relevant constructors.
+
+    Inherited Functionality
+    -----------------------
+    BraceText inherits the following methods from BraceLabel:
+
+    creation_anim(label_anim=FadeIn, brace_anim=GrowFromCenter)
+        Returns an AnimationGroup for animating the brace and label.
+
+    shift_brace(obj, **kwargs)
+        Replaces the brace to annotate a different target object and repositions
+        the existing label at the new brace's tip.
+
+    change_label(*text, **kwargs)
+        Replaces the current label using TexText as the label constructor.
+
+    change_brace_label(obj, *text)
+        Updates both the target brace and its label.
+
+    copy()
+        Creates a copy of the combined object, including copies of its brace
+        and label.
+
+    Example
+    -------
+        expression = Tex("a", "+", "b")
+        annotation = BraceText(expression, "Two terms")
+        self.add(expression, annotation)
+
+    The example creates a brace around the expression and places the text
+    "Two terms" at the brace's tip.
+
+    Notes
+    -----
+    - BraceText changes the label constructor; it does not introduce a separate
+      brace geometry or video-independent animation system.
+    - Label construction and placement behavior are inherited from BraceLabel.
+    - The inherited change_label() method also uses TexText because it refers
+      to self.label_constructor.
+    - The inherited label_buff value is explicitly used during initial label
+      placement. Replacement labels use the default buffer of put_at_tip()
+      unless the implementation is changed.
+    - The exact text syntax and rendering behavior depend on TexText.
+
+    See Also
+    --------
+    BraceLabel
+        Base class that combines a brace and a label.
+    Brace
+        Creates and positions the brace.
+    TexText
+        Text-rendering class used to construct labels.
+    """
+
     label_constructor: type = TexText
 
 
