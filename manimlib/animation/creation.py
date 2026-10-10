@@ -46,6 +46,62 @@ class ShowPartial(Animation, ABC):
 
 
 class ShowCreation(ShowPartial):
+    """
+    Animates the creation of a Mobject by progressively revealing it from its
+    beginning to its end.
+
+    ShowCreation extends ShowPartial and defines the visible portion of the
+    Mobject at each animation progress value. At alpha = 0, the revealed interval
+    has zero length. As alpha increases, the visible portion grows from the
+    beginning of the Mobject. At alpha = 1, the entire Mobject is revealed.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The object whose creation is to be animated.
+
+    lag_ratio : float, optional
+        Relative timing parameter forwarded to ShowPartial. Defaults to 1.0.
+        Its effect depends on the implementation of ShowPartial.
+
+    **kwargs
+        Additional keyword arguments forwarded to ShowPartial.
+
+    Methods
+    -------
+    get_bounds(alpha)
+        Returns the start and end bounds of the visible portion for the given
+        animation progress. The start bound remains 0, while the end bound
+        increases linearly with alpha.
+
+    Notes
+    -----
+    - ShowCreation inherits its animation behavior from ShowPartial.
+    - The get_bounds method returns (0, alpha), representing a growing interval
+      from the beginning of the Mobject.
+    - At alpha = 0, the bounds are (0, 0).
+    - At alpha = 0.5, the bounds are (0, 0.5).
+    - At alpha = 1, the bounds are (0, 1).
+    - The method does not clamp alpha; any clamping or progress management is
+      handled elsewhere in the animation system.
+    - The precise visual result depends on how ShowPartial interprets these
+      bounds for the supplied Mobject.
+
+    Examples
+    --------
+    Reveal a curve progressively:
+
+        >>> animation = ShowCreation(curve, run_time=2)
+
+    The example illustrates construction only; curve must be a defined Mobject.
+
+    See Also
+    --------
+    ShowPartial
+    Animation
+    Mobject
+    """
+
     def __init__(self, mobject: Mobject, lag_ratio: float = 1.0, **kwargs):
         super().__init__(mobject, lag_ratio=lag_ratio, **kwargs)
 
