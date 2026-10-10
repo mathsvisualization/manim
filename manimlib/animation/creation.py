@@ -110,6 +110,72 @@ class ShowCreation(ShowPartial):
 
 
 class Uncreate(ShowCreation):
+    """
+    Animates the disappearance of a Mobject by progressively reversing its
+    creation animation.
+
+    Uncreate extends ShowCreation and forwards its configuration to the parent
+    class. Its default rate function is smooth(1 - t), which reverses the input
+    progress before applying the smooth rate function. This makes the object
+    appear to be drawn backward, gradually disappearing from its end toward
+    its beginning.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The object whose visible portion is to be progressively removed.
+
+    rate_func : Callable[[float], float], optional
+        Rate function controlling the animation's progress. Defaults to
+        lambda t: smooth(1 - t), which reverses the input before applying
+        smooth interpolation.
+
+    remover : bool, optional
+        Whether the animation should remove the Mobject from the scene when
+        it finishes. Defaults to True. The behavior is inherited from the
+        parent animation implementation.
+
+    should_match_start : bool, optional
+        Whether the animation should match the starting state according to the
+        behavior implemented by the parent animation classes. Defaults to True.
+
+    **kwargs
+        Additional keyword arguments forwarded to ShowCreation.
+
+    Notes
+    -----
+    - Uncreate inherits its partial-revelation behavior from ShowCreation and
+      ShowPartial.
+    - Unlike ShowCreation's default forward progression, Uncreate uses a
+      reversed smooth rate function by default.
+    - The rate function transforms the animation's input progress; the actual
+      visible interval is determined by the inherited get_bounds method.
+    - With the default remover=True, the animation is configured to remove the
+      Mobject when the animation finishes.
+    - Setting remover=False disables that removal behavior.
+    - The class does not define its own begin, finish, or interpolate methods;
+      these behaviors are inherited.
+
+    Examples
+    --------
+    Animate a curve disappearing as though it were being drawn backward:
+
+        >>> animation = Uncreate(curve, run_time=2)
+
+    Keep the Mobject from being removed automatically after the animation:
+
+        >>> animation = Uncreate(curve, remover=False)
+
+    These examples illustrate construction only; curve must be a defined Mobject.
+
+    See Also
+    --------
+    ShowCreation
+    ShowPartial
+    Animation
+    Mobject
+    """
+
     def __init__(
         self,
         mobject: Mobject,
