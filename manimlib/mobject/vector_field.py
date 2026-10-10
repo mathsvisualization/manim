@@ -294,6 +294,207 @@ def vectorize(pointwise_function: Callable[[Tuple], Tuple]):
 
 
 class VectorField(VMobject):
+    """
+    Visualize a vector field as a collection of arrows on a coordinate system.
+
+    Each arrow represents the output of a vectorized function evaluated at
+    a sampled coordinate. Arrow direction indicates the vector's direction,
+    while its displayed length is scaled to keep the visualization readable.
+    Colors and opacities can optionally represent vector magnitudes.
+
+    Parameters
+    ----------
+    func
+        A vectorized function that accepts an array of coordinates with shape
+        (N, dimension) and returns an array of vectors with corresponding shape.
+
+    coordinate_system
+        Coordinate system used to convert sampled coordinates and vector
+        outputs into scene-space positions.
+
+    sample_coords
+        Optional array of coordinates at which to evaluate the vector field.
+        If None, coordinates are generated using get_sample_coords().
+
+    density
+        Sampling density used when sample_coords is None. Defaults to 2.0.
+        Higher values produce more sample points.
+
+    magnitude_range
+        Optional (minimum, maximum) magnitude range for color mapping.
+        If None, the range is inferred from the maximum norm of the function's
+        outputs at the sampled coordinates.
+
+    color
+        Optional uniform stroke color. When provided, color mapping is disabled.
+
+    color_map_name
+        Name of the colormap to use when color_map is not provided.
+        Defaults to "3b1b_colormap".
+
+    color_map
+        Optional callable that maps normalized magnitudes to RGBA colors.
+        Takes precedence over color_map_name when color is None.
+
+    stroke_opacity
+        Base opacity of the vector-field strokes. Defaults to 1.0.
+
+    stroke_width
+        Base stroke width. Defaults to 3.
+
+    tip_width_ratio
+        Arrowhead width relative to the base stroke width. Defaults to 4.
+
+    tip_len_to_width
+        Arrowhead length relative to its width. Defaults to 0.01.
+
+    max_vect_len
+        Optional maximum displayed vector length, scaled by the coordinate
+        system's x-axis unit size. If None, the limit is derived from sample
+        spacing and max_vect_len_to_step_size.
+
+    max_vect_len_to_step_size
+        Maximum displayed vector length as a multiple of sample spacing when
+        max_vect_len is None. Defaults to 0.8.
+
+    flat_stroke
+        Whether to use flat strokes. Defaults to False.
+
+    norm_to_opacity_func
+        Optional function mapping vector magnitudes to stroke opacities.
+        Receives an array of magnitudes corresponding to the rendered stroke
+        points, with values repeated for each arrow segment.
+
+    **kwargs
+        Additional keyword arguments passed to VMobject.
+
+    Attributes
+    ----------
+    func
+        Vectorized function defining the vector field.
+    coordinate_system
+        Coordinate system used for sampling and rendering.
+    sample_coords
+        Coordinates where the vector field is evaluated.
+    sample_points
+        Corresponding positions in scene coordinates.
+    magnitude_range
+        Magnitude range used for color mapping.
+    color_map
+        Callable used to map magnitudes to colors, or None.
+    max_displayed_vect_len
+        Maximum displayed arrow length in scene units.
+    stroke_width
+        Current base stroke width.
+    base_stroke_width_array
+        Per-point multipliers used to shape the arrow strokes.
+
+    Examples
+    --------
+    Example 1: Create a simple rotational vector field.
+
+        axes = Axes(
+            x_range=(-4, 4, 1),
+            y_range=(-4, 4, 1),
+        )
+
+        def rotational_field(coords):
+            x, y = coords.T
+            return np.column_stack((-y, x))
+
+        field = VectorField(
+            rotational_field,
+            axes,
+            density=1.5,
+            color=BLUE,
+        )
+
+        self.add(axes, field)
+
+    The field produces vectors (-y, x), which are perpendicular to the
+    position vector (x, y). The arrows therefore circulate around the origin.
+
+    Example 2: Visualize a radial vector field.
+
+        def radial_field(coords):
+            return coords
+
+        field = VectorField(
+            radial_field,
+            axes,
+            density=2,
+            color=YELLOW,
+            max_vect_len=1.0,
+        )
+
+        self.add(field)
+
+    Each vector points away from the origin. The finite max_vect_len limits
+    the displayed arrow lengths using the coordinate system's x-axis scale.
+
+    Example 3: Color vectors according to their magnitudes.
+
+        def scaling_field(coords):
+            return 0.5 * coords
+
+        field = VectorField(
+            scaling_field,
+            axes,
+            density=2,
+            magnitude_range=(0, 3),
+            color_map_name="3b1b_colormap",
+        )
+
+        self.add(field)
+
+    The output magnitude increases with distance from the origin. When no
+    uniform color is specified, the colormap maps these magnitudes to colors.
+    Values outside magnitude_range are passed through inverse_interpolate
+    to the colormap function, whose behavior determines their final colors.
+
+    Example 4: Supply custom sample coordinates.
+
+        sample_coords = np.array([
+            [-2, 0, 0],
+            [ 0, 0, 0],
+            [ 2, 0, 0],
+            [ 0, 2, 0],
+        ])
+
+        field = VectorField(
+            rotational_field,
+            axes,
+            sample_coords=sample_coords,
+            color=GREEN,
+        )
+
+        self.add(field)
+
+    Only the specified coordinates are sampled. When sample_coords is
+    provided, density is not used to generate a replacement sample grid.
+
+    Notes
+    -----
+    The vectorized function must accept the coordinate array in the format
+    expected by the coordinate system and return one vector per sample.
+
+    The output vectors are converted to scene-space displacements by
+    subtracting the coordinate system's scene-space origin from the
+    converted vector coordinates.
+
+    When max_vect_len is None, the initial sample spacing is estimated from
+    the first two sample points. Therefore, the generated sample points
+    must contain at least two entries for this calculation.
+
+    If color is provided, color_map is set to None. Otherwise, the supplied
+    color_map is used, or a colormap is obtained from color_map_name.
+
+    Returns
+    -------
+    VectorField
+        The initialized vector-field visualization as a VMobject.
+    """
+
     def __init__(
         self,
         # Vectorized function: Takes in an array of coordinates, returns an array of outputs.
