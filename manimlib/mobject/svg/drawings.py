@@ -1694,6 +1694,28 @@ class OldThoughtBubble(Bubble):
 
 
 class VectorizedEarth(SVGMobject):
+    """
+    A vectorized Earth illustration based on an SVG asset.
+
+    The SVG is loaded from the "earth" asset, subdivided into additional
+    curves, and placed over a blue-filled circle with a green outline.
+
+    Parameters
+    ----------
+    height : float, optional
+        Height of the Earth illustration. Defaults to 2.0.
+    **kwargs
+        Additional arguments passed to SVGMobject.
+
+    Examples
+    --------
+        earth = VectorizedEarth()
+        self.add(earth)
+
+        earth = VectorizedEarth(height=3.0)
+        self.add(earth)
+    """
+
     file_name: str = "earth"
 
     def __init__(
