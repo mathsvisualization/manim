@@ -2012,6 +2012,105 @@ class Piano3D(VGroup):
 
 
 class DieFace(VGroup):
+    """
+    A single face of a standard six-sided die, represented as a rounded square
+    with a number of dots corresponding to the face's value.
+
+    The face is constructed from a :class:`Square` with rounded corners and a
+    group of :class:`Dot` objects positioned according to the conventional
+    arrangements used on a six-sided die.
+
+    The number of dots is determined by ``value``:
+        - 1: One dot at the center.
+        - 2: Two dots along the upper-left to lower-right diagonal.
+        - 3: Two diagonal dots and one at the center.
+        - 4: Four dots near the corners.
+        - 5: Four corner dots and one at the center.
+        - 6: Three dots on each side, arranged in two columns.
+
+    The dots are positioned using the bounding-box points of the square and
+    then spaced using ``dot_coalesce_factor``. The resulting object is a
+    :class:`VGroup` containing the square and the dot arrangement.
+
+    Parameters
+    ----------
+    value : int
+        The number shown on the die face. Must be between 1 and 6, inclusive.
+        The implementation checks this range but does not explicitly verify
+        that the input is an integer.
+    side_length : float, optional
+        The side length of the square representing the die face. Default is 1.0.
+    corner_radius : float, optional
+        The rounding radius applied to the square's corners. Default is 0.15.
+    stroke_color : ManimColor, optional
+        The outline color of the square. Default is WHITE.
+    stroke_width : float, optional
+        The width of the square's outline. Default is 2.0.
+    fill_color : ManimColor, optional
+        The fill color of the square. Default is GREY_E.
+    dot_radius : float, optional
+        The radius of each dot. Default is 0.08.
+    dot_color : ManimColor, optional
+        The fill color of the dots. Default is WHITE.
+    dot_coalesce_factor : float, optional
+        The spacing factor passed to ``arrangement.space_out_submobjects``.
+        Default is 0.5. Its effect depends on the spacing behavior implemented
+        by that method.
+
+    Attributes
+    ----------
+    dots : VGroup
+        The group of dots displayed on the face.
+    value : int
+        The supplied value used to determine the dot arrangement.
+    index : int
+        Set to the same value as ``value``.
+
+    Raises
+    ------
+    Exception
+        If ``value`` is outside the range from 1 through 6.
+
+    Notes
+    -----
+    The square is created with full fill opacity. Its corners are rounded before
+    the dot positions are calculated. Each dot is copied from a common template
+    and moved to a bounding-box point of the square.
+
+    The final group contains two main submobjects:
+        1. The rounded square.
+        2. The group of dots.
+
+    Examples
+    --------
+    Create a standard die face displaying five:
+
+    >>> face = DieFace(5)
+    >>> face.value
+    5
+    >>> face.index
+    5
+    >>> len(face.dots)
+    5
+
+    Customize the face and dot appearance:
+
+    >>> face = DieFace(
+    ...     value=6,
+    ...     side_length=2.0,
+    ...     corner_radius=0.2,
+    ...     fill_color=BLUE_E,
+    ...     stroke_color=WHITE,
+    ...     dot_radius=0.1,
+    ...     dot_color=YELLOW,
+    ... )
+
+    Add the face to a scene:
+
+    >>> face = DieFace(3)
+    >>> self.add(face)
+    """
+
     def __init__(
         self,
         value: int,
