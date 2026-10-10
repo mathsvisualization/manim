@@ -462,7 +462,81 @@ class FadeInFromPoint(FadeIn):
         )
 
 
-class FadeOutToPoint(FadeOut):
+    """
+    Animates a Mobject out of view toward a specified point.
+
+    FadeOutToPoint extends FadeOut and calculates a shift vector that moves the
+    Mobject's center toward the given point. It also sets the scale factor to
+    zero, so the target copy collapses to zero scale while becoming transparent.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The object to animate out of view.
+
+    point : Vect3
+        The destination point toward which the Mobject moves. The shift vector
+        is calculated as point - mobject.get_center().
+
+    **kwargs
+        Additional keyword arguments forwarded to FadeOut, such as run_time,
+        rate_func, or remover.
+
+    Notes
+    -----
+    - The class inherits its target creation and interpolation behavior from
+      FadeOut, Fade, and Transform.
+    - The shift vector is calculated automatically from the Mobject's current
+      center and the specified destination point.
+    - FadeOut.create_target() applies this shift to the copied Mobject.
+    - The scale factor is set to zero, so the target copy is scaled to zero.
+    - The target copy is also assigned zero opacity by FadeOut.create_target().
+    - With FadeOut's default remover=True, the original Mobject is configured
+      to be removed from the scene when the animation finishes.
+    - Because scaling to zero can collapse the target geometry, the exact visual
+      result depends on the Mobject and the parent Transform implementation.
+
+    Examples
+    --------
+    Example 1: Make a circle disappear toward the origin.
+
+        >>> animation = FadeOutToPoint(circle, ORIGIN)
+
+    The target is shifted so that its center moves toward the origin, while
+    the target copy becomes transparent and collapses to zero scale.
+
+    Example 2: Make a square disappear toward a point above it.
+
+        >>> animation = FadeOutToPoint(square, 2 * UP)
+
+    The destination is 2 * UP. The class calculates the necessary shift from
+    the square's current center.
+
+    Example 3: Keep the Mobject in the scene after the animation.
+
+        >>> animation = FadeOutToPoint(
+        ...     circle,
+        ...     point=LEFT,
+        ...     remover=False,
+        ...     run_time=2,
+        ... )
+
+    The animation is configured to move the circle toward LEFT over two seconds
+    without automatically removing it from the scene at completion.
+
+    These examples illustrate construction only; circle, square, and direction
+    vectors must be defined in the surrounding scene.
+
+    See Also
+    --------
+    FadeOut
+    FadeInToPoint
+    Fade
+    Transform
+    Mobject
+    """class FadeOutToPoint(FadeOut):
+
+
     def __init__(self, mobject: Mobject, point: Vect3, **kwargs):
         super().__init__(
             mobject,
