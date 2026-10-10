@@ -891,8 +891,120 @@ class FadeTransformPieces(FadeTransform):
 
 class VFadeIn(Animation):
     """
-    VFadeIn and VFadeOut only work for VMobjects,
+    Fade a VMobject into view by gradually increasing its stroke and fill opacity.
+
+    VFadeIn is an Animation subclass that reveals a VMobject by interpolating
+    its stroke opacity and fill opacity from zero to their original values.
+    Unlike a general-purpose fade animation, it specifically modifies the
+    visual opacity of vector-object strokes and fills.
+
+    The animation processes the object's submobjects individually. For each
+    submobject, it uses the corresponding starting object's stroke and fill
+    opacity as the final values and interpolates from zero according to the
+    current animation progress.
+
+    Parameters
+    ----------
+    vmobject : VMobject
+        The vector mobject to reveal. Its stroke and fill opacity are
+        interpolated from zero to their starting values.
+
+    suspend_mobject_updating : bool, optional
+        Whether to suspend updating of the animated mobject while the
+        animation runs. Defaults to False.
+
+    **kwargs
+        Additional keyword arguments forwarded to Animation, such as
+        ``run_time`` and other supported animation configuration options.
+
+    Methods
+    -------
+    interpolate_submobject(
+        submob: VMobject,
+        start: VMobject,
+        alpha: float
+    ) -> None
+        Interpolate the stroke and fill opacity of a submobject.
+
+        Parameters
+        ----------
+        submob : VMobject
+            The submobject whose opacity is being updated.
+        start : VMobject
+            The corresponding starting submobject. Its original stroke and
+            fill opacity values determine the final opacity.
+        alpha : float
+            Animation progress, typically ranging from 0 to 1. At 0, the
+            stroke and fill opacity are zero; at 1, they reach their
+            respective starting opacity values.
+
+    Notes
+    -----
+    - VFadeIn is intended for VMobjects. It is not a general-purpose fade
+      animation for every type of Mobject.
+    - Stroke and fill opacity are interpolated independently. For example,
+      a VMobject can have a visible stroke but a transparent fill.
+    - The method uses ``start.get_stroke_opacity()`` and
+      ``start.get_fill_opacity()`` as the respective final values.
+    - The opacity of each submobject is updated using the interpolation
+      function and the current animation progress.
+    - This class changes stroke and fill opacity; it does not explicitly
+      interpolate the object's position, scale, or color.
+    - If a VMobject has no visible stroke or fill initially, the
+      corresponding component will remain transparent throughout the
+      animation.
+
+    Examples
+    --------
+    Example 1: Fade in a circle.
+
+    >>> circle = Circle()
+    >>> scene.play(VFadeIn(circle))
+
+    The circle's stroke and fill become visible gradually, reaching their
+    original opacity values when the animation completes.
+
+    Example 2: Control the animation duration.
+
+    >>> square = Square()
+    >>> scene.play(VFadeIn(square, run_time=2))
+
+    The square takes two seconds to reveal, assuming the scene's animation
+    timing is measured in seconds.
+
+    Example 3: Fade in a group of vector objects.
+
+    >>> shapes = VGroup(
+    ...     Circle(),
+    ...     Square().shift(RIGHT * 2),
+    ... )
+    >>> scene.play(VFadeIn(shapes))
+
+    The animation processes the VMobject submobjects individually. Each
+    submobject's stroke and fill opacity are interpolated toward the values
+    stored in its corresponding starting state.
+
+    Example 4: Inspect opacity interpolation.
+
+    >>> shape = Circle()
+    >>> animation = VFadeIn(shape)
+    >>> animation.begin()
+    >>> animation.interpolate(0)
+    >>> animation.interpolate(1)
+
+    At the beginning of the interpolation, stroke and fill opacity are set
+    to zero. At the end, they are restored to the corresponding starting
+    opacity values through the interpolation logic.
+
+    See Also
+    --------
+    Animation
+    VMobject
+    VFadeOut
+    FadeIn
+    FadeOut
     """
+
     def __init__(self, vmobject: VMobject, suspend_mobject_updating: bool = False, **kwargs):
         super().__init__(
             vmobject,
