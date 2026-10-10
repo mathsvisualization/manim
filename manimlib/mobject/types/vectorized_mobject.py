@@ -1736,6 +1736,123 @@ class VectorizedPoint(Point, VMobject):
 
 
 class CurvesAsSubmobjects(VGroup):
+    """
+    CurvesAsSubmobjects
+    ===================
+
+    A VGroup that splits a VMobject into separate submobjects, one for each
+    Bezier curve segment in the original object's point data.
+
+    CurvesAsSubmobjects is useful when individual curve segments need to be
+    accessed, styled, transformed, or animated independently instead of
+    manipulating the entire VMobject as a single object.
+
+    Each segment is represented by a new VMobject containing the points from
+    one Bezier tuple obtained from the original object's
+    ``get_bezier_tuples`` method. The new segment then copies the original
+    VMobject's style and is added to the group.
+
+    Parameters
+    ----------
+    vmobject : VMobject
+        The source vectorized mobject whose Bezier curve segments will be
+        extracted.
+    **kwargs
+        Additional keyword arguments passed to the parent VGroup
+        initialization method.
+
+    Inheritance
+    -----------
+    CurvesAsSubmobjects inherits from ``VGroup`` and therefore supports
+    group operations and access to its individual child mobjects.
+
+    Initialization
+    --------------
+    The constructor performs the following operations:
+
+    1. Initializes the parent VGroup using ``super().__init__(**kwargs)``.
+    2. Calls ``vmobject.get_bezier_tuples()`` to retrieve the source
+       object's Bezier curve segments.
+    3. Iterates over each returned tuple.
+    4. Creates a new VMobject for each tuple.
+    5. Calls ``part.set_points(tup)`` to assign the tuple's points to the
+       new VMobject.
+    6. Calls ``part.match_style(vmobject)`` to copy the source object's
+       style to the new segment.
+    7. Adds the resulting VMobject to the group using ``self.add(part)``.
+
+    Attributes
+    ----------
+    submobjects : list
+        Contains the newly created VMobject instances, with one entry for
+        each Bezier tuple returned by the source object's
+        ``get_bezier_tuples`` method.
+
+    How the Segmentation Works
+    --------------------------
+    A VMobject can represent a path made up of multiple Bezier curve
+    segments. Rather than retaining the entire path as one object, this
+    class extracts the individual Bezier tuples and stores each tuple in
+    its own VMobject.
+
+    For example, if the source object provides five Bezier tuples, the
+    resulting group will contain five child VMobjects.
+
+    The number of children depends on the tuples returned by
+    ``get_bezier_tuples``; it is not necessarily equal to the number of
+    visually distinct shapes or disconnected components in the original
+    object.
+
+    Style Preservation
+    ------------------
+    Each generated segment receives its style through:
+
+        part.match_style(vmobject)
+
+    This delegates style matching to the inherited VMobject implementation.
+    The exact style properties copied depend on the behavior of
+    ``match_style`` in the relevant ManimGL version.
+
+    The constructor does not explicitly assign a separate style to each
+    segment. All segments are initially styled to match the source object.
+
+    Notes
+    -----
+    - The source VMobject is not directly modified by the operations shown.
+    - Each segment is a new VMobject containing the points from one
+      Bezier tuple.
+    - The constructor does not preserve the source object as a child;
+      it adds the newly created segment objects instead.
+    - The resulting group can be indexed to retrieve individual segments.
+    - Operations applied to the group can affect its children collectively,
+      while individual children can also be manipulated separately.
+    - The class assumes that ``get_bezier_tuples`` returns point data
+      accepted by ``VMobject.set_points``.
+    - If the source object returns no Bezier tuples, the resulting group
+      remains empty.
+    - Geometric continuity between neighboring segments depends on the
+      source point data. This class does not independently validate or
+      modify continuity.
+
+    Examples
+    --------
+    Split a VMobject into its Bezier segments:
+
+        segments = CurvesAsSubmobjects(vmobject)
+
+    Access the first segment:
+
+        first_segment = segments[0]
+
+    Iterate over all segments:
+
+        for segment in segments:
+            segment.set_color(RED)
+
+    Each child is an independent VMobject initialized from one Bezier
+    tuple and styled to match the original object at construction time.
+    """
+
     def __init__(self, vmobject: VMobject, **kwargs):
         super().__init__(**kwargs)
         for tup in vmobject.get_bezier_tuples():
