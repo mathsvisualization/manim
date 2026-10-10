@@ -1394,6 +1394,79 @@ class VCube(VGroup3D):
 
 
 class VPrism(VCube):
+    """
+    A three-dimensional rectangular prism created by independently stretching
+    a :class:`VCube` along its three coordinate dimensions.
+
+    VPrism inherits from :class:`VCube`. It first initializes a cube using the
+    provided keyword arguments, then rescales the resulting group to match the
+    requested width, height, and depth. Stretching is enabled so each dimension
+    can be adjusted independently.
+
+    Parameters
+    ----------
+    width : float, optional
+        Target extent along dimension 0 (the x-axis). Defaults to ``3.0``.
+    height : float, optional
+        Target extent along dimension 1 (the y-axis). Defaults to ``2.0``.
+    depth : float, optional
+        Target extent along dimension 2 (the z-axis). Defaults to ``1.0``.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`VCube`, such as
+        ``side_length``, ``fill_color``, ``fill_opacity``, ``stroke_width``,
+        and other supported styling or rendering options.
+
+    Notes
+    -----
+    - The parent ``VCube`` constructor creates the initial cube geometry.
+    - The constructor then iterates over ``width``, ``height``, and ``depth``,
+      calling ``rescale_to_fit(value, dim, stretch=True)`` for each dimension.
+    - The dimension indices correspond to x (0), y (1), and z (2).
+    - Setting ``stretch=True`` allows each dimension to change independently
+      instead of preserving the original proportions.
+    - The resulting object retains the six-face group structure inherited
+      from ``VCube`` rather than becoming a single volumetric mesh.
+    - The requested dimensions describe target extents along the coordinate
+      dimensions. The final geometry also depends on the initial cube geometry
+      and the behavior of ``rescale_to_fit``.
+    - The constructor does not explicitly validate the supplied dimensions.
+
+    Examples
+    --------
+    Create a prism with the default dimensions::
+
+        prism = VPrism()
+        self.add(prism)
+
+    Create a wide rectangular prism::
+
+        prism = VPrism(
+            width=4,
+            height=2,
+            depth=1,
+        )
+        self.add(prism)
+
+    Customize the initial cube's appearance::
+
+        prism = VPrism(
+            width=3,
+            height=2,
+            depth=1,
+            side_length=2,
+            fill_color=BLUE_D,
+            fill_opacity=0.8,
+            stroke_width=1,
+        )
+        self.add(prism)
+
+    See Also
+    --------
+    VCube
+    VGroup3D
+    square_to_cube_faces
+    """
+
     def __init__(
         self,
         width: float = 3.0,
