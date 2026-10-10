@@ -744,6 +744,142 @@ class FadeTransform(Transform):
 
 
 class FadeTransformPieces(FadeTransform):
+    """
+    Animate a transformation by fading individual pieces of the source and target
+    mobjects into one another.
+
+    FadeTransformPieces is a subclass of FadeTransform that performs the
+    transformation at the level of individual mobjects within each object's
+    family, rather than treating the source and target as single objects.
+
+    Before the animation begins, the source mobject's family is aligned with
+    the target mobject's family using ``align_family()``. During the setup of
+    the fade transformation, corresponding members of the two families are
+    processed individually by ``ghost_to()``.
+
+    This is useful when transforming objects made up of multiple components,
+    such as groups of letters, mathematical expressions, or collections of
+    shapes, and you want their individual pieces to participate in the
+    transformation.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The source mobject that will be transformed. Its family members are
+        aligned with those of the target before the animation begins.
+
+    target_mobject : Mobject
+        The target mobject that the source transforms into. The individual
+        members of its family are paired with the source family's members
+        during the fade setup.
+
+    stretch : bool, optional
+        Whether replacement operations may stretch the source pieces to match
+        the corresponding target pieces. Inherited from FadeTransform.
+        Defaults to True.
+
+    dim_to_match : int, optional
+        The dimension used when matching source and target pieces during
+        replacement. Inherited from FadeTransform. Defaults to 1.
+
+    **kwargs
+        Additional keyword arguments forwarded through FadeTransform to
+        Transform. Available options depend on the parent animation classes.
+
+    Methods
+    -------
+    begin() -> None
+        Align the families of the source and target mobjects, then initialize
+        the FadeTransform animation.
+
+    ghost_to(source: Mobject, target: Mobject) -> None
+        Process corresponding family members individually. For each pair,
+        delegate to FadeTransform.ghost_to(), which replaces the source
+        member's geometry with the target member's geometry, copies the
+        target's uniforms, and sets the source member's opacity to zero.
+
+    Inherited Behavior
+    ------------------
+    FadeTransformPieces inherits the main animation setup and cleanup behavior
+    from FadeTransform, including its handling of the source and target
+    mobjects and the addition of the target to the scene when appropriate.
+
+    Notes
+    -----
+    - ``align_family()`` is called before the parent ``begin()`` method.
+      This prepares the two families for piece-by-piece processing.
+    - ``ghost_to()`` uses ``zip(source.get_family(), target.get_family())``.
+      Consequently, members are paired according to their order in the
+      family lists. The method itself does not explicitly match pieces by
+      semantic meaning, such as matching identical letters.
+    - The number and ordering of family members can affect which pieces are
+      paired. Family alignment is performed first to help make the structures
+      compatible.
+    - The exact visual result depends on the structure of the source and target
+      mobjects, their family members, and the interpolation behavior inherited
+      from the parent animation classes.
+    - This class overrides ``begin()`` and ``ghost_to()``; the remaining
+      animation lifecycle is inherited.
+
+    Examples
+    --------
+    Example 1: Transform one group of shapes into another.
+
+    >>> source = VGroup(
+    ...     Square(),
+    ...     Circle(),
+    ... )
+    >>> target = VGroup(
+    ...     Circle(),
+    ...     Square(),
+    ... )
+    >>> scene.add(source)
+    >>> scene.play(FadeTransformPieces(source, target))
+
+    The source and target families are aligned before the animation begins.
+    Their family members are then processed individually during the fade
+    transformation. The code does not guarantee that the pieces will be
+    matched by shape or meaning; pairing follows their family order.
+
+    Example 2: Transform groups containing multiple components.
+
+    >>> source = VGroup(
+    ...     Dot(LEFT),
+    ...     Dot(ORIGIN),
+    ...     Dot(RIGHT),
+    ... )
+    >>> target = VGroup(
+    ...     Dot(UP),
+    ...     Dot(ORIGIN),
+    ...     Dot(DOWN),
+    ... )
+    >>> scene.add(source)
+    >>> scene.play(FadeTransformPieces(source, target))
+
+    Each corresponding family-member pair is processed through the parent's
+    ``ghost_to()`` implementation. This example illustrates the setup for
+    piece-by-piece transformation; the final visual behavior depends on the
+    objects' family structures and the parent animation's interpolation.
+
+    Example 3: Compare with FadeTransform.
+
+    >>> scene.play(FadeTransform(source, target))
+    >>> scene.play(FadeTransformPieces(source, target))
+
+    FadeTransform performs its ghosting operation on the mobjects passed to
+    its ``ghost_to()`` method. FadeTransformPieces overrides that operation
+    to iterate through the members returned by ``get_family()``, applying the
+    parent implementation to each pair individually.
+
+    See Also
+    --------
+    FadeTransform
+    Transform
+    Animation
+    Mobject.align_family
+    Mobject.get_family
+    """
+
     def begin(self) -> None:
         self.mobject[0].align_family(self.mobject[1])
         super().begin()
