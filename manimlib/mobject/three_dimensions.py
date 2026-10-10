@@ -1125,6 +1125,77 @@ class Cube(Group):
 
 
 class Prism(Cube):
+    """
+    A three-dimensional rectangular prism constructed by stretching a cube
+    independently along its three coordinate dimensions.
+
+    Prism inherits from :class:`Cube`. It first creates the six square faces
+    of a cube, then rescales the resulting group to fit the requested width,
+    height, and depth. Stretching is enabled so each dimension can be adjusted
+    independently.
+
+    Parameters
+    ----------
+    width : float, optional
+        Target extent along dimension 0 (the x-axis). Defaults to ``3.0``.
+    height : float, optional
+        Target extent along dimension 1 (the y-axis). Defaults to ``2.0``.
+    depth : float, optional
+        Target extent along dimension 2 (the z-axis). Defaults to ``1.0``.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Cube`, including
+        its color, opacity, shading, square resolution, and side length.
+
+    Notes
+    -----
+    - The constructor first initializes the parent ``Cube``.
+    - It then calls ``rescale_to_fit(value, dim, stretch=True)`` for each
+      requested dimension.
+    - The dimension indices correspond to x (0), y (1), and z (2).
+    - Since ``stretch=True``, the prism's dimensions are adjusted independently
+      rather than preserving the cube's original proportions.
+    - The final geometry is a group of six surface faces, not a single solid
+      volumetric mesh.
+    - The requested dimensions describe target extents along the coordinate
+      dimensions; the resulting shape also depends on the parent cube's
+      initial geometry.
+    - The implementation does not explicitly validate the supplied dimensions.
+
+    Examples
+    --------
+    Create a prism with the default dimensions::
+
+        prism = Prism()
+        self.add(prism)
+
+    Create a wide rectangular prism::
+
+        prism = Prism(
+            width=4,
+            height=2,
+            depth=1,
+        )
+        self.add(prism)
+
+    Customize the faces through Cube's parameters::
+
+        prism = Prism(
+            width=3,
+            height=2,
+            depth=1,
+            color=BLUE,
+            opacity=0.8,
+            square_resolution=(4, 4),
+        )
+        self.add(prism)
+
+    See Also
+    --------
+    Cube
+    Square3D
+    square_to_cube_faces
+    """
+
     def __init__(
         self,
         width: float = 3.0,
