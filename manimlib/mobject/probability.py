@@ -26,6 +26,154 @@ EPSILON = 0.0001
 
 
 class SampleSpace(Rectangle):
+    """
+    Represent a sample space as a rectangle that can be divided
+    into probability regions with optional braces and labels.
+
+    SampleSpace extends Rectangle with helpers for dividing its
+    area according to a list of proportions. It is useful for
+    visualizing sample spaces, probability distributions, and
+    conditional probability diagrams.
+
+    Parameters
+    ----------
+    width
+        Width of the sample-space rectangle. Defaults to 3.
+    height
+        Height of the rectangle. Defaults to 3.
+    fill_color
+        Initial fill color. Defaults to GREY_D.
+    fill_opacity
+        Initial fill opacity. Defaults to 1.
+    stroke_width
+        Width of the rectangle's outline. Defaults to 0.5.
+    stroke_color
+        Color of the outline. Defaults to GREY_B.
+    default_label_scale_val
+        Scale factor applied to labels created from strings.
+        Defaults to 1.
+    **kwargs
+        Additional keyword arguments forwarded to Rectangle.
+
+    Attributes
+    ----------
+    default_label_scale_val
+        Default scale factor for generated labels.
+    title
+        Title mobject created by add_title(), if called.
+    label
+        Value assigned by add_label(), if called.
+    horizontal_parts
+        Regions created by divide_horizontally(), if called.
+    vertical_parts
+        Regions created by divide_vertically(), if called.
+
+    Methods
+    -------
+    add_title(title="Sample space", buff=MED_SMALL_BUFF)
+        Create and add a title above the rectangle.
+    add_label(label)
+        Store a label value on the instance.
+    complete_p_list(p_list)
+        Convert proportions to a list and append the remainder
+        needed to make their sum equal to one, when significant.
+    get_division_along_dimension(p_list, dim, colors, vect)
+        Create colored subdivisions along a chosen dimension.
+    get_horizontal_division(p_list, colors, vect)
+        Create horizontal strips representing proportions.
+    get_vertical_division(p_list, colors, vect)
+        Create vertical strips representing proportions.
+    divide_horizontally(*args, **kwargs)
+        Create, store, and add horizontal subdivisions.
+    divide_vertically(*args, **kwargs)
+        Create, store, and add vertical subdivisions.
+    get_subdivision_braces_and_labels(parts, labels, direction, buff)
+        Create braces and labels for a group of subdivisions.
+    get_side_braces_and_labels(labels, direction=LEFT, **kwargs)
+        Create braces and labels beside horizontal subdivisions.
+    get_top_braces_and_labels(labels, **kwargs)
+        Create braces and labels above vertical subdivisions.
+    get_bottom_braces_and_labels(labels, **kwargs)
+        Create braces and labels below vertical subdivisions.
+    add_braces_and_labels()
+        Add stored braces and labels for existing subdivisions.
+    __getitem__(index)
+        Index the preferred subdivision group, or the result of
+        split() if no subdivisions have been created.
+
+    Notes
+    -----
+    - complete_p_list() appends the remaining probability mass
+      only when its absolute value exceeds EPSILON. It does not
+      normalize the supplied probabilities.
+    - If the supplied proportions sum to more than one, the
+      remainder can be negative. Proportions are not validated.
+    - get_division_along_dimension() creates fresh SampleSpace
+      objects, stretches them to match the original rectangle,
+      and then scales each region along the selected dimension.
+    - The colors are interpolated with color_gradient() to match
+      the number of proportions.
+    - The direction vector determines the side from which the
+      subdivision begins and the direction in which it proceeds.
+    - Labels passed as strings are iterated character by character.
+      To use multi-character labels, pass a suitable sequence or
+      prebuilt Mobject labels as appropriate.
+    - Prebuilt Mobject labels are used directly and are not scaled
+      by default_label_scale_val.
+    - Subdivision braces and labels are stored as attributes on
+      the parts VGroup. add_braces_and_labels() adds them to the
+      SampleSpace only if those attributes exist.
+    - __getitem__ prefers horizontal_parts whenever available;
+      otherwise it uses vertical_parts, and falls back to split()
+      when neither subdivision group exists.
+    - Calling divide_horizontally() or divide_vertically() again
+      replaces the corresponding stored group, but does not
+      explicitly remove the previous group from the rectangle.
+
+    Examples
+    --------
+    Create a sample space::
+
+        sample_space = SampleSpace()
+
+    Divide it into horizontal regions::
+
+        sample_space.divide_horizontally(
+            [0.3, 0.7],
+            colors=[GREEN_E, BLUE_E],
+        )
+
+    Divide it into vertical regions::
+
+        sample_space.divide_vertically(
+            [0.4, 0.6],
+            colors=[MAROON_B, YELLOW],
+        )
+
+    Add a title and subdivision labels::
+
+        sample_space = SampleSpace()
+        sample_space.add_title("Possible outcomes")
+        sample_space.divide_horizontally([0.25, 0.75])
+        braces_labels = sample_space.get_side_braces_and_labels(
+            ["A", "B"]
+        )
+        sample_space.add_braces_and_labels()
+
+    Access a subdivision::
+
+        first_region = sample_space[0]
+
+    See Also
+    --------
+    Rectangle
+        Base rectangular geometry.
+    Brace
+        Adds a brace alongside a region.
+    VGroup
+        Groups subdivision regions, braces, and labels.
+    """
+
     def __init__(
         self,
         width: float = 3,
