@@ -505,5 +505,58 @@ class GlowDots(DotCloud):
 
 
 class GlowDot(GlowDots):
+    """
+    A single glowing dot positioned at a specified three-dimensional center.
+
+    `GlowDot` inherits from :class:`GlowDots` and initializes the parent with
+    a NumPy array containing exactly one point. It provides a convenient way
+    to create an individual glowing dot while retaining GlowDots' default
+    color, radius, and glow settings.
+
+    Parameters
+    ----------
+    center : Vect3, optional
+        Three-dimensional coordinates of the dot's center. Defaults to ORIGIN.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`GlowDots`, such as
+        ``color``, ``radius``, ``glow_factor``, ``opacity``, and
+        ``anti_alias_width``.
+
+    Examples
+    --------
+    Create a glowing dot at the origin:
+
+        dot = GlowDot()
+
+    Position it at a specific location:
+
+        dot = GlowDot(np.array([1.0, 2.0, 0.0]))
+
+    Customize its appearance:
+
+        dot = GlowDot(
+            center=np.array([1.0, 0.0, 0.0]),
+            color=BLUE,
+            radius=0.08,
+            glow_factor=2.5,
+        )
+
+    Create a glowing dot with reduced glow intensity:
+
+        dot = GlowDot(glow_factor=0.5)
+
+    Notes
+    -----
+    - The center is wrapped in a one-element NumPy array and passed to
+      GlowDots through the ``points`` argument.
+    - The resulting object contains one point and uses the rendering
+      behavior inherited from DotCloud through GlowDots.
+    - The dot's position is determined by its center coordinates, while
+      its size and glow are controlled by the inherited radius and
+      glow-factor settings.
+    - Unless overridden through ``kwargs``, GlowDots supplies its own
+      defaults for color, radius, and glow factor.
+    """
+
     def __init__(self, center: Vect3 = ORIGIN, **kwargs):
         super().__init__(points=np.array([center]), **kwargs)
