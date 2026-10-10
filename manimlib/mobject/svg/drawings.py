@@ -792,6 +792,39 @@ class Laptop(VGroup):
 
 
 class VideoIcon(SVGMobject):
+    """
+    An SVG-based icon representing video content.
+
+    VideoIcon inherits from SVGMobject and loads the SVG asset identified by
+    file_name = "video_icon". It provides a simple way to display a video-related
+    icon in a ManimGL scene, with configurable width and color.
+
+    Parameters
+    ----------
+    width : float, optional
+        Desired width of the icon. Defaults to 1.2.
+
+    color : optional
+        Color applied to the SVG mobject. Defaults to BLUE_A.
+
+    **kwargs
+        Additional keyword arguments forwarded to SVGMobject.
+
+    Examples
+    --------
+        icon = VideoIcon()
+        self.add(icon)
+
+        icon = VideoIcon(width=2.0, color=RED)
+        self.add(icon)
+
+    Notes
+    -----
+    - The icon's appearance depends on the SVG asset and SVGMobject's rendering.
+    - set_width() adjusts the icon to the requested width while normally
+      preserving its aspect ratio.
+    """
+
     file_name: str = "video_icon"
 
     def __init__(
