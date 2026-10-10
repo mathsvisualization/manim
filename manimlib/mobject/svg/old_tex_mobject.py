@@ -726,6 +726,100 @@ class OldTex(SingleStringTex):
 
 
 class OldTexText(OldTex):
+    """
+    A text-oriented variant of `OldTex` for rendering LaTeX expressions without
+    mathematical mode enabled by default.
+
+    `OldTexText` is a subclass of `OldTex` that preserves its substring isolation,
+    part selection, coloring, indexing, and slicing functionality while providing
+    a default configuration suited to text rendering.
+
+    It forwards the supplied text strings and keyword arguments to `OldTex`,
+    explicitly passing the selected `math_mode` and `arg_separator` values.
+
+    Parameters
+    ----------
+    *tex_strings : str
+        One or more LaTeX strings that form the expression to render. These are
+        passed directly to the `OldTex` constructor.
+
+    math_mode : bool, default=False
+        Determines whether the expression is wrapped in an `align*` environment
+        by the inherited `SingleStringTex` rendering logic. Defaults to False,
+        unlike the default mathematical mode used by `SingleStringTex`.
+
+    arg_separator : str, default=""
+        String inserted between the processed text pieces when constructing the
+        complete expression. The default is an empty string.
+
+    **kwargs
+        Additional keyword arguments forwarded to `OldTex`. These can include
+        options for isolating substrings, mapping substrings to colors, setting
+        font size, controlling SVG styling, and configuring LaTeX rendering.
+
+    Notes
+    -----
+    - `OldTexText` does not implement its own rendering or substring-processing
+      methods. It inherits these behaviors from `OldTex` and its parent classes.
+    - The only constructor-specific defaults are `math_mode=False` and
+      `arg_separator=""`.
+    - Setting `math_mode=False` prevents the inherited rendering logic from
+      automatically wrapping the processed expression in an `align*` environment.
+      The expression is still processed using the configured alignment prefix.
+    - Substring isolation and color mapping work through the inherited `OldTex`
+      implementation.
+    - An explicit `math_mode` argument overrides the default False value.
+    - The class name indicates text-oriented usage, but the supplied strings must
+      still be valid for the selected LaTeX template and rendering configuration.
+
+    Examples
+    --------
+    Render a simple text expression:
+
+    >>> text = OldTexText(r"Hello, World!")
+    >>> self.add(text)
+
+    Render multiple text pieces:
+
+    >>> text = OldTexText("Hello, ", "Manim!")
+    >>> self.add(text)
+
+    Isolate and color selected substrings:
+
+    >>> text = OldTexText(
+    ...     r"Hello, World!",
+    ...     isolate=["Hello", "World"],
+    ...     tex_to_color_map={
+    ...         "Hello": BLUE,
+    ...         "World": YELLOW,
+    ...     },
+    ... )
+    >>> self.add(text)
+
+    Specify a separator between input strings:
+
+    >>> text = OldTexText(
+    ...     "First",
+    ...     "Second",
+    ...     arg_separator=" ",
+    ... )
+    >>> self.add(text)
+
+    Enable mathematical mode explicitly:
+
+    >>> text = OldTexText(
+    ...     r"x^2 + y^2",
+    ...     math_mode=True,
+    ... )
+    >>> self.add(text)
+
+    See Also
+    --------
+    OldTex
+    SingleStringTex
+    TexText
+    """
+
     def __init__(
         self,
         *tex_strings: str,
