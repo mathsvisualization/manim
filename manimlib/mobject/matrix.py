@@ -539,6 +539,101 @@ class DecimalMatrix(Matrix):
 
 
 class IntegerMatrix(DecimalMatrix):
+    """
+    A specialized DecimalMatrix configured to display matrix entries as integers.
+
+    IntegerMatrix inherits from DecimalMatrix and sets the default number of
+    decimal places to zero. It retains DecimalMatrix's entry conversion and
+    formatting behavior, along with Matrix's layout, brackets, row and column
+    access, and other matrix operations.
+
+    Parameters
+    ----------
+    matrix : FloatMatrixType
+        Two-dimensional iterable of numerical values used to construct the
+        matrix. The original input is stored in ``float_matrix`` by the parent
+        DecimalMatrix constructor.
+    num_decimal_places : int, default=0
+        Number of decimal places displayed by each DecimalNumber. Although the
+        default is zero, callers can explicitly request a different precision.
+    decimal_config : dict, default={}
+        Additional keyword arguments passed to DecimalNumber through
+        DecimalMatrix. If this dictionary contains ``num_decimal_places``, that
+        value overrides the separate ``num_decimal_places`` argument.
+    **config
+        Additional keyword arguments forwarded through DecimalMatrix to Matrix,
+        including matrix spacing, bracket buffers, target height, alignment,
+        and ellipsis options.
+
+    Attributes
+    ----------
+    float_matrix : FloatMatrixType
+        Reference to the original input matrix, inherited from DecimalMatrix.
+    mob_matrix : VMobjectMatrixType
+        Nested list of DecimalNumber mobjects representing the matrix entries.
+    elements : list of VMobject
+        Flat list of ordinary matrix entry mobjects, inherited from Matrix.
+    rows : VGroup
+        Group containing the matrix's rows.
+    columns : VGroup
+        Group containing the matrix's columns.
+    brackets : VGroup
+        Group containing the left and right matrix brackets.
+    ellipses : list of VMobject
+        Entry mobjects visually replaced by ellipsis symbols.
+
+    Notes
+    -----
+    - IntegerMatrix does not convert entries to Python integers. It uses
+      DecimalNumber with zero decimal places by default, so the displayed
+      representation is integer-like while the underlying numerical values
+      remain those supplied to DecimalNumber.
+    - The caller can override ``num_decimal_places`` and display decimal places
+      if desired; zero decimal places is a default, not an enforced restriction.
+    - All entry formatting behavior is inherited from DecimalMatrix, and
+      matrix layout and manipulation behavior are inherited from Matrix.
+    - No explicit validation of the input matrix is performed in this class.
+    - The ``decimal_config`` default is a mutable dictionary. Avoid modifying
+      it in place to prevent shared-default side effects.
+
+    Examples
+    --------
+    Create a matrix displayed with zero decimal places::
+
+        matrix = IntegerMatrix([
+            [1, 2],
+            [3, 4],
+        ])
+
+        self.add(matrix)
+
+    Display values rounded to two decimal places instead::
+
+        matrix = IntegerMatrix(
+            [
+                [1.234, 5.678],
+                [9.876, 2.345],
+            ],
+            num_decimal_places=2,
+        )
+
+    Pass additional formatting options::
+
+        matrix = IntegerMatrix(
+            [
+                [1, 2],
+                [3, 4],
+            ],
+            decimal_config={"include_sign": True},
+        )
+
+    See Also
+    --------
+    Matrix
+    DecimalMatrix
+    DecimalNumber
+    """
+
     def __init__(
         self,
         matrix: FloatMatrixType,
