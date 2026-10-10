@@ -224,7 +224,100 @@ class ExponentialValueTracker(ValueTracker):
     """
     Operates just like ValueTracker, except it encodes the value as the
     exponential of a position coordinate, which changes how interpolation
-    behaves
+    behaves.
+
+    ExponentialValueTracker inherits from :class:`ValueTracker` but stores the
+    natural logarithm of the logical value internally. When the value is
+    retrieved, the tracker exponentiates the stored representation. When a new
+    value is assigned, it takes the natural logarithm before delegating to the
+    parent class.
+
+    This logarithmic encoding makes interpolation occur in log-space rather
+    than directly in the original value-space. As a result, interpolating
+    between positive values can produce exponential or multiplicative changes
+    instead of ordinary linear changes.
+
+    Parameters
+    ----------
+    value : float or complex, optional
+        Initial logical value. The inherited constructor stores this value
+        directly unless the subclass or calling code uses ``set_value`` to
+        encode it. For correct exponential tracking, initialize the tracker
+        with the logarithm of the intended logical value, or ensure the
+        initialization behavior is adapted accordingly.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`ValueTracker`.
+
+    Methods
+    -------
+    get_value()
+        Return the exponential of the internally stored value.
+    set_value(value)
+        Store the natural logarithm of the supplied value using the parent
+        class's ``set_value`` method.
+
+    Notes
+    -----
+    - The inherited ``ValueTracker`` stores its value in a NumPy array.
+    - ``get_value`` calls ``ValueTracker.get_value(self)`` to retrieve the
+      internal representation, then applies ``np.exp`` to it.
+    - ``set_value`` applies ``np.log`` to the supplied value before delegating
+      to ``ValueTracker.set_value``.
+    - Because interpolation operates on the stored representation inherited
+      from ``ValueTracker``, values are interpolated in logarithmic space.
+    - For positive real endpoints ``a`` and ``b``, linear interpolation of
+      their logarithms produces the geometric interpolation
+      ``a * (b / a) ** alpha`` for ``0 <= alpha <= 1``.
+    - This behavior is useful when multiplicative changes are more meaningful
+      than additive changes, such as exponential growth, decay, or scale changes.
+    - The natural logarithm is defined for positive real inputs. Zero and
+      negative real values can produce ``-inf`` or ``nan`` values, respectively.
+    - Complex values are supported by NumPy's complex logarithm and exponential,
+      subject to the usual branch behavior of the complex logarithm.
+    - The inherited constructor initializes ``self.value`` directly from its
+      ``value`` argument; it does not call the overridden ``set_value`` method.
+      Therefore, passing a logical value directly to the constructor does not
+      automatically encode it in logarithmic form. To initialize correctly,
+      pass the encoded value or customize the constructor.
+    - The implementation does not explicitly validate the input domain or
+      handle logarithm-related numerical warnings.
+    - ``set_value`` returns the result of ``ValueTracker.set_value``, which is
+      the tracker itself, allowing method chaining.
+
+    Examples
+    --------
+    Create a tracker using an explicitly encoded initial value::
+
+        tracker = ExponentialValueTracker(np.log(1.0))
+        print(tracker.get_value())  # 1.0
+
+    Set the logical value through ``set_value``::
+
+        tracker.set_value(8.0)
+        print(tracker.get_value())  # Approximately 8.0
+
+    Interpolate between two positive values in logarithmic space::
+
+        start = ExponentialValueTracker(np.log(1.0))
+        end = ExponentialValueTracker(np.log(16.0))
+        tracker = ExponentialValueTracker(np.log(1.0))
+
+        tracker.interpolate(start, end, 0.5)
+        print(tracker.get_value())  # Approximately 4.0
+
+    Animate exponential growth::
+
+        tracker = ExponentialValueTracker(np.log(1.0))
+        self.play(
+            tracker.animate.set_value(100.0),
+            run_time=3,
+        )
+
+    See Also
+    --------
+    ValueTracker
+    numpy.exp
+    numpy.log
     """
 
     def get_value(self) -> float | complex:
