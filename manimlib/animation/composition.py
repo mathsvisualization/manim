@@ -603,6 +603,93 @@ class LaggedStart(AnimationGroup):
 
 
 class LaggedStartMap(LaggedStart):
+    """
+    Creates a lagged-start animation for each submobject in a group.
+
+    LaggedStartMap extends LaggedStart and automatically constructs one animation
+    for every submobject in the supplied Mobject. The provided anim_func is
+    called once per submobject, and the resulting animations are passed to
+    LaggedStart to create a staggered animation sequence.
+
+    Parameters
+    ----------
+    anim_func : Callable[[Mobject], Animation]
+        A callable that creates an Animation for a given submobject. Additional
+        keyword arguments supplied to LaggedStartMap are forwarded to this
+        callable when it is invoked for each submobject.
+
+    group : Mobject
+        The Mobject whose submobjects will each receive an animation. The group
+        is also passed to the parent animation group through the group keyword
+        argument.
+
+    run_time : float, optional
+        Total runtime requested for the resulting animation group. Defaults to
+        2.0.
+
+    lag_ratio : float, optional
+        Relative delay between the start times of consecutive animations.
+        Defaults to DEFAULT_LAGGED_START_LAG_RATIO. The timing behavior is
+        inherited from LaggedStart.
+
+    time_span : tuple[float, float] or None, optional
+        Optional time span associated with the animation group. Defaults to None.
+        This argument belongs to the group itself, so it is handled explicitly
+        rather than being forwarded to each animation constructor.
+
+    **kwargs
+        Additional keyword arguments passed to anim_func for every submobject.
+        The lag_ratio entry is removed from the copied keyword arguments before
+        constructing the child animations, preventing it from being passed to
+        anim_func.
+
+    Notes
+    -----
+    - One animation is created for each submobject yielded by iterating over
+      group.
+    - Each child animation is constructed by calling anim_func(submob,
+      **anim_kwargs).
+    - The supplied group, run_time, lag_ratio, and time_span are passed to the
+      LaggedStart constructor.
+    - The original kwargs dictionary is not modified. A shallow copy is made
+      before lag_ratio is removed from that copy.
+    - The time_span parameter is reserved for the parent animation group rather
+      than being forwarded to individual child animations.
+    - The class does not implement its own interpolation logic; it inherits
+      the staggered animation behavior from LaggedStart and AnimationGroup.
+
+    Examples
+    --------
+    Apply FadeIn to each submobject with a staggered start:
+
+        >>> animation = LaggedStartMap(
+        ...     FadeIn,
+        ...     group,
+        ...     run_time=2.0,
+        ...     lag_ratio=0.1,
+        ... )
+
+    Pass additional keyword arguments to every child animation:
+
+        >>> animation = LaggedStartMap(
+        ...     FadeIn,
+        ...     group,
+        ...     shift=UP,
+        ...     lag_ratio=0.15,
+        ... )
+
+    These examples illustrate construction only; the group, animation
+    constructors, and any required objects must be defined in the surrounding
+    scene.
+
+    See Also
+    --------
+    LaggedStart
+    AnimationGroup
+    Succession
+    Animation
+    """
+
     def __init__(
         self,
         anim_func: Callable[[Mobject], Animation],
