@@ -1186,6 +1186,154 @@ class TexturedGeometry(TexturedSurface):
 
 
 class ThreeDModel(Group):
+    """
+    ThreeDModel
+    ===========
+
+    A 3D model loader that imports an OBJ file, assigns textures to its
+    geometry, and arranges the resulting objects into a Group.
+
+    ThreeDModel uses Trimesh to load the model geometry and PyWavefront to
+    inspect its material definitions and extract texture filenames from the
+    associated MTL file. Each imported mesh is wrapped in a TexturedGeometry
+    object, which is then added to the group.
+
+    After loading, the model has depth testing enabled, is scaled to the
+    requested height, and is centered.
+
+    Parameters
+    ----------
+    obj_file : str
+        Filename or path identifying the OBJ model to load. The path is
+        resolved using ``get_full_three_d_model_path`` before loading.
+    height : float, default=3
+        Target height assigned to the resulting group through ``set_height``.
+        The actual scaling behavior depends on the inherited implementation.
+
+    Attributes
+    ----------
+    No additional public instance attributes are explicitly defined in this
+    constructor beyond those inherited from Group and populated through its
+    methods. The group contains the TexturedGeometry objects created from
+    the imported mesh.
+
+    Model Loading Process
+    ---------------------
+    The constructor performs the following operations:
+
+    1. Initializes the parent ``Group``.
+    2. Resolves the OBJ file path using ``get_full_three_d_model_path``.
+    3. Looks for a file named ``texture.png`` in the resolved OBJ file's
+       parent directory.
+    4. If that file does not exist, resolves ``White.png`` through
+       ``get_full_raster_image_path`` as the default texture.
+    5. Calls ``get_textures_from_mtl`` to obtain texture paths associated
+       with the OBJ file's materials.
+    6. Loads the OBJ file using ``trimesh.load``.
+    7. Handles the loaded result according to its type:
+       - If the result is a ``trimesh.Scene``, iterates over its geometry
+         objects and creates a ``TexturedGeometry`` for each one, pairing
+         each geometry with the corresponding texture path or the default
+         texture when the material texture is missing.
+       - If the result is a ``trimesh.Geometry``, adds one
+         ``TexturedGeometry`` using the default texture. The implementation
+         contains a TODO comment in this branch, indicating that this case
+         may need further development.
+    8. Enables depth testing through ``apply_depth_test``.
+    9. Sets the group's height using ``set_height(height)``.
+    10. Centers the group using ``center``.
+
+    Texture Selection
+    -----------------
+    The default texture is initially assumed to be ``texture.png`` beside
+    the OBJ file. If that file is absent, the code falls back to the
+    application's resolved ``White.png`` image.
+
+    For scene-based models, textures returned by ``get_textures_from_mtl``
+    are matched to geometry using the iteration order of the values in
+    ``mesh.geometry`` and ``texture_files``. If a geometry's associated
+    texture value is ``None`` or otherwise falsy, the default texture is
+    used.
+
+    This matching relies on the geometry and material mappings having
+    compatible iteration order and corresponding entries. The code uses
+    ``zip``, so unmatched trailing entries are silently ignored if the
+    collections differ in length.
+
+    Method: get_textures_from_mtl
+    -----------------------------
+    get_textures_from_mtl(obj_filepath, suppress_warnings=True)
+
+    Loads an OBJ file with PyWavefront and returns the texture path
+    associated with each material.
+
+    Parameters
+    ----------
+    obj_filepath : str
+        Path to the OBJ file whose materials should be inspected.
+    suppress_warnings : bool, default=True
+        If true, sets the ``pywavefront`` logger's level to ``logging.ERROR``
+        to suppress messages below the error level.
+
+    Returns
+    -------
+    dict
+        A dictionary mapping material names to texture paths. Materials
+        without an associated texture are mapped to ``None``.
+
+    Method Behavior
+    ---------------
+    1. Optionally sets the ``pywavefront`` logger to ``logging.ERROR``.
+    2. Loads the OBJ file with ``pywavefront.Wavefront``, using
+       ``collect_faces=True`` and allowing PyWavefront to load its
+       associated material information.
+    3. Iterates through ``obj_scene.materials``.
+    4. For each material, stores ``material.texture.path`` if a texture
+       exists; otherwise, stores ``None``.
+    5. Returns the resulting material-to-texture dictionary.
+
+    Notes
+    -----
+    - This method changes the global logging level for the ``pywavefront``
+      logger when warning suppression is enabled. The original logger level
+      is not restored by this implementation.
+    - The constructor expects the required OBJ, MTL, and texture resources
+      to be accessible through the relevant loaders and path-resolution
+      helpers.
+    - Although the texture extraction method returns paths keyed by
+      material name, the constructor pairs texture values with geometry
+      values by iteration order rather than explicitly matching each
+      geometry to its material.
+    - The single-geometry branch currently uses the default texture rather
+      than selecting a texture from the extracted material mapping.
+    - The ``trimesh.Geometry`` branch includes a TODO comment, so its
+      behavior may not cover every kind of geometry returned by Trimesh.
+    - This implementation does not explicitly handle loading errors,
+      missing OBJ files, malformed MTL files, or unsupported geometry.
+    - The final appearance depends on the imported geometry, available UV
+      coordinates, texture files, TexturedGeometry, and the renderer's
+      depth-testing behavior.
+
+    Examples
+    --------
+    Load a model and add it to a scene:
+
+        model = ThreeDModel("models/robot.obj")
+        scene.add(model)
+
+    Specify a target height:
+
+        model = ThreeDModel("models/robot.obj", height=5)
+
+    Inspect the material texture mapping separately:
+
+        textures = model.get_textures_from_mtl("models/robot.obj")
+        print(textures)
+
+    The paths shown in these examples are illustrative. The actual model
+    and texture files must be available through the configured path helpers.
+    """
+
     def __init__(self, obj_file: str, height=3):
         super().__init__()
         obj_file = get_full_three_d_model_path(obj_file)
