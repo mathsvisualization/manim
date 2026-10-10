@@ -1591,6 +1591,131 @@ class VGroup(Group, VMobject, Generic[SubVmobjectType]):
 
 
 class VectorizedPoint(Point, VMobject):
+    """
+    VectorizedPoint
+    ===============
+
+    A point-like mobject that combines Point positioning behavior with
+    VMobject vector-geometry and styling capabilities.
+
+    VectorizedPoint represents a single location in space as a VMobject
+    containing one point. Unlike a typical visible vector shape, it defaults
+    to fully transparent fill and zero stroke width, making it useful as a
+    geometric anchor or placeholder in operations that expect vectorized
+    mobjects.
+
+    Parameters
+    ----------
+    location : numpy.ndarray, default=ORIGIN
+        The 3D coordinates specifying the point's initial location.
+        ``ORIGIN`` is the default location.
+    color : ManimColor, default=BLACK
+        The color supplied to VMobject initialization. The point's default
+        fill opacity and stroke width make it invisible under ordinary
+        rendering conditions.
+    fill_opacity : float, default=0.0
+        The initial fill opacity passed to VMobject. A value of ``0.0``
+        makes the fill fully transparent.
+    stroke_width : float, default=0.0
+        The initial stroke width passed to VMobject. A value of ``0.0``
+        disables the visible stroke.
+    **kwargs
+        Additional keyword arguments passed to both ``Point.__init__`` and
+        ``VMobject.__init__``. The accepted arguments depend on the
+        implementations of those parent classes.
+
+    Inheritance
+    -----------
+    VectorizedPoint inherits from:
+
+    - ``Point``: Provides point-like positioning behavior.
+    - ``VMobject``: Provides vector-mobject geometry, styling, and rendering
+      functionality.
+
+    Initialization
+    --------------
+    The constructor performs the following operations:
+
+    1. Calls ``Point.__init__(self, location, **kwargs)`` to initialize the
+       point-related state at the specified location.
+    2. Calls ``VMobject.__init__`` with the requested color, fill opacity,
+       stroke width, and additional keyword arguments.
+    3. Calls ``set_points`` with a NumPy array containing only ``location``.
+
+    The final call explicitly sets the VMobject's point array to contain
+    one point representing the supplied location.
+
+    Geometry Representation
+    -----------------------
+    The point data is created using:
+
+        np.array([location])
+
+    If ``location`` is a three-component coordinate such as
+    ``np.array([1.0, 2.0, 0.0])``, the resulting array has shape ``(1, 3)``.
+    It contains one 3D point rather than the multiple points normally used
+    to define a line, polygon, or other vector path.
+
+    Because only one point is stored, the object should not be assumed to
+    form a visible line or filled region by itself. Its usefulness comes
+    from providing a point represented within the VMobject system.
+
+    Default Appearance
+    ------------------
+    The default styling is:
+
+    - Color: ``BLACK``
+    - Fill opacity: ``0.0``
+    - Stroke width: ``0.0``
+
+    These settings make the object effectively invisible under ordinary
+    rendering conditions. Its geometry and position can nevertheless be
+    useful to other mobjects and animation operations.
+
+    The color argument is still passed to VMobject initialization even
+    though the default opacity and stroke width generally prevent the point
+    from appearing visibly.
+
+    Notes
+    -----
+    - The object stores a single point, not a complete vector path.
+    - The supplied location is passed to both parent initialization logic
+      and the final ``set_points`` call.
+    - The exact accepted location format depends on the surrounding ManimGL
+      implementation, but a NumPy array containing three spatial
+      coordinates is the conventional representation.
+    - Additional keyword arguments are passed to both parent constructors.
+      Therefore, a keyword argument must be compatible with both
+      initialization paths to work correctly.
+    - The constructor does not explicitly copy or normalize ``location``
+      before constructing the point array.
+    - This class is useful when an operation needs a VMobject-compatible
+      point or anchor, even when that point is not intended to be visible.
+
+    Examples
+    --------
+    Create an invisible vectorized point at the origin:
+
+        point = VectorizedPoint()
+
+    Create one at a specified location:
+
+        point = VectorizedPoint(np.array([1.0, 2.0, 0.0]))
+
+    Specify styling parameters:
+
+        point = VectorizedPoint(
+            location=np.array([2.0, 1.0, 0.0]),
+            color=RED,
+            fill_opacity=1.0,
+            stroke_width=2.0,
+        )
+
+    Even when non-default styling is supplied, the underlying geometry
+    still consists of a single point. Its visible appearance depends on
+    how the renderer handles a one-point VMobject.
+    """
+
     def __init__(
         self,
         location: np.ndarray = ORIGIN,
