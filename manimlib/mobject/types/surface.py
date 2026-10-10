@@ -1037,10 +1037,128 @@ class TexturedSurface(Surface):
 
 class TexturedGeometry(TexturedSurface):
     """
-    An imported mesh, which is a list of triangles rather than a grid of points, so
-    each of its faces is written out as three points of its own. A resolution of zero
-    is what tells the vertex shader to read them that way, see surface_mesh.wgsl.
+    TexturedGeometry
+    ================
+
+    A textured 3D mesh represented as a collection of independent triangles.
+
+    TexturedGeometry extends TexturedSurface but is designed for imported mesh
+    geometry, where each face is represented by three vertices rather than by
+    a regular grid of points. It stores the mesh's vertex positions, texture
+    coordinates, and opacity in the data structures expected by the rendering
+    pipeline.
+
+    The vertex shader determines that the geometry is a triangle mesh from
+    the zero-valued initial resolution. See ``surface_mesh.wgsl`` for the
+    corresponding shader behavior.
+
+    Parameters
+    ----------
+    geometry : trimesh.base.Trimesh
+        The input Trimesh object containing the mesh's vertices, triangular
+        faces, and visual information such as UV texture coordinates.
+    texture_file : str
+        Path or identifier for the image file used to texture the mesh.
+    **kwargs
+        Additional keyword arguments accepted by the surrounding API. This
+        implementation does not explicitly forward them to the parent class.
+
+    Attributes
+    ----------
+    num_textures : int
+        Set to ``1``, indicating that the object uses one texture.
+    geometry : trimesh.base.Trimesh
+        The original input mesh.
+    texture_file : str
+        The texture image path or identifier supplied during initialization.
+    initial_resolution : tuple[int, int]
+        Set to ``(0, 0)`` to indicate that the geometry is not a regular
+        surface grid.
+    verts_per_record : int
+        Class attribute set to ``1``. Each stored vertex record represents
+        one vertex, so triangle faces are represented by three records.
+    vertex_indices : numpy.ndarray
+        Flattened face-index array. Each entry identifies a vertex in the
+        original mesh, and the order preserves the mesh's face connectivity.
+    data["im_coords"] : numpy.ndarray
+        UV texture coordinates corresponding to the expanded vertex records.
+        The vertical UV coordinate is flipped during initialization.
+    data["opacity"]
+        The object's opacity values, assigned after the points and texture
+        coordinates are initialized.
+
+    Initialization
+    --------------
+    The constructor performs the following operations:
+
+    1. Sets ``num_textures`` to ``1``.
+    2. Stores the input mesh and texture filename.
+    3. Sets ``initial_resolution`` to ``(0, 0)`` to distinguish this mesh
+       from a regularly sampled surface.
+    4. Calls ``Mobject.__init__`` directly, supplying a texture dictionary
+       whose ``"LightTexture"`` entry is an ``ImageFile`` created from the
+       resolved raster-image path.
+
+    Calling ``Mobject.__init__`` directly means this constructor does not
+    invoke ``TexturedSurface.__init__``. It relies on the explicit setup
+    performed here and on the relevant inherited behavior.
+
+    Point Initialization
+    --------------------
+    ``init_points`` prepares the mesh data for rendering:
+
+    1. Flattens ``geometry.faces`` into ``vertex_indices``. For triangular
+       faces, every three consecutive indices describe one face.
+    2. Converts ``geometry.visual.uv`` into a NumPy array.
+    3. Flips the vertical texture coordinate using ``1.0 - uv[:, 1]``.
+       This adjusts the UV convention to match the texture-coordinate
+       orientation expected by the renderer.
+    4. Uses the flattened indices to select vertices from
+       ``geometry.vertices`` and passes the resulting array to ``set_points``.
+       Shared vertices are consequently repeated when they occur in multiple
+       faces.
+    5. Selects the corresponding UV coordinates using the same flattened
+       indices and stores them in ``data["im_coords"]``.
+    6. Copies the current opacity attribute into ``data["opacity"]``.
+
+    The method assumes the mesh provides compatible triangular face indices
+    and UV coordinates. In particular, the UV array must have entries
+    corresponding to the mesh vertices.
+
+    Notes
+    -----
+    - This class represents imported triangle meshes, not a parametrically
+      sampled surface grid.
+    - The zero-valued initial resolution is meaningful to the rendering
+      shader; it should not be interpreted as an instruction to create a
+      mesh with no vertices.
+    - The flattened index array establishes the correspondence between
+      original mesh vertices, expanded triangle vertices, and UV coordinates.
+    - Flipping the vertical UV component changes the texture mapping
+      orientation without changing the mesh's 3D vertex positions.
+    - The constructor accepts ``**kwargs`` but does not use or forward them
+      in the shown implementation.
+    - The implementation expects ``geometry.visual.uv`` to be available.
+      Meshes without UV coordinates may require preprocessing before they
+      can be textured correctly.
+
+    Examples
+    --------
+    Given a Trimesh object with triangular faces and UV coordinates:
+
+        mesh = trimesh.load("model.obj")
+        textured_mesh = TexturedGeometry(
+            geometry=mesh,
+            texture_file="texture.png",
+        )
+
+    The object initializes its rendering data from the mesh and associates
+    the supplied texture image with the ``"LightTexture"`` texture slot.
+
+    Actual rendering depends on the surrounding ManimGL scene, renderer,
+    shader implementation, and the validity of the mesh's texture data.
     """
+
     # One vertex per record, the records being the corners of each triangle in turn
     verts_per_record: int = 1
 
