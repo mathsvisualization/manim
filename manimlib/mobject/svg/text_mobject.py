@@ -784,6 +784,147 @@ class MarkupText(StringMobject):
 
 
 class Text(MarkupText):
+    """
+    Create a vector-based text object from plain text.
+
+    `Text` is a subclass of :class:`MarkupText` that provides a simplified interface
+    for rendering ordinary text while retaining the font configuration, text
+    styling, substring selection, SVG conversion, and vector-mobject functionality
+    of its parent class.
+
+    Unlike `MarkupText`, which recognizes markup tags and entities as formatting
+    instructions, `Text` overrides the parsing methods so that characters such as
+    angle brackets, ampersands, and quotation marks are treated as literal text.
+    These special characters are escaped when constructing markup content.
+
+    The class also provides backward-compatible defaults for substring isolation
+    and configures path-string processing to use a simple quadratic approximation.
+
+    Parameters
+    ----------
+    text : str
+        The plain text to render. Special markup characters are escaped during
+        content processing so they can be displayed as text rather than interpreted
+        as markup syntax.
+
+    isolate : Selector, default=(re.compile(r"\w+", re.U), re.compile(r"\S+", re.U))
+        Selectors used to isolate portions of the text for individual access.
+        The default contains two Unicode-aware regular expressions:
+
+        - ``\\w+`` matches sequences of word characters.
+        - ``\\S+`` matches sequences of non-whitespace characters.
+
+        Both selectors are provided for backward compatibility.
+
+    use_labelled_svg : bool, default=True
+        Whether to use labelled SVG output. Forwarded to `MarkupText` and its
+        parent implementation.
+
+    path_string_config : dict, default={"use_simple_quadratic_approx": True}
+        Configuration dictionary for path-string processing. By default, simple
+        quadratic approximation is enabled. Forwarded to the parent constructor
+        through `kwargs`.
+
+    **kwargs
+        Additional keyword arguments forwarded to `MarkupText`. These can configure
+        properties such as font size, font family, slant, weight, alignment,
+        line spacing, gradients, and selector-based text styling.
+
+    Inheritance
+    -----------
+    `Text` inherits the rendering and styling functionality of `MarkupText`,
+    including:
+
+    - Font configuration and text layout.
+    - Conversion of text content into SVG.
+    - Global and selector-specific text styling.
+    - Text-part selection and coloring.
+    - Gradient application.
+    - Line-spacing and ligature configuration.
+
+    The main distinction is its handling of special characters during parsing.
+
+    Methods
+    -------
+    __init__(text, isolate=..., use_labelled_svg=True,
+             path_string_config=..., **kwargs)
+        Initialize the text object.
+
+        Forward `text`, `isolate`, `use_labelled_svg`, and `path_string_config`
+        to the `MarkupText` constructor. All additional keyword arguments are
+        forwarded unchanged.
+
+    get_command_matches(string)
+        Static method. Find occurrences of the special characters ``<``, ``>``,
+        ``&``, double quotation marks, and single quotation marks.
+
+        Unlike the parent implementation, this method does not identify markup
+        tags, entities, comments, or other markup constructs. It treats only
+        the specified characters as special characters requiring processing.
+
+        Return a list of regular-expression match objects.
+
+    get_command_flag(match_obj)
+        Static method. Return ``0`` for every match. No opening or closing markup
+        tag structure is interpreted by this method.
+
+    replace_for_content(match_obj)
+        Static method. Escape the matched special character using
+        `Text.escape_markup_char()`. This allows the character to be included
+        safely in markup content while preserving its intended visible meaning.
+
+    replace_for_matching(match_obj)
+        Static method. Return the matched character unchanged. This ensures that
+        special characters remain part of the text representation used for
+        substring matching.
+
+    Examples
+    --------
+    Create a basic text object:
+
+    >>> from manimlib import *
+    >>> text = Text("Hello, World!")
+    >>> self.add(text)
+
+    Configure font properties:
+
+    >>> text = Text(
+    ...     "Plain text",
+    ...     font_size=48,
+    ...     font="sans-serif",
+    ...     weight="bold",
+    ... )
+    >>> self.add(text)
+
+    Color selected words:
+
+    >>> text = Text("Red text and blue text")
+    >>> text.set_color_by_text("Red", RED)
+    >>> text.set_color_by_text("blue", BLUE)
+
+    Select individual text portions:
+
+    >>> text = Text("Hello Manim")
+    >>> words = text.get_parts_by_text("Hello")
+    >>> word = text.get_part_by_text("Manim")
+
+    Display characters that would otherwise be interpreted as markup:
+
+    >>> text = Text("a < b & c > d")
+    >>> self.add(text)
+
+    Notes
+    -----
+    - `Text` is intended for ordinary text rather than markup-based formatting.
+      Use `MarkupText` when you need inline tags such as ``<b>`` or ``<i>``.
+    - Special characters are escaped during content processing, but remain
+      unchanged during matching so selectors can refer to the original text.
+    - The default isolation selectors preserve the behavior expected by older
+      code that relies on both word-level and non-whitespace substring matching.
+    - `path_string_config` enables simple quadratic approximation by default;
+      its exact effect depends on the path-string processing implementation.
+    """
+
     def __init__(
         self,
         text: str,
