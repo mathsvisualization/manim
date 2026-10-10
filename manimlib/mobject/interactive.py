@@ -1333,6 +1333,187 @@ class ColorSliders(Group):
 
 
 class Textbox(ControlMobject):
+    """
+    An interactive text input control that accepts keyboard input in a scene.
+
+    Textbox is a ControlMobject subclass that combines a rectangular input
+    box with a text object. When active, it listens for keyboard events and
+    updates its stored string value in response to supported key presses.
+    Clicking the rectangle toggles the active state, and the rectangle's
+    stroke color indicates whether the textbox is active.
+
+    The displayed text is resized to fit within the box and repositioned
+    when its value changes.
+
+    Parameters
+    ----------
+    value : str, default=""
+        Initial text displayed in the textbox and stored as its value.
+
+    value_type : np.dtype, default=np.dtype(object)
+        Data type associated with the stored value. This parameter is saved
+        as an attribute but is not used to convert the string in the shown
+        implementation.
+
+    box_kwargs : dict, default={"width": 2.0, "height": 1.0, "fill_color": DEFAULT_MOBJECT_COLOR, "fill_opacity": 1.0}
+        Keyword arguments passed to Rectangle to configure the input box.
+
+    text_kwargs : dict, default={"color": BLUE}
+        Keyword arguments passed to Text to configure the displayed text.
+
+    text_buff : float, default=MED_SMALL_BUFF
+        Horizontal buffer reserved on each side of the text when fitting it
+        to the box's width.
+
+    isInitiallyActive : bool, default=False
+        Determines whether the textbox starts in the active state.
+
+    active_color : ManimColor, default=BLUE
+        Stroke color used when the textbox is active.
+
+    deactive_color : ManimColor, default=RED
+        Stroke color used when the textbox is inactive.
+
+    **kwargs
+        Additional keyword arguments forwarded to ControlMobject.
+
+    Attributes
+    ----------
+    value_type : np.dtype
+        Stored value type parameter.
+
+    box_kwargs : dict
+        Configuration used to construct the rectangular input box.
+
+    text_kwargs : dict
+        Configuration used to construct the displayed Text object.
+
+    text_buff : float
+        Horizontal spacing reserved around the displayed text.
+
+    isInitiallyActive : bool
+        Initial active-state setting supplied to the constructor.
+
+    active_color : ManimColor
+        Stroke color indicating the active state.
+
+    deactive_color : ManimColor
+        Stroke color indicating the inactive state.
+
+    isActive : bool
+        Current active state. Clicking the box toggles this attribute.
+
+    box : Rectangle
+        Rectangular input area. Its stroke color changes with the active state.
+
+    text : Text
+        Text object displaying the current string value.
+
+    Methods
+    -------
+    set_value_anim(value)
+        Updates the displayed text when the tracked value changes.
+
+    update_text(value)
+        Rebuilds the displayed text, fits it to the box, and positions it
+        inside the input area.
+
+    active_anim(isActive)
+        Updates the box stroke color to reflect the active state.
+
+    box_on_mouse_press(mob, event_data)
+        Toggles the active state when the input box is clicked.
+
+    on_key_press(mob, event_data)
+        Processes supported keyboard events while the textbox is active.
+
+    Examples
+    --------
+    Create an initially inactive textbox::
+
+        textbox = Textbox()
+        self.add(textbox)
+
+    Create a textbox with initial text::
+
+        textbox = Textbox(value="Hello")
+        self.add(textbox)
+
+    Start with the textbox active::
+
+        textbox = Textbox(
+            value="Type here",
+            isInitiallyActive=True,
+        )
+        self.add(textbox)
+
+    Customize the box and text appearance::
+
+        textbox = Textbox(
+            value="Name",
+            box_kwargs={
+                "width": 3.0,
+                "height": 0.8,
+                "fill_color": BLACK,
+                "fill_opacity": 1.0,
+            },
+            text_kwargs={"color": WHITE},
+            active_color=GREEN,
+            deactive_color=RED,
+        )
+        self.add(textbox)
+
+    Read or programmatically change the value::
+
+        textbox = Textbox(value="Manim")
+        print(textbox.get_value())
+
+        textbox.set_value("ManimGL")
+
+    Notes
+    -----
+    - The constructor creates the Rectangle and Text objects, registers a
+      mouse-press listener on the rectangle, and registers a key-press
+      listener on the Textbox itself.
+    - Clicking the box toggles ``isActive`` and changes the rectangle's
+      stroke color. The click handler returns ``False`` to stop further
+      event bubbling according to the event system's dispatch rules.
+    - Keyboard input is processed only when ``mob.isActive`` is True.
+    - The key handler reads ``symbol`` and ``modifiers`` from ``event_data``.
+      It appends alphanumeric characters, converts them to uppercase when
+      Shift is held, and otherwise converts them to lowercase.
+    - The handler also contains branches for space, Tab, and Backspace.
+      Space appends the character represented by the key symbol, Tab appends
+      a tab character, and Backspace removes the final character.
+    - The implementation calls ``chr(symbol)`` before checking special keys.
+      Depending on the key constants and event representation, this may not
+      produce a meaningful character for special keys.
+    - The shown handler does not implement arrow-key navigation, cursor
+      positioning, selection, clipboard operations, Enter-key submission,
+      or general modifier-based shortcuts.
+    - Unsupported keys do not intentionally modify the value. However,
+      the handler still calls ``set_value`` with the unchanged value and
+      returns ``False`` while active.
+    - ``update_text`` reinitializes the existing Text object with the new
+      string and styling, fits its width to the box minus the horizontal
+      buffers, and limits its height to the height measured before resizing.
+    - A no-op or other updater behavior is not used to implement text editing;
+      the actual editing logic resides in ``on_key_press``.
+    - ``value_type`` is stored but does not convert the value into another
+      type. The control is designed around string input.
+    - Interactive typing requires a rendering or preview environment that
+      dispatches keyboard and mouse events.
+
+    See Also
+    --------
+    ControlMobject
+        Base class for value-based visual controls.
+    Button
+        Wraps a Mobject and invokes a callback on mouse press.
+    Checkbox
+        A clickable Boolean control with a checkmark or cross.
+    """
+
     def __init__(
         self,
         value: str = "",
