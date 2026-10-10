@@ -10,6 +10,66 @@ if TYPE_CHECKING:
 
 
 class ScreenRectangle(Rectangle):
+    """
+    A rectangle whose width is determined by a specified aspect ratio
+    and height.
+
+    ``ScreenRectangle`` extends ``Rectangle`` and is useful for representing
+    screens, video frames, or other rectangular regions with a fixed
+    width-to-height ratio.
+
+    Parameters
+    ----------
+    aspect_ratio
+        Ratio of the rectangle's width to its height, calculated as
+        ``width / height``. Defaults to ``16.0 / 9.0``, corresponding
+        to a widescreen 16:9 format.
+
+    height
+        Height of the rectangle in scene units. Defaults to ``4``.
+
+    **kwargs
+        Additional keyword arguments forwarded to ``Rectangle.__init__``,
+        except ``width`` and ``height``, which are explicitly determined
+        by ``aspect_ratio`` and ``height`` in this class.
+
+    Notes
+    -----
+    The rectangle's width is calculated as::
+
+        width = aspect_ratio * height
+
+    Changing the height while keeping the aspect ratio constant scales
+    both dimensions proportionally, preserving the specified ratio.
+
+    Examples
+    --------
+    Create a default widescreen rectangle:
+
+    >>> screen = ScreenRectangle()
+
+    Create a rectangle with a height of 3 scene units:
+
+    >>> screen = ScreenRectangle(height=3)
+
+    Create a rectangle with a 4:3 aspect ratio:
+
+    >>> screen = ScreenRectangle(aspect_ratio=4 / 3, height=3)
+
+    Create a rectangle with customized styling:
+
+    >>> screen = ScreenRectangle(
+    ...     aspect_ratio=16 / 9,
+    ...     height=4,
+    ...     color=BLUE,
+    ...     stroke_width=2,
+    ... )
+
+    See Also
+    --------
+    Rectangle
+    """
+
     def __init__(
         self,
         aspect_ratio: float = 16.0 / 9.0,
