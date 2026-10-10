@@ -22,6 +22,200 @@ if TYPE_CHECKING:
 
 
 class Matrix(VMobject):
+    """
+    A visual representation of a mathematical matrix using arranged Manim
+    mobjects, with square brackets and optional ellipsis entries.
+
+    Each matrix entry is converted into a mobject and positioned in a regular
+    grid. The matrix exposes groups for accessing its rows, columns, entries,
+    brackets, and ellipses, making it useful for mathematical animations and
+    transformations.
+
+    Parameters
+    ----------
+    matrix : GenericMatrixType
+        Two-dimensional iterable containing matrix entries. Entries may be
+        existing VMobjects, floating-point or complex numbers, or values that
+        can be represented as strings and rendered with Tex.
+    v_buff : float, default=0.5
+        Vertical spacing added to the maximum entry height when positioning
+        consecutive rows.
+    h_buff : float, default=0.5
+        Horizontal spacing added to the maximum entry width when positioning
+        consecutive columns.
+    bracket_h_buff : float, default=0.2
+        Horizontal distance between the matrix entries and the left and right
+        brackets.
+    bracket_v_buff : float, default=0.25
+        Extra vertical space used when sizing the brackets. If ``height`` is
+        specified, twice this value is subtracted from the requested row-group
+        height.
+    height : float or None, default=None
+        Optional target height for the row group, applied before the brackets
+        are created. When provided, the rows are resized to
+        ``height - 2 * bracket_v_buff``.
+    element_config : dict, default={}
+        Keyword arguments passed to element-conversion methods. These are used
+        when constructing DecimalNumber or Tex entries; existing VMobjects are
+        returned directly without applying this configuration.
+    element_alignment_corner : Vect3, default=DOWN
+        Alignment corner used when positioning each entry in the grid.
+    ellipses_row : int or None, default=None
+        Optional row index whose entries are replaced visually with vertical
+        ellipses. Negative indices are supported when they fall within the
+        valid row-index range.
+    ellipses_col : int or None, default=None
+        Optional column index whose entries are replaced visually with
+        horizontal ellipses. Negative indices are supported when they fall
+        within the valid column-index range.
+
+    Attributes
+    ----------
+    mob_matrix : VMobjectMatrixType
+        Nested list containing the original entry mobjects arranged by row and
+        column. Entries replaced visually by ellipses remain referenced here.
+    elements : list of VMobject
+        Flat list of entries currently treated as ordinary matrix elements.
+        Entries replaced by ellipses are removed from this list.
+    columns : VGroup
+        Group of column groups. Each column contains the corresponding entry
+        mobjects from all rows.
+    rows : VGroup
+        Group of row groups. Each row contains its entry mobjects.
+    brackets : VGroup
+        Group containing the left and right bracket components.
+    ellipses : list of VMobject
+        List of entry mobjects that have been visually replaced by ellipsis
+        symbols.
+
+    Methods
+    -------
+    copy(deep=False)
+        Copies the matrix and remaps the ``elements`` and ``ellipses`` lists
+        to the corresponding mobjects in the copied family.
+    create_mobject_matrix(matrix, v_buff, h_buff, aligned_corner, **element_config)
+        Converts the input entries into mobjects and arranges them in a grid.
+    element_to_mobject(element, **config)
+        Returns an existing VMobject unchanged, converts a float or complex
+        number to DecimalNumber, or converts other values to Tex.
+    create_brackets(rows, v_buff, h_buff)
+        Constructs and positions the left and right matrix brackets.
+    get_column(index)
+        Returns the column at the specified index. Raises IndexError if the
+        index is outside the valid nonnegative range.
+    get_row(index)
+        Returns the row at the specified index. Raises IndexError if the
+        index is outside the valid nonnegative range.
+    get_columns()
+        Returns the group of column groups.
+    get_rows()
+        Returns the group of row groups.
+    set_column_colors(*colors)
+        Applies the supplied colors to columns in order and returns this
+        Matrix. Extra colors or columns are ignored when their counts differ.
+    add_background_to_entries()
+        Adds a background rectangle to every entry returned by get_entries()
+        and returns this Matrix.
+    swap_entry_for_dots(entry, dots)
+        Moves a dots mobject to an entry's position, replaces the entry's
+        appearance using become(), removes it from elements if present, and
+        records it in ellipses if not already recorded.
+    swap_entries_for_ellipses(row_index=None, col_index=None,
+                              height_ratio=0.65, width_ratio=0.4)
+        Replaces entries in a valid selected row with vertical ellipses and/or
+        entries in a valid selected column with horizontal ellipses. Returns
+        this Matrix.
+    get_mob_matrix()
+        Returns the nested list of entry mobjects.
+    get_entries()
+        Returns a VGroup containing the entries currently listed in elements.
+    get_brackets()
+        Returns a VGroup containing the bracket components.
+    get_ellipses()
+        Returns a VGroup containing the entries visually replaced by ellipses.
+
+    Notes
+    -----
+    - The matrix is laid out using a uniform step based on the maximum width
+      and maximum height among all entries. Individual entries with different
+      dimensions therefore do not receive independently calculated spacing.
+    - The input is expected to be a nonempty, rectangular matrix. The
+      implementation accesses the first row and computes maxima over all
+      entries; empty matrices or empty rows are not supported reliably.
+    - Existing VMobject entries are reused rather than copied. Constructing
+      a Matrix can therefore reposition the supplied mobjects.
+    - Only float and complex values are converted to DecimalNumber. Integers
+      and other values are converted to Tex(str(element)).
+    - ``height`` resizes the row group before bracket creation. It does not
+      directly set the final height of the complete Matrix, and values too
+      small for the bracket buffer may produce undesirable geometry.
+    - Brackets are constructed using a Tex array expression, then split into
+      left and right components. Their exact appearance depends on the
+      available LaTeX environment and font configuration.
+    - ``get_row()`` and ``get_column()`` reject negative indices, even though
+      ``swap_entries_for_ellipses()`` accepts valid negative indices.
+    - Replacing an entry with dots uses ``become()`` on the existing entry
+      mobject. Its identity is retained, but its visible geometry is replaced.
+      The nested ``mob_matrix``, row groups, and column groups continue to
+      reference that mobject.
+    - If both row and column ellipses are requested, their intersection entry
+      is rotated by ``-45 * DEG`` after the replacements.
+    - ``swap_entries_for_ellipses()`` calculates average row height and column
+      width from the row and column groups. Degenerate matrices may lead to
+      invalid dimensions or divisions.
+    - The ``copy()`` override remaps only ``elements`` and ``ellipses`` using
+      family membership. Other attributes are handled by the parent copy
+      implementation.
+    - ``element_config`` uses a mutable default dictionary in the constructor.
+      Avoid mutating it in place to prevent shared-default side effects.
+
+    Examples
+    --------
+    Create a matrix from numbers and strings::
+
+        matrix = Matrix([
+            [1, 2],
+            [3, 4],
+        ])
+
+        self.add(matrix)
+
+    Access a row or column::
+
+        first_row = matrix.get_row(0)
+        second_column = matrix.get_column(1)
+
+    Color columns independently::
+
+        matrix.set_column_colors(RED, BLUE)
+
+    Add vertical and horizontal ellipses::
+
+        matrix = Matrix(
+            [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+            ],
+            ellipses_row=1,
+            ellipses_col=1,
+        )
+
+    Retrieve entries, brackets, and ellipses::
+
+        entries = matrix.get_entries()
+        brackets = matrix.get_brackets()
+        ellipses = matrix.get_ellipses()
+
+    See Also
+    --------
+    VMobject
+    VGroup
+    DecimalNumber
+    Tex
+    GenericMatrixType
+    """
+
     def __init__(
         self,
         matrix: GenericMatrixType,
