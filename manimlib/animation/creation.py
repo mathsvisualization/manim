@@ -762,6 +762,102 @@ class ShowSubmobjectsOneByOne(ShowIncreasingSubsets):
 
 
 class AddTextWordByWord(ShowIncreasingSubsets):
+    """
+    Reveals a StringMobject progressively, adding its word groups one by one.
+
+    AddTextWordByWord extends ShowIncreasingSubsets. It converts the supplied
+    StringMobject into a grouped Mobject using build_groups(), then animates that
+    group so its submobjects appear progressively. If no non-negative runtime is
+    specified, the duration is calculated from the number of word groups and the
+    requested time per word.
+
+    Parameters
+    ----------
+    string_mobject : StringMobject
+        The text object to reveal. The constructor asserts that the supplied
+        object is an instance of StringMobject.
+
+    time_per_word : float, optional
+        Amount of animation time allocated per group when run_time is negative.
+        Defaults to 0.2 seconds. The total runtime is calculated by multiplying
+        this value by the number of groups returned by build_groups().
+
+    run_time : float, optional
+        Total duration of the animation in seconds. Defaults to -1.0, which
+        indicates that the runtime should be calculated automatically. Any
+        negative value triggers automatic calculation.
+
+    rate_func : Callable[[float], float], optional
+        Function controlling the animation's progress over time. Defaults to
+        linear.
+
+    **kwargs
+        Additional keyword arguments forwarded to ShowIncreasingSubsets and
+        subsequently to Animation.
+
+    Attributes
+    ----------
+    string_mobject : StringMobject
+        Reference to the original text object. It is retained separately from
+        the grouped Mobject used for the animation.
+
+    Methods
+    -------
+    clean_up_from_scene(scene)
+        Removes the grouped animation Mobject from the scene. If the animation
+        is not configured as a remover, it adds the original StringMobject back
+        to the scene.
+
+    Notes
+    -----
+    - The constructor uses string_mobject.build_groups() to obtain the Mobject
+      that is animated.
+    - The resulting grouped Mobject is passed to ShowIncreasingSubsets, so the
+      inherited interpolation logic progressively reveals prefixes of its
+      submobject list.
+    - Automatic runtime is computed as time_per_word multiplied by the number
+      of groups returned by build_groups().
+    - The runtime is automatically recomputed only when run_time is negative.
+    - The name suggests word-by-word animation, but the actual grouping behavior
+      depends on how StringMobject.build_groups() divides the text.
+    - The original StringMobject is stored in self.string_mobject, while the
+      grouped Mobject is the inherited self.mobject.
+    - During cleanup, the grouped Mobject is removed. The original text object
+      is re-added only when is_remover() returns False.
+    - The class does not define its own interpolation logic; it inherits that
+      behavior from ShowIncreasingSubsets.
+
+    Examples
+    --------
+    Reveal a text object progressively using the default timing:
+
+        >>> animation = AddTextWordByWord(text)
+
+    Set a custom time per group:
+
+        >>> animation = AddTextWordByWord(
+        ...     text,
+        ...     time_per_word=0.3,
+        ... )
+
+    Specify the total runtime directly:
+
+        >>> animation = AddTextWordByWord(
+        ...     text,
+        ...     run_time=4,
+        ... )
+
+    These examples illustrate construction only; text must be a defined
+    StringMobject.
+
+    See Also
+    --------
+    ShowIncreasingSubsets
+    ShowSubmobjectsOneByOne
+    StringMobject
+    Animation
+    """
+
     def __init__(
         self,
         string_mobject: StringMobject,
