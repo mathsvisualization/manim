@@ -542,4 +542,101 @@ class Tex(StringMobject):
 
 
 class TexText(Tex):
+    """
+    Create a LaTeX-based text object using the `Tex` implementation without
+    wrapping the content in a LaTeX environment by default.
+
+    `TexText` is a lightweight subclass of :class:`Tex`. It inherits the LaTeX
+    compilation, SVG conversion, substring selection, color mapping, scaling,
+    and numeric replacement functionality provided by `Tex`.
+
+    The main difference is that `TexText` sets `tex_environment` to an empty
+    string. Consequently, the default content-generation process does not add
+    a `\\begin{...}` and `\\end{...}` pair around the expression.
+
+    This class is useful for rendering LaTeX text or expressions that should
+    not be enclosed in the default `align*` environment used by `Tex`.
+
+    Class Attributes
+    ----------------
+    tex_environment : str
+        LaTeX environment surrounding the expression. Defaults to an empty
+        string, disabling automatic environment wrapping in the inherited
+        `get_content_prefix_and_suffix()` implementation.
+
+    Parameters
+    ----------
+    *tex_strings
+        One or more strings containing LaTeX content. Multiple strings are
+        combined by the inherited `Tex` constructor.
+
+    font_size : int, default=48
+        Font-size scaling parameter inherited from `Tex`.
+
+    alignment : str, default=r"\\centering"
+        LaTeX alignment command inherited from `Tex`. Set to an empty string
+        if no alignment command should be inserted.
+
+    template : str, default=""
+        LaTeX template configuration used during compilation.
+
+    additional_preamble : str, default=""
+        Additional LaTeX preamble content used during compilation.
+
+    tex_to_color_map : dict, default={}
+        Mapping of LaTeX selectors to colors.
+
+    t2c : dict, default={}
+        Short alias for the selector-to-color mapping.
+
+    isolate : Selector, default=[]
+        Selectors specifying substrings that should be isolated.
+
+    use_labelled_svg : bool, default=True
+        Whether to use labelled SVG output.
+
+    **kwargs
+        Additional keyword arguments forwarded through the inherited `Tex`
+        constructor to `StringMobject`.
+
+    Inherited Functionality
+    -----------------------
+    `TexText` inherits the methods of `Tex`, including:
+
+    - `get_svg_string_by_content()` for compiling LaTeX content into SVG.
+    - `get_parts_by_tex()` and `get_part_by_tex()` for selecting expression parts.
+    - `set_color_by_tex()` and `set_color_by_tex_to_color_map()` for coloring
+      selected substrings.
+    - `get_tex()` for retrieving the stored LaTeX expression.
+    - `make_number_changeable()` for replacing selected numeric parts with
+      `DecimalNumber` mobjects.
+    - LaTeX command parsing and symbol-substring extraction methods.
+
+    Examples
+    --------
+    Create a text object:
+
+    >>> from manimlib import *
+    >>> text = TexText(r"Hello, World!")
+    >>> self.add(text)
+
+    Render mathematical text without the default `align*` environment:
+
+    >>> expression = TexText(r"x^2 + y^2 = z^2")
+    >>> self.add(expression)
+
+    Color selected substrings:
+
+    >>> expression = TexText(r"a + b = c", t2c={"a": RED, "b": BLUE, "c": GREEN})
+    >>> self.add(expression)
+
+    Notes
+    -----
+    - `TexText` changes only the default `tex_environment`; most of its behavior
+      comes from `Tex` and its parent classes.
+    - The inherited default alignment command remains `\\centering` unless
+      overridden. An empty environment does not automatically disable alignment.
+    - LaTeX content must still be valid for the configured compilation setup.
+    """
+
     tex_environment: str = ""
