@@ -2102,6 +2102,100 @@ class Mobject(object):
 
 
 class Group(Mobject, Generic[SubmobjectType]):
+    """
+    A flexible container for grouping and organizing mobjects.
+
+    Group extends Mobject to collect multiple mobjects or an iterable of
+    mobjects into a single object. It supports indexing and addition, allowing
+    its members to be accessed and additional mobjects to be added using a
+    convenient interface.
+
+    Unlike a specialized geometric object, Group primarily serves as a
+    container. Its behavior for transformations, rendering, and submobject
+    management is inherited from Mobject.
+
+    Parameters
+    ----------
+    *mobjects : Mobject or Iterable[Mobject]
+        Mobjects to add to the group. The constructor accepts either multiple
+        mobjects as positional arguments or a single iterable as the first
+        positional argument.
+    **kwargs
+        Additional keyword arguments forwarded to the Mobject constructor.
+
+    Attributes
+    ----------
+    submobjects : list[Mobject]
+        Collection of child mobjects managed by the inherited Mobject
+        implementation.
+
+    Methods
+    -------
+    _ingest_args(*args)
+        Processes constructor arguments and adds the resulting mobjects to
+        the group. If every argument is a Mobject, all arguments are added.
+        Otherwise, if the first argument is iterable, its elements are added.
+        Raises Exception for unsupported argument patterns.
+    __add__(other)
+        Adds another Mobject to this group and returns the result of add().
+        The operand must satisfy the Mobject type assertion.
+    __getitem__(index)
+        Returns the indexed submobject using the parent Mobject implementation.
+        This method explicitly declares the return type for generic typing
+        and static-analysis tools.
+
+    Notes
+    -----
+    - When initialized with multiple Mobject arguments, each is added directly
+      to the group.
+    - When the first argument is an iterable and not all arguments are
+      Mobjects, only the first argument is unpacked and added. Additional
+      positional arguments are not processed in that branch.
+    - The iterable-handling branch does not recursively flatten nested
+      iterables. The elements passed to add() must be acceptable to the
+      inherited implementation.
+    - An empty constructor call creates an empty group.
+    - A non-Mobject argument that is not iterable as the first argument
+      raises an Exception.
+    - The addition operator implemented here supports adding a Mobject to
+      the group. It does not construct a new independent Group; it delegates
+      to add() and returns that method's result.
+    - Group inherits indexing behavior from Mobject, so valid index types,
+      slicing behavior, and out-of-range handling depend on the parent
+      implementation.
+    - The generic type parameter SubmobjectType describes the expected
+      submobject type for static type checking; it does not perform runtime
+      validation of every child.
+    - Transformations and other Mobject operations generally act through
+      the group's inherited submobject hierarchy.
+
+    Examples
+    --------
+    Create a group from separate mobjects::
+
+        circle = Circle()
+        square = Square()
+        group = Group(circle, square)
+
+    Create a group from an iterable::
+
+        shapes = [Circle(), Square(), Triangle()]
+        group = Group(shapes)
+
+    Access an element by index::
+
+        first_shape = group[0]
+
+    Add another mobject using the addition operator::
+
+        group + Dot()
+
+    See Also
+    --------
+    Mobject
+    VGroup
+    """
+
     def __init__(self, *mobjects: SubmobjectType | Iterable[SubmobjectType], **kwargs):
         super().__init__(**kwargs)
         self._ingest_args(*mobjects)
