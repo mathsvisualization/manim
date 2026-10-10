@@ -297,6 +297,112 @@ class TexTextFromPresetString(TexText):
 
 
 class Title(TexText):
+    """
+    A text-based title positioned at the top of the scene, optionally accompanied
+    by a horizontal underline.
+
+    `Title` is a subclass of `TexText` that provides a convenient way to create
+    titles using LaTeX-rendered text. It automatically positions the title near
+    the top edge of the frame and can add an underline whose width is either fixed
+    or matched to the rendered text.
+
+    Parameters
+    ----------
+    *text_parts : str
+        One or more strings that form the title. These are passed directly to
+        `TexText`, allowing multiple text parts to be rendered together.
+
+    font_size : int, default=72
+        Font size used to render the title. This value is forwarded to `TexText`.
+
+    include_underline : bool, default=True
+        Whether to add a horizontal line beneath the title.
+
+    underline_width : float, default=FRAME_WIDTH - 2
+        Width of the underline when `match_underline_width_to_text` is False.
+        The width is measured in Manim scene units.
+
+    match_underline_width_to_text : bool, default=False
+        If True, the underline's width is matched to the rendered title's width.
+        This takes precedence over `underline_width`.
+
+    underline_buff : float, default=SMALL_BUFF
+        Vertical spacing between the title and its underline.
+
+    underline_style : dict, default=dict(stroke_width=2, stroke_color=GREY_C)
+        Keyword arguments passed to the `Line` constructor to customize the
+        underline's appearance, such as its stroke width and color.
+
+    **kwargs
+        Additional keyword arguments forwarded to `TexText`, except for
+        `font_size`, which is explicitly passed by `Title`.
+
+    Attributes
+    ----------
+    underline : Line
+        The underline object, created and attached to the title when
+        `include_underline` is True. This attribute is not assigned when the
+        underline is disabled.
+
+    Notes
+    -----
+    - The title is positioned at the top of the frame using `to_edge(UP,
+      buff=MED_SMALL_BUFF)`.
+    - The underline is created as a horizontal `Line` from `LEFT` to `RIGHT`.
+    - The underline is placed below the title using `next_to`.
+    - If text-matched sizing is enabled, `match_width(self)` determines the
+      underline's width; otherwise, `set_width(underline_width)` is used.
+    - The underline is added as a submobject of the title, so it moves with the
+      title when the title is transformed or repositioned.
+    - When `include_underline` is False, no underline is created or added.
+
+    Examples
+    --------
+    Create a title with the default underline:
+
+    >>> title = Title("Introduction")
+    >>> self.add(title)
+
+    Create a title with a custom font size and underline color:
+
+    >>> title = Title(
+    ...     "Complex Numbers",
+    ...     font_size=60,
+    ...     underline_style={"stroke_width": 3, "stroke_color": BLUE},
+    ... )
+    >>> self.add(title)
+
+    Match the underline width to the title text:
+
+    >>> title = Title(
+    ...     "Pythagorean Theorem",
+    ...     match_underline_width_to_text=True,
+    ... )
+    >>> self.add(title)
+
+    Create a title without an underline:
+
+    >>> title = Title(
+    ...     "A New Section",
+    ...     include_underline=False,
+    ... )
+    >>> self.add(title)
+
+    Create a title from multiple text parts:
+
+    >>> title = Title("The ", "Complex ", "Plane")
+    >>> self.add(title)
+
+    See Also
+    --------
+    TexText
+    Line
+    VMobject.to_edge
+    VMobject.next_to
+    VMobject.match_width
+    VMobject.set_width
+    """
+
     def __init__(
         self,
         *text_parts: str,
