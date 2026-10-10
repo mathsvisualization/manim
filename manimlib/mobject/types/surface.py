@@ -760,6 +760,165 @@ class ParametricSurface(Surface):
 
 
 class TexturedSurface(Surface):
+    """
+    A surface that maps one or more image textures onto the geometry of an
+    existing Surface.
+
+    `TexturedSurface` inherits from :class:`Surface` and uses another surface
+    to define its geometry, parameter ranges, and sampling resolution. Instead
+    of storing an RGBA color for every point, it stores texture coordinates
+    and opacity values. The GPU shader samples the supplied image textures
+    to determine the visible colors across the surface.
+
+    The class supports a light texture and an optional dark texture, allowing
+    different images to be used for light and dark rendering modes.
+
+    Parameters
+    ----------
+    uv_surface : Surface
+        Surface providing the geometry, parameterization, ranges, shading,
+        and initial resolution. Must be an instance of Surface.
+    image_file : str
+        Path or filename of the primary image texture. Its resolved path is
+        loaded as the ``LightTexture``.
+    dark_image_file : str or None, optional
+        Optional image texture used as the ``DarkTexture``. If omitted,
+        the primary image is used for both texture slots and ``num_textures``
+        is set to 1. If supplied, ``num_textures`` is set to 2.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Surface`.
+
+    Attributes
+    ----------
+    uv_surface : Surface
+        Source surface whose sampled geometry is used by this object.
+    uv_func : Callable
+        Reference to the source surface's ``uv_func``.
+    u_range : Tuple[float, float]
+        Parameter range copied from the source surface.
+    v_range : Tuple[float, float]
+        Parameter range copied from the source surface.
+    initial_resolution : Tuple[int, int]
+        Initial sampling resolution copied from the source surface.
+    num_textures : int
+        Number of active textures indicated to the shader: 1 when no separate
+        dark image is supplied, otherwise 2.
+    data_dtype : np.dtype
+        Structured data layout containing point coordinates, two-dimensional
+        image coordinates, and per-point opacity.
+    uniform_dtype : np.dtype
+        Shader uniform layout containing common uniforms, surface resolution,
+        and the number of active textures.
+    shader_file : str
+        Shader filename used for rendering: ``textured_surface.wgsl``.
+
+    Examples
+    --------
+    Apply an image texture to a parametric surface:
+
+        surface = ParametricSurface(
+            lambda u, v: (u, v, 0),
+            u_range=(-2, 2),
+            v_range=(-1, 1),
+            resolution=(100, 100),
+        )
+
+        textured = TexturedSurface(
+            surface,
+            "texture.png",
+        )
+
+    Provide a separate dark-mode texture:
+
+        textured = TexturedSurface(
+            surface,
+            image_file="light_texture.png",
+            dark_image_file="dark_texture.png",
+        )
+
+    Change how surface parameters map to texture coordinates:
+
+        textured.set_image_coords_by_uv_func(
+            lambda u, v: (u, 1 - v)
+        )
+
+    Set the surface opacity:
+
+        textured.set_opacity(0.5)
+
+    Supply different opacity values for the sampled points:
+
+        textured.set_opacity(np.linspace(0.2, 1.0, 100))
+
+    Change opacity through the color interface:
+
+        textured.set_color(None, opacity=0.7)
+
+    Methods
+    -------
+    init_points()
+        Copy the source surface's point positions and resolution, transfer
+        its alpha values into the opacity field, and generate image
+        coordinates over the normalized texture domain. The v-coordinate
+        sampling order is reversed to account for image-coordinate orientation.
+
+    set_image_coords_by_uv_func(uv_func)
+        Remap each normalized texture coordinate pair through a callable
+        that accepts ``(u, v)`` and returns a new pair ``(u_prime, v_prime)``.
+
+    init_uniforms()
+        Initialize the inherited uniforms and set ``num_textures`` for the
+        shader.
+
+    min_opacity()
+        Return the minimum stored opacity, or 1.0 if there are no records.
+
+    set_opacity(opacity, recurse=True)
+        Set per-point opacity values, resizing the supplied values through
+        interpolation to match the number of records.
+
+    set_color(color, opacity=None, recurse=True)
+        Preserve the texture's colors. If opacity is supplied, update the
+        opacity values; the color argument itself does not recolor the texture.
+
+    pointwise_become_partial(tsmobject, a, b, axis=None)
+        Apply the inherited partial-surface operation and copy the source
+        object's texture coordinates, with additional handling intended to
+        keep texture mapping aligned with the partial geometry.
+
+    Notes
+    -----
+    - The constructor checks ``uv_surface`` with ``isinstance`` and raises
+      an Exception if the supplied object is not a Surface.
+    - Both texture slots are created even when only one image is supplied.
+      In that case, the same image file is used for LightTexture and
+      DarkTexture, while ``num_textures`` remains 1.
+    - The source surface provides the geometry. ``init_points`` copies its
+      point coordinates instead of evaluating ``uv_func`` independently.
+    - The source surface's RGBA alpha channel is copied into the new
+      object's opacity field during point initialization.
+    - Texture coordinates are generated from normalized values between
+      0 and 1. The v-coordinate values are enumerated from 1 down to 0
+      to reverse the vertical image-coordinate direction.
+    - ``set_image_coords_by_uv_func`` changes the texture-coordinate mapping,
+      not the geometric point positions. The callable is evaluated for
+      every normalized coordinate pair.
+    - ``min_opacity`` considers only the stored opacity field. It does not
+      account for transparency that may already exist in the source image.
+    - ``set_opacity`` interpolates the provided values to the number of
+      point records. Its ``recurse`` parameter is accepted but not used.
+    - ``set_color`` does not apply the supplied color because visible colors
+      are sampled from the texture. Only its optional opacity argument has
+      an effect.
+    - ``pointwise_become_partial`` defaults to the inherited preferred
+      creation axis when ``axis`` is None.
+    - In the supplied implementation, the partial-texture-coordinate section
+      references ``im_coords`` without defining it locally or qualifying it
+      as ``self.data["im_coords"]``. Unless ``im_coords`` exists in the
+      surrounding scope, a partial interval may raise a NameError. This
+      section should be checked before relying on partial textured surfaces.
+    """
+
     shader_file: str = "textured_surface.wgsl"
     data_dtype: np.dtype = np.dtype([
         ('point', np.float32, (3,)),
