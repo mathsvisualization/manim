@@ -660,6 +660,91 @@ class ShowIncreasingSubsets(Animation):
 
 
 class ShowSubmobjectsOneByOne(ShowIncreasingSubsets):
+    """
+    Displays the submobjects of a group one at a time as the animation progresses.
+
+    ShowSubmobjectsOneByOne extends ShowIncreasingSubsets but overrides the
+    submobject-list update behavior. Instead of progressively displaying an
+    increasing prefix of the original submobject list, it displays only the
+    single submobject corresponding to the current index.
+
+    Parameters
+    ----------
+    group : Mobject
+        The Mobject containing the submobjects to display sequentially.
+
+    int_func : Callable[[float], float], optional
+        Function used to convert scaled animation progress into a submobject
+        index. Defaults to np.ceil. The function is forwarded to
+        ShowIncreasingSubsets.
+
+    **kwargs
+        Additional keyword arguments forwarded to ShowIncreasingSubsets and
+        subsequently to Animation.
+
+    Attributes
+    ----------
+    all_submobs : list
+        Inherited from ShowIncreasingSubsets. Stores the group's direct
+        submobjects as they existed during initialization.
+
+    int_func : Callable[[float], float]
+        Inherited function used to calculate the current submobject index.
+
+    Methods
+    -------
+    update_submobject_list(index)
+        Clamps the supplied index between zero and len(all_submobs) - 1,
+        converts it to an integer, and updates the animated Mobject's direct
+        submobject list. An index of zero produces an empty list; otherwise,
+        only the submobject at index - 1 is displayed.
+
+    Notes
+    -----
+    - The animation inherits interpolate_mobject() from ShowIncreasingSubsets.
+      It applies the rate function, calculates an index using int_func, and
+      passes that index to update_submobject_list().
+    - Unlike ShowIncreasingSubsets, this class displays at most one direct
+      submobject at a time.
+    - The index is clamped using clip(index, 0, len(all_submobs) - 1) before
+      being converted to int.
+    - When the clamped index is zero, the group is assigned an empty submobject
+      list.
+    - For a positive index, the displayed submobject is all_submobs[index - 1].
+    - With the default np.ceil function, the index generally advances to the
+      next integer as soon as scaled progress becomes positive enough to cross
+      an integer boundary.
+    - The class does not animate the geometry or opacity of individual
+      submobjects; it changes which submobject is present in the group's
+      direct submobject list.
+    - For a group containing no submobjects, the upper clipping bound is -1.
+      The resulting behavior depends on the implementation of clip and should
+      not be assumed to match the non-empty case.
+
+    Examples
+    --------
+    Display the objects in a group one by one:
+
+        >>> animation = ShowSubmobjectsOneByOne(group, run_time=3)
+
+    Use a custom index function:
+
+        >>> animation = ShowSubmobjectsOneByOne(
+        ...     group,
+        ...     int_func=np.floor,
+        ...     run_time=3,
+        ... )
+
+    These examples illustrate construction only; group and any referenced
+    functions must be defined in the surrounding scene.
+
+    See Also
+    --------
+    ShowIncreasingSubsets
+    Animation
+    Mobject
+    """
+
     def __init__(
         self,
         group: Mobject,
