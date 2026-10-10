@@ -34,8 +34,77 @@ if TYPE_CHECKING:
 
 class MotionMobject(Mobject):
     """
-        You could hold and drag this object to any position
+    Wrap a Mobject to make it draggable with the mouse.
+
+    MotionMobject allows a user to interactively reposition a Mobject by
+    clicking and dragging it in the scene. It registers a mouse-drag
+    listener on the wrapped object and moves that object to the position
+    provided by the drag event.
+
+    The wrapped Mobject receives a no-op updater to help prevent it from
+    being treated as a static object.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The object that should be draggable. The object is added as a
+        submobject of the MotionMobject.
+
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Mobject`.
+
+    Attributes
+    ----------
+    mobject : Mobject
+        The wrapped object that responds to mouse-drag events.
+
+    Methods
+    -------
+    mob_on_mouse_drag(mob, event_data)
+        Moves the dragged object to the point specified by the event data.
+
+    Examples
+    --------
+    Make a circle draggable::
+
+        circle = Circle()
+        draggable_circle = MotionMobject(circle)
+        self.add(draggable_circle)
+
+    Make a text label draggable::
+
+        label = Text("Drag me")
+        draggable_label = MotionMobject(label)
+        self.add(draggable_label)
+
+    Wrap an existing object without creating a copy::
+
+        square = Square()
+        draggable_square = MotionMobject(square)
+        self.add(draggable_square)
+
+    Notes
+    -----
+    - The constructor checks that ``mobject`` is an instance of
+      :class:`Mobject`; otherwise, an ``AssertionError`` is raised.
+    - The mouse-drag listener is registered on the wrapped object through
+      ``add_mouse_drag_listner``.
+    - During dragging, ``event_data["point"]`` provides the target position.
+    - The callback moves the object using ``mob.move_to(...)`` and returns
+      ``False``.
+    - The wrapped object is added directly as a submobject, so this wrapper
+      does not create an independent copy of it.
+    - The no-op updater is attached to the wrapped object to help avoid
+      locking it as a static Mobject.
+    - Interactive dragging requires a rendering or preview environment
+      that supports mouse events.
+
+    See Also
+    --------
+    Mobject
+        Base class for objects in the scene.
     """
+
     def __init__(self, mobject: Mobject, **kwargs):
         super().__init__(**kwargs)
         assert isinstance(mobject, Mobject)
