@@ -207,6 +207,103 @@ class SurfaceMesh(VGroup):
 # 3D shapes
 
 class Sphere(Surface):
+    """
+    A three-dimensional spherical surface parameterized by azimuthal and
+    polar angles.
+
+    Sphere inherits from :class:`Surface` and defines its geometry through
+    the ``uv_func()`` parameterization. The sphere is centered at the origin,
+    with a configurable radius and orientation of angular traversal.
+
+    Parameters
+    ----------
+    u_range : Tuple[float, float], optional
+        Range of the azimuthal parameter ``u`` in radians. Defaults to
+        ``(0, TAU)``, covering a complete revolution around the vertical axis.
+    v_range : Tuple[float, float], optional
+        Range of the polar parameter ``v`` in radians. Defaults to
+        ``(0, PI)``, covering the sphere from its bottom pole to its top pole.
+    resolution : Tuple[int, int], optional
+        Number of samples used along the ``u`` and ``v`` parameter directions.
+        Defaults to ``(101, 51)``.
+    radius : float, optional
+        Radius of the sphere. Defaults to ``1.0``.
+    clockwise : bool, optional
+        Determines the direction of angular traversal around the vertical
+        axis. If ``True``, the sign of ``u`` is reversed; otherwise, it is
+        positive. Defaults to ``False``.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Surface`.
+
+    Attributes
+    ----------
+    radius : float
+        Radius used to scale the sphere's parameterized coordinates.
+    clockwise : bool
+        Whether the azimuthal parameter uses a reversed sign.
+
+    Methods
+    -------
+    uv_func(u, v)
+        Maps the angular parameters ``u`` and ``v`` to a three-dimensional
+        point on the sphere and returns it as a NumPy array.
+
+    Notes
+    -----
+    - The sphere is centered at the origin.
+    - The parameterization is
+
+      ``x = radius * cos(sign * u) * sin(v)``
+
+      ``y = radius * sin(sign * u) * sin(v)``
+
+      ``z = -radius * cos(v)``
+
+      where ``sign = -1`` when ``clockwise`` is true and ``+1`` otherwise.
+    - With the default ranges, ``v = 0`` maps to the bottom pole
+      ``(0, 0, -radius)``, while ``v = PI`` maps to the top pole
+      ``(0, 0, radius)``.
+    - The equator corresponds to ``v = PI / 2``.
+    - Changing ``u_range`` or ``v_range`` can create a partial spherical
+      surface rather than a complete sphere.
+    - ``clockwise`` reverses the direction of angular traversal in the
+      horizontal plane; it does not change the sphere's radius or center.
+    - The class relies on ``Surface`` to sample the parameterization and
+      construct the actual surface geometry.
+
+    Examples
+    --------
+    Create a unit sphere::
+
+        sphere = Sphere()
+        self.add(sphere)
+
+    Create a larger sphere::
+
+        sphere = Sphere(radius=2)
+        self.add(sphere)
+
+    Create a sphere with reversed azimuthal traversal::
+
+        sphere = Sphere(clockwise=True)
+        self.add(sphere)
+
+    Create a partial spherical surface::
+
+        sphere = Sphere(
+            u_range=(0, PI),
+            v_range=(0, PI / 2),
+            resolution=(51, 26),
+        )
+        self.add(sphere)
+
+    See Also
+    --------
+    Surface
+    ThreeDAxes
+    SurfaceMesh
+    """
+
     def __init__(
         self,
         u_range: Tuple[float, float] = (0, TAU),
