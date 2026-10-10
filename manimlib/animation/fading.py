@@ -20,6 +20,96 @@ if TYPE_CHECKING:
 
 
 class Fade(Transform):
+    """
+    Animates a Mobject by transforming it while applying a positional shift and
+    a scale factor.
+
+    Fade extends Transform and stores a shift vector and scale factor before
+    forwarding the Mobject and additional arguments to Transform. The exact
+    transformation behavior depends on how the parent Transform class uses these
+    attributes.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The object to animate.
+
+    shift : np.ndarray, optional
+        Vector describing the positional shift associated with the animation.
+        Defaults to ORIGIN, meaning a zero displacement.
+
+    scale : float, optional
+        Scale factor associated with the animation. Defaults to 1, meaning the
+        original scale.
+
+    **kwargs
+        Additional keyword arguments forwarded to Transform.
+
+    Attributes
+    ----------
+    shift_vect : np.ndarray
+        Stores the supplied shift vector.
+
+    scale_factor : float
+        Stores the supplied scale factor.
+
+    Notes
+    -----
+    - Fade inherits its transformation lifecycle and interpolation behavior from
+      Transform.
+    - The constructor stores shift in self.shift_vect and scale in
+      self.scale_factor.
+    - This class does not directly modify the Mobject's position or scale in the
+      supplied implementation; it passes the Mobject to Transform after storing
+      these values.
+    - The actual visual result depends on the parent Transform implementation.
+
+    Examples
+    --------
+    Example 1: Create a Fade animation with default values.
+
+        >>> fade = Fade(circle)
+
+    Here, circle is the Mobject being animated. Since shift defaults to ORIGIN
+    and scale defaults to 1, no additional displacement or scaling is requested
+    through these parameters.
+
+    Example 2: Configure a shift to the right.
+
+        >>> fade = Fade(circle, shift=RIGHT)
+
+    The shift vector is stored in fade.shift_vect. How it affects the animation
+    depends on the Transform implementation.
+
+    Example 3: Configure a scale factor of 0.5.
+
+        >>> fade = Fade(circle, scale=0.5)
+
+    The scale factor is stored in fade.scale_factor. A value of 0.5 represents
+    half the original scale if the parent transformation uses this attribute
+    as a scale factor.
+
+    Example 4: Combine a shift and a scale factor.
+
+        >>> fade = Fade(
+        ...     circle,
+        ...     shift=UP,
+        ...     scale=0.5,
+        ...     run_time=2,
+        ... )
+
+    This constructs the animation with both parameters and requests a two-second
+    runtime from the parent class.
+
+    In these examples, circle must be a defined Mobject, and RIGHT and UP must
+    be available direction vectors.
+
+    See Also
+    --------
+    Transform
+    Mobject
+    """
+
     def __init__(
         self,
         mobject: Mobject,
