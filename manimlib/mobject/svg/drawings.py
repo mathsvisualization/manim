@@ -1736,6 +1736,119 @@ class VectorizedEarth(SVGMobject):
 
 
 class Piano(VGroup):
+    """
+    A vector-based piano keyboard made from white and black rectangular keys.
+
+    The keyboard creates a row of white keys, places black keys according
+    to a repeating pattern, and adjusts neighboring white keys to make room
+    for the black keys. The finished keyboard is sorted horizontally and
+    scaled to the requested total width.
+
+    Parameters
+    ----------
+    n_white_keys : int, optional
+        Number of white keys to create. Defaults to 52.
+    black_pattern : list[int], optional
+        Indices within each octave that determine where black keys are
+        placed between adjacent white keys. Defaults to [0, 2, 3, 5, 6].
+    white_keys_per_octave : int, optional
+        Number of white keys in one repeating octave pattern. Defaults to 7.
+    white_key_dims : tuple[float, float], optional
+        Width and height of each white key before the keyboard is scaled.
+        Defaults to (0.15, 1.0).
+    black_key_dims : tuple[float, float], optional
+        Width and height of each black key before the keyboard is scaled.
+        Defaults to (0.1, 0.66).
+    key_buff : float, optional
+        Spacing between white keys and the clearance used around black keys.
+        Defaults to 0.02.
+    white_key_color : ManimColor, optional
+        Fill color of the white keys. Defaults to WHITE.
+    black_key_color : ManimColor, optional
+        Fill color of the black keys. Defaults to GREY_E.
+    total_width : float, optional
+        Target width of the complete keyboard. Defaults to 13.
+    **kwargs
+        Additional arguments passed to VGroup.
+
+    Attributes
+    ----------
+    n_white_keys : int
+        Number of white keys in the keyboard.
+    black_pattern : list[int]
+        Repeating pattern used to determine black-key placement.
+    white_keys_per_octave : int
+        Number of white keys in each pattern cycle.
+    white_key_dims : tuple[float, float]
+        Initial dimensions of each white key.
+    black_key_dims : tuple[float, float]
+        Initial dimensions of each black key.
+    key_buff : float
+        Spacing and clearance used while arranging keys.
+    white_key_color : ManimColor
+        Color used for white keys.
+    black_key_color : ManimColor
+        Color used for black keys.
+    total_width : float
+        Target width of the finished keyboard.
+    white_keys : VGroup
+        Group of white keys.
+    black_keys : VGroup
+        Group of black keys.
+
+    Methods
+    -------
+    add_white_keys()
+        Creates and adds the white keys in a horizontal row.
+    add_black_keys()
+        Creates black keys according to black_pattern and modifies adjacent
+        white-key shapes to make room for them.
+    sort_keys()
+        Sorts the keyboard's submobjects by their horizontal position.
+
+    Examples
+    --------
+    Create a default piano keyboard:
+
+        piano = Piano()
+        self.add(piano)
+
+    Create a shorter keyboard with custom dimensions:
+
+        piano = Piano(
+            n_white_keys=14,
+            total_width=7,
+            white_key_dims=(0.2, 1.0),
+            black_key_dims=(0.12, 0.65),
+        )
+        self.add(piano)
+
+    Customize the key colors:
+
+        piano = Piano(
+            white_key_color=WHITE,
+            black_key_color=GREY_D,
+            total_width=10,
+        )
+        self.add(piano)
+
+    Notes
+    -----
+    - White keys are created first. Black keys are then placed between
+      selected adjacent white keys according to black_pattern.
+    - Each black key is positioned near the top of its neighboring white
+      keys. A slightly enlarged copy is subtracted from both neighboring
+      white keys to create clearance around the black key.
+    - The keys are sorted horizontally before the points of all but the
+      final submobject are reversed. The complete group is then scaled to
+      total_width.
+    - Dimensions are initial values; set_width(total_width) scales the
+      finished keyboard, so the final key dimensions may differ from the
+      supplied dimensions.
+    - The class constructs keyboard geometry only; it does not implement
+      musical notes, sound playback, or key-press interaction.
+    """
+
     def __init__(
         self,
         n_white_keys = 52,
