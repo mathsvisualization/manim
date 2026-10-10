@@ -356,11 +356,137 @@ class DotCloud(PMobject):
 
 
 class TrueDot(DotCloud):
+    """
+    A single shader-rendered dot positioned at a specified three-dimensional
+    center.
+
+    `TrueDot` inherits from :class:`DotCloud` and initializes the parent with
+    a point array containing exactly one point. It therefore provides a
+    convenient way to create an individual dot while retaining DotCloud's
+    radius, color, opacity, glow, anti-aliasing, and shading functionality.
+
+    Parameters
+    ----------
+    center : Vect3, optional
+        Three-dimensional coordinates of the dot's center. Defaults to ORIGIN.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`DotCloud`, such as
+        ``color``, ``opacity``, ``radius``, ``glow_factor``, and
+        ``anti_alias_width``.
+
+    Examples
+    --------
+    Create a dot at the origin:
+
+        dot = TrueDot()
+
+    Place a dot at a specific position:
+
+        dot = TrueDot(np.array([1.0, 2.0, 0.0]))
+
+    Customize its appearance:
+
+        dot = TrueDot(
+            center=np.array([1.0, 0.0, 0.0]),
+            color=BLUE,
+            radius=0.08,
+            opacity=0.8,
+        )
+
+    Create a glowing dot:
+
+        dot = TrueDot(
+            center=np.array([0.0, 1.0, 0.0]),
+            color=YELLOW,
+            radius=0.06,
+            glow_factor=0.8,
+        )
+
+    Notes
+    -----
+    - The center is converted into a NumPy array containing one point and
+      passed to DotCloud through the ``points`` argument.
+    - The dot's position is represented by its point coordinates; its visual
+      size is controlled by the radius.
+    - Since the parent receives one point, the object starts with exactly
+      one dot.
+    - All other behavior, including radius management, bounding-box
+      calculation, shader rendering, and optional 3D shading, is inherited
+      from DotCloud.
+    """
+
     def __init__(self, center: Vect3 = ORIGIN, **kwargs):
         super().__init__(points=np.array([center]), **kwargs)
 
 
 class GlowDots(DotCloud):
+    """
+    A point cloud of glowing dots rendered using the DotCloud shader.
+
+    `GlowDots` inherits from :class:`DotCloud` and provides defaults suited
+    to a glowing appearance: yellow color, a glow-dot-specific radius, and
+    a stronger glow factor. It forwards the supplied points and appearance
+    settings to the parent class, which handles point data, shader uniforms,
+    and rendering.
+
+    Parameters
+    ----------
+    points : Vect3Array, optional
+        Three-dimensional coordinates of the dots. Defaults to NULL_POINTS.
+    color : ManimColor, optional
+        Color assigned to the dots. Defaults to YELLOW.
+    radius : float, optional
+        Radius assigned to every dot. Defaults to DEFAULT_GLOW_DOT_RADIUS.
+    glow_factor : float, optional
+        Glow intensity parameter passed to the DotCloud shader.
+        Defaults to 2.0.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`DotCloud`.
+
+    Examples
+    --------
+    Create an empty collection of glowing dots:
+
+        dots = GlowDots()
+
+    Create glowing dots at specified positions:
+
+        points = np.array([
+            [-1.0, 0.0, 0.0],
+            [ 0.0, 1.0, 0.0],
+            [ 1.0, 0.0, 0.0],
+        ])
+
+        dots = GlowDots(points)
+
+    Customize the color and glow intensity:
+
+        dots = GlowDots(
+            points,
+            color=BLUE,
+            glow_factor=1.5,
+        )
+
+    Adjust the radius:
+
+        dots = GlowDots(
+            points,
+            radius=0.08,
+            glow_factor=2.5,
+        )
+
+    Notes
+    -----
+    - GlowDots does not implement a separate rendering system; it relies on
+      DotCloud's shader and point-data representation.
+    - The default glow factor is 2.0, but the visual result depends on the
+      shader implementation and rendering configuration.
+    - Additional options supported by DotCloud, such as ``opacity`` and
+      ``anti_alias_width``, can be supplied through ``kwargs``.
+    - The constructor does not explicitly expose an ``opacity`` parameter;
+      if provided, it is forwarded to DotCloud through ``kwargs``.
+    """
+
     def __init__(
         self,
         points: Vect3Array = NULL_POINTS,
