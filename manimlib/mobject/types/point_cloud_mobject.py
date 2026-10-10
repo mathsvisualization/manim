@@ -202,6 +202,55 @@ class PMobject(Mobject):
 
 
 class PGroup(PMobject):
+    """
+    A group of :class:`PMobject` instances that combines their point-based data
+    into a single object.
+
+    `PGroup` inherits from :class:`PMobject` and accepts multiple PMobject
+    instances as submobjects. It validates that every supplied object is a
+    PMobject, initializes the parent class, and adds the supplied objects to
+    the group.
+
+    Parameters
+    ----------
+    *pmobs : PMobject
+        Any number of PMobject instances to include in the group. If any
+        argument is not a PMobject instance, an Exception is raised.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`PMobject`.
+
+    Raises
+    ------
+    Exception
+        If any supplied submobject is not an instance of PMobject.
+
+    Examples
+    --------
+    Create a group containing two point-based objects:
+
+        dots = PMobject()
+        points = PMobject()
+
+        group = PGroup(dots, points)
+
+    The group can also be initialized without any submobjects:
+
+        group = PGroup()
+
+    Pass keyword arguments to the parent PMobject constructor:
+
+        group = PGroup(dots, points, color=RED)
+
+    Notes
+    -----
+    PGroup does not independently merge the point data of its submobjects
+    during initialization. It adds them using the inherited ``add`` method,
+    so their data remains associated with the respective submobjects.
+
+    The validation uses ``isinstance``, so subclasses of PMobject are also
+    accepted.
+    """
+
     def __init__(self, *pmobs: PMobject, **kwargs):
         if not all([isinstance(m, PMobject) for m in pmobs]):
             raise Exception("All submobjects must be of type PMobject")
