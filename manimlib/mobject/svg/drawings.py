@@ -903,6 +903,12 @@ class Clock(VGroup):
     minute_hand : Line
         The longer hand, initially pointing upward.
 
+    Examples
+    --------
+        clock = Clock()
+        clock = Clock(stroke_color=BLUE, stroke_width=2)
+        clock.hour_hand.rotate(PI / 6, about_point=clock.get_center())
+
     Notes
     -----
     This class creates the clock's visual components only. It does not
@@ -936,6 +942,36 @@ class Clock(VGroup):
 
 
 class ClockPassesTime(AnimationGroup):
+    """
+    Animates a clock to simulate the passage of time.
+
+    Parameters
+    ----------
+    clock : Clock
+        Clock whose hands will rotate.
+    run_time : float, optional
+        Duration of the animation in seconds. Defaults to 5.0.
+    hours_passed : float, optional
+        Number of hours to simulate. Defaults to 12.0.
+    rate_func : Callable[[float], float], optional
+        Rate function controlling animation progress. Defaults to linear.
+    **kwargs
+        Additional arguments passed to AnimationGroup.
+
+    Examples
+    --------
+        clock = Clock()
+        self.add(clock)
+        self.play(ClockPassesTime(clock, hours_passed=3, run_time=2))
+
+        self.play(ClockPassesTime(clock, hours_passed=12, run_time=5))
+
+    Notes
+    -----
+    The hour hand rotates according to the elapsed hours, while the minute
+    hand rotates twelve times as far. Both rotate around the clock's center.
+    """
+
     def __init__(
         self,
         clock: Clock,
