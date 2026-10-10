@@ -295,6 +295,82 @@ class BackgroundRectangle(SurroundingRectangle):
 
 
 class Cross(VGroup):
+    """
+    A cross-shaped group of two diagonal lines used to mark, reject, or cross
+    out a mobject in a scene.
+
+    Cross consists of two diagonal lines forming an X. The group is initially
+    constructed from unit-diagonal lines, then resized to match the supplied
+    mobject's bounding box and styled with the requested stroke color and width.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The mobject whose position and dimensions determine the cross's
+        placement and size.
+    stroke_color : ManimColor, optional
+        Color applied to both diagonal lines. Defaults to ``RED``.
+    stroke_width : float or Sequence[float], optional
+        Stroke width passed to ``set_stroke()``. Defaults to ``[0, 6, 0]``.
+        A sequence can specify different widths across the curves according
+        to Manim's stroke-width handling.
+    **kwargs
+        Accepted by the constructor signature but not forwarded or otherwise
+        used in this implementation.
+
+    Attributes
+    ----------
+    Inherited from VGroup
+        The two diagonal Line objects are stored as the group's submobjects.
+
+    Notes
+    -----
+    - The two lines run from ``UL`` to ``DR`` and from ``UR`` to ``DL``,
+      forming an X.
+    - ``insert_n_curves(20)`` increases the curve structure before resizing
+      and styling the group.
+    - ``replace(mobject, stretch=True)`` positions and resizes the cross to
+      match the target mobject's bounding box, allowing independent horizontal
+      and vertical stretching.
+    - The target mobject is not added to the group; it is used only to
+      determine the cross's size and position.
+    - The default stroke-width sequence is applied to the group's curves
+      through ``set_stroke()``.
+    - This constructor does not explicitly set a fill style or create an
+      updater, so the cross does not automatically follow later transformations
+      of the target mobject.
+
+    Examples
+    --------
+    Cross out a text object::
+
+        text = Tex("Incorrect")
+        cross = Cross(text)
+        self.add(text, cross)
+
+    Customize the cross color and width::
+
+        shape = Square()
+        cross = Cross(
+            shape,
+            stroke_color=BLUE,
+            stroke_width=4,
+        )
+        self.add(shape, cross)
+
+    Cross out a larger object::
+
+        circle = Circle(radius=2)
+        cross = Cross(circle, stroke_color=RED)
+        self.add(circle, cross)
+
+    See Also
+    --------
+    VGroup
+    Line
+    SurroundingRectangle
+    """
+
     def __init__(
         self,
         mobject: Mobject,
