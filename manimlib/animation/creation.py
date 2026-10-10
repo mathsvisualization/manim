@@ -538,6 +538,102 @@ class Write(DrawBorderThenFill):
 
 
 class ShowIncreasingSubsets(Animation):
+    """
+    Reveals the submobjects of a group progressively by increasing the number
+    of visible submobjects as the animation advances.
+
+    ShowIncreasingSubsets extends Animation. It stores the group's original
+    submobject list and, during interpolation, calculates how many submobjects
+    should currently be visible. It then replaces the group's current submobject
+    list with a prefix of the stored list.
+
+    Parameters
+    ----------
+    group : Mobject
+        The Mobject whose submobjects will be revealed progressively. The
+        animation operates on its direct submobjects, rather than automatically
+        flattening the entire family hierarchy.
+
+    int_func : Callable[[float], float], optional
+        Function used to convert the scaled animation progress into a submobject
+        index. Defaults to np.round. The result is converted to int before being
+        passed to update_submobject_list().
+
+    suspend_mobject_updating : bool, optional
+        Whether to suspend updating of the animated Mobject during the animation.
+        Defaults to False. The setting is forwarded to Animation.
+
+    **kwargs
+        Additional keyword arguments forwarded to Animation.
+
+    Attributes
+    ----------
+    all_submobs : list
+        Snapshot of the group's direct submobjects captured when the animation
+        is initialized. This stored list is used to determine which submobjects
+        should be present at each animation progress.
+
+    int_func : Callable[[float], float]
+        Function used to calculate the current submobject index from normalized
+        animation progress.
+
+    Methods
+    -------
+    interpolate_mobject(alpha)
+        Applies the animation's rate function to alpha, scales the result by the
+        number of stored submobjects, converts it to an integer index using
+        int_func, and updates the group's submobject list.
+
+    update_submobject_list(index)
+        Sets the animated Mobject's direct submobjects to the first index
+        elements of all_submobs.
+
+    Notes
+    -----
+    - The original direct submobject list is captured during initialization.
+      Changes made to the group's submobject list afterward do not automatically
+      update all_submobs.
+    - The animation reveals submobjects by list membership, not by progressively
+      changing each submobject's geometry or opacity.
+    - The visible list is always assigned from the prefix all_submobs[:index].
+    - With the default np.round function, the index is calculated by rounding
+      alpha * n_submobs to the nearest integer before converting it to int.
+    - The rate function is applied inside interpolate_mobject() before the
+      index is calculated.
+    - The computed index is not explicitly clamped in this class. Python slicing
+      determines the result if the index is outside the usual range.
+    - At alpha = 0, the default index is 0, so the group has no direct
+      submobjects assigned by this method.
+    - At alpha = 1, the default index is the rounded number of submobjects,
+      so the full stored list is assigned.
+    - Because set_submobjects() replaces the current direct submobject list,
+      any submobjects added to the animated group after initialization but not
+      present in all_submobs will not be retained by this update method.
+
+    Examples
+    --------
+    Reveal a group of objects progressively:
+
+        >>> animation = ShowIncreasingSubsets(group, run_time=2)
+
+    Use floor-based indexing instead of rounding:
+
+        >>> animation = ShowIncreasingSubsets(
+        ...     group,
+        ...     int_func=np.floor,
+        ...     run_time=2,
+        ... )
+
+    These examples illustrate construction only; group and any referenced
+    functions must be defined in the surrounding scene.
+
+    See Also
+    --------
+    Animation
+    ShowSubmobjectsOneByOne
+    Mobject
+    """
+
     def __init__(
         self,
         group: Mobject,
