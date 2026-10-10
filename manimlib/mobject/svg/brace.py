@@ -30,6 +30,156 @@ if TYPE_CHECKING:
 
 
 class Brace(Tex):
+    """
+    A LaTeX-rendered brace used to annotate a mobject and optionally position
+    text or mathematical expressions at the brace's tip.
+
+    Brace inherits from Tex and uses a LaTeX underbrace representation by default.
+    It adjusts the brace's width to match the width of a target mobject, positions
+    the brace relative to that mobject, and rotates both objects as needed to
+    support different brace orientations.
+
+    The class is useful for grouping parts of a mathematical expression, labeling
+    a region of a diagram, or indicating which portion of a visual construction
+    corresponds to a particular quantity or concept.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The target mobject whose width determines the initial width of the brace.
+        Its lower-left and lower-right corners are used to calculate the target
+        width after temporarily rotating it into the brace's reference orientation.
+
+    direction : Vect3, optional
+        The direction in which the brace is oriented relative to the target
+        mobject. Defaults to DOWN. The direction's first two components determine
+        the rotation angle used during positioning.
+
+    buff : float, optional
+        The vertical offset applied while positioning the brace relative to the
+        target mobject in the brace's temporary reference orientation. Defaults
+        to 0.2.
+
+    tex_string : str, optional
+        The LaTeX string used to render the brace. Defaults to
+        R"\underbrace{\qquad}". The implementation assumes a particular point
+        arrangement in this LaTeX representation when identifying the brace's tip
+        and adjusting its width.
+
+    **kwargs
+        Additional keyword arguments forwarded to Tex during initialization.
+
+    Attributes
+    ----------
+    tip_point_index : int
+        Index of the point in the brace's complete point array that represents
+        its tip. It is determined by locating the point with the minimum y
+        coordinate in the initially rendered brace geometry. This index is
+        subsequently used by get_tip() to retrieve the tip's position.
+
+    Width Adjustment
+    ----------------
+    The constructor calculates the horizontal distance between the target
+    mobject's lower-left and lower-right corners after rotating the target into
+    a reference orientation. It then calls set_initial_width() to resize the
+    brace to that width before positioning and rotating both objects back.
+
+    set_initial_width() handles widening differently from narrowing. When the
+    requested width exceeds the brace's current width, it expands the two
+    outer rectangular portions while moving the corresponding tips outward.
+    When the requested width is smaller, it stretches the entire brace to the
+    requested width.
+
+    Brace Orientation and Placement
+    -------------------------------
+    The constructor computes a rotation angle from the supplied direction's
+    first two components. It temporarily rotates the target mobject, determines
+    the target width, positions the brace relative to the target, and finally
+    rotates both objects back to their intended orientation.
+
+    This approach allows the brace to be placed along different orientations
+    without implementing a separate brace geometry for every direction.
+
+    Methods
+    -------
+    set_initial_width(width)
+        Adjusts the brace to the specified width and returns the brace itself.
+
+    put_at_tip(mob, use_next_to=True, **kwargs)
+        Positions another mobject relative to the brace's tip. When use_next_to
+        is True, it uses Mobject.next_to() with the rounded brace direction.
+        Otherwise, it moves the supplied mobject to the tip and shifts it along
+        the brace direction by half its width plus a buffer.
+
+    get_text(text, **kwargs)
+        Creates a Text mobject and positions it relative to the brace's tip.
+        The optional buff argument controls the spacing and defaults to
+        SMALL_BUFF. Other keyword arguments are passed to Text.
+
+    get_tex(*tex, **kwargs)
+        Creates a Tex mobject and positions it relative to the brace's tip.
+        The optional buff argument controls the spacing and defaults to
+        SMALL_BUFF. Other keyword arguments are passed to Tex.
+
+    get_tip()
+        Returns the point at tip_point_index from the brace's complete point
+        array. The implementation relies on the geometry of the chosen LaTeX
+        brace representation.
+
+    get_direction()
+        Computes a normalized vector from the brace's center to its tip.
+        This vector is used to determine the direction in which labels should
+        be positioned relative to the brace.
+
+    Examples
+    --------
+    Create a brace beneath a mathematical expression:
+
+        expression = Tex("a", "+", "b", "+", "c")
+        brace = Brace(expression, direction=DOWN)
+        label = brace.get_tex("x")
+        self.add(expression, brace, label)
+
+    Create a brace with a custom buffer:
+
+        brace = Brace(expression, direction=DOWN, buff=0.3)
+        label = brace.get_text("sum", buff=0.15)
+        self.add(expression, brace, label)
+
+    Position an existing mobject at the brace's tip:
+
+        brace.put_at_tip(label)
+
+    Notes
+    -----
+    - The default LaTeX representation is an underbrace. Other tex_string values
+      may not have the same point arrangement or a reliably identifiable tip.
+    - tip_point_index is computed from the minimum y coordinate of the initially
+      rendered geometry. Its correctness depends on the chosen LaTeX representation.
+    - The width adjustment logic assumes a particular internal organization of
+      the rendered brace, including specific submobject indices.
+    - set_initial_width() stretches existing geometry rather than regenerating
+      the LaTeX expression at a new size.
+    - get_direction() returns a unit vector from the brace's center toward its
+      tip; it is not simply the original direction argument.
+    - When use_next_to is False, put_at_tip() calculates its offset using half
+      the supplied mobject's width, even when the brace direction is not
+      horizontal. This behavior follows the implementation and may affect
+      placement for differently oriented braces.
+    - The constructor rotates the supplied target mobject during positioning and
+      then rotates it back. It therefore modifies the target's geometry as part
+      of the placement procedure.
+
+    See Also
+    --------
+    Tex
+        The LaTeX-rendered mobject class from which Brace inherits.
+    Text
+        The text mobject used by get_text().
+    Mobject.next_to
+        The relative-positioning method used by put_at_tip().
+    """
+
     def __init__(
         self,
         mobject: Mobject,
