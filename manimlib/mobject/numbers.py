@@ -436,6 +436,64 @@ class DecimalNumber(VMobject):
 
 
 class Integer(DecimalNumber):
+    """
+    Display a numerical value as an integer.
+
+    Integer subclasses DecimalNumber, defaulting to zero decimal
+    places. Its get_value() method rounds the stored value to the
+    nearest integer and returns it as a Python int.
+
+    Parameters
+    ----------
+    number
+        Initial numerical value. Defaults to 0.
+    num_decimal_places
+        Number of decimal places used for display. Defaults to 0,
+        but can be overridden to display decimal places.
+    **kwargs
+        Additional keyword arguments forwarded to DecimalNumber.
+
+    Methods
+    -------
+    get_value()
+        Return the stored value rounded to the nearest integer,
+        converted to a Python int.
+
+    Notes
+    -----
+    - Integer does not enforce integer-only values internally.
+      The inherited set_value() method can still store floats.
+    - get_value() rounds the stored value using np.round before
+      converting it to int. NumPy's rounding behavior applies,
+      including ties-to-even for halfway values.
+    - The displayed value is controlled by num_decimal_places;
+      changing it does not change the rounding performed by
+      get_value().
+    - Methods inherited from DecimalNumber, including set_value()
+      and increment_value(), remain available.
+
+    Examples
+    --------
+    Create an integer display::
+
+        number = Integer(5)
+
+    Update the stored value::
+
+        number.set_value(3.7)
+        value = number.get_value()  # 4
+
+    Display decimal places while retrieving an integer::
+
+        number = Integer(2.8, num_decimal_places=2)
+        value = number.get_value()  # 3
+
+    See Also
+    --------
+    DecimalNumber
+        Base class for formatting and displaying numerical values.
+    """
+
     def __init__(
         self,
         number: int = 0,
