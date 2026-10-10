@@ -413,6 +413,98 @@ class DrawBorderThenFill(Animation):
 
 
 class Write(DrawBorderThenFill):
+    """
+    Animates a VMobject as though it is being written or drawn, using a
+    border-tracing effect followed by a transition to its original appearance.
+
+    Write extends DrawBorderThenFill and automatically determines default values
+    for the total runtime and the lag ratio based on the number of family members
+    that contain points. It also defaults the outline stroke color to the
+    Mobject's color when no stroke color is explicitly provided.
+
+    Parameters
+    ----------
+    vmobject : VMobject
+        The vector object to animate. Its family members with points determine
+        the default runtime and lag ratio.
+
+    run_time : float, optional
+        Total duration of the animation in seconds. Defaults to -1, which signals
+        that the runtime should be computed automatically. Negative values trigger
+        automatic selection; non-negative values are used as provided.
+
+    lag_ratio : float, optional
+        Relative delay between the starts of consecutive submobject animations.
+        Defaults to -1, which signals automatic calculation. Negative values
+        trigger automatic selection; non-negative values are used as provided.
+
+    rate_func : Callable[[float], float], optional
+        Function that transforms animation progress over time. Defaults to linear.
+
+    stroke_color : ManimColor or None, optional
+        Color used to trace the object's outline. If None, the color returned by
+        vmobject.get_color() is used. Defaults to None.
+
+    **kwargs
+        Additional keyword arguments forwarded to DrawBorderThenFill, including
+        any supported animation configuration options.
+
+    Methods
+    -------
+    compute_run_time(family_size, run_time)
+        Returns the requested runtime when run_time is non-negative. Otherwise,
+        returns 1 second if family_size is less than 15, or 2 seconds if it is
+        15 or greater.
+
+    compute_lag_ratio(family_size, lag_ratio)
+        Returns the requested lag ratio when lag_ratio is non-negative.
+        Otherwise, computes a default using the family size, capped at 0.2.
+
+    Notes
+    -----
+    - family_size is calculated using len(vmobject.family_members_with_points()).
+      It counts family members that contain points, not necessarily every
+      object in the full family.
+    - The default runtime is 1 second for fewer than 15 such members and
+      2 seconds for 15 or more.
+    - The default lag ratio is min(4.0 / (family_size + 1.0), 0.2).
+    - For small family sizes, the computed lag ratio is capped at 0.2.
+      As family_size increases, the computed ratio can become smaller.
+    - The computed runtime and lag ratio are passed to DrawBorderThenFill.
+    - Write does not implement a separate interpolation method; it inherits the
+      border-tracing and style-transition behavior from DrawBorderThenFill.
+    - The default rate function is linear, unlike the double_smooth default
+      specified by DrawBorderThenFill.
+    - The stroke color defaults to vmobject.get_color() only when stroke_color
+      is None. An explicitly supplied color is passed through unchanged.
+
+    Examples
+    --------
+    Write a vector object using automatically selected timing:
+
+        >>> animation = Write(text_mobject)
+
+    Specify a custom runtime and lag ratio:
+
+        >>> animation = Write(
+        ...     text_mobject,
+        ...     run_time=3.0,
+        ...     lag_ratio=0.1,
+        ...     stroke_color=BLUE,
+        ... )
+
+    These examples illustrate construction only; text_mobject and any color
+    constants must be defined in the surrounding scene.
+
+    See Also
+    --------
+    DrawBorderThenFill
+    ShowCreation
+    Uncreate
+    Animation
+    VMobject
+    """
+
     def __init__(
         self,
         vmobject: VMobject,
