@@ -489,7 +489,71 @@ class VideoMobject(ImageMobject):
 
 class Sprite(VideoMobject):
     """
-    A VideoMobject read nearest pixel rather than blended, keeping pixel art crisp however
-    far it is scaled up.
+    A specialized VideoMobject that uses nearest-neighbor texture filtering to
+    preserve the crisp appearance of pixel-art video when displayed at different
+    scales.
+
+    Sprite is intended for video content made up of discrete pixels, such as
+    pixel-art animations, retro game footage, and other low-resolution graphics
+    whose visual style depends on sharp pixel boundaries. Unlike smooth texture
+    filtering, nearest-neighbor filtering selects nearby source texels without
+    blending their colors. This helps prevent adjacent pixel colors from being
+    interpolated into one another when the video texture is enlarged.
+
+    Texture Filtering
+    -----------------
+    The class sets the texture_filter attribute to "nearest". This configures the
+    texture to use nearest-neighbor sampling, assuming the underlying rendering
+    implementation supports and honors this filtering mode.
+
+    With nearest-neighbor filtering, an enlarged source pixel is typically
+    displayed as a block of repeated pixels rather than as a smoothly blended
+    region. As a result, edges and individual color regions in pixel art remain
+    visually distinct.
+
+    This behavior is especially useful when the source video has a deliberately
+    low resolution and its pixels are intended to remain visible as individual
+    units.
+
+    Relationship to VideoMobject
+    ----------------------------
+    Sprite inherits from VideoMobject and retains its general role of displaying
+    video content inside a ManimGL scene. Its distinguishing behavior is the
+    choice of texture filtering rather than a separate video-decoding or playback
+    system.
+
+    The video source, frame retrieval, metadata, and playback behavior are therefore
+    provided by the inherited implementation. Sprite specializes how the resulting
+    video texture is sampled for display.
+
+    Use Cases
+    ---------
+    - Displaying pixel-art animations without introducing smooth color blending.
+    - Presenting retro game footage while preserving sharp pixel boundaries.
+    - Enlarging low-resolution graphical content when a block-like appearance is
+      intentional.
+    - Maintaining the visual style of artwork designed around a fixed pixel grid.
+
+    Example
+    -------
+        sprite = Sprite("pixel_art_animation.mp4")
+        self.add(sprite)
+        self.wait(3)
+
+    In this example, the Sprite is added to the scene like a regular video mobject.
+    Its nearest-neighbor texture filtering helps preserve the source video's
+    pixelated appearance when the texture is scaled.
+
+    Notes
+    -----
+    - Nearest-neighbor filtering affects texture sampling, not the resolution of
+      the original video or the number of frames it contains.
+    - It does not create additional detail or improve the source video's quality.
+    - The final appearance depends on the source content, scaling, and rendering
+      backend's handling of the texture-filter setting.
+    - Nearest-neighbor filtering is not generally intended to produce smooth
+      photographic images; its primary advantage is preserving distinct pixels
+      and hard edges.
     """
+
     texture_filter: str = "nearest"
