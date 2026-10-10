@@ -893,6 +893,261 @@ class SVGMobject(VMobject):
 
 
 class VMobjectFromSVGPath(VMobject):
+    """
+    Convert an SVG path into a Manim vector mobject by interpreting its path
+    segments and constructing the corresponding Bézier curves and line paths.
+
+    ``VMobjectFromSVGPath`` is a specialized subclass of :class:`VMobject`
+    designed to convert a parsed ``svgelements.Path`` object into Manim's
+    internal point representation. It processes the path's individual
+    segments, translates their SVG coordinates into Manim coordinates, and
+    builds the geometry using Manim's path-construction methods.
+
+    The class supports the following SVG path segment types:
+        - ``Move``: Begin a new subpath.
+        - ``Close``: Close the current subpath.
+        - ``Line``: Add a straight line segment.
+        - ``QuadraticBezier``: Add a quadratic Bézier curve.
+        - ``CubicBezier``: Add a cubic Bézier curve.
+        - ``Arc``: Convert an elliptical SVG arc into a sequence of quadratic
+          Bézier curve segments.
+
+    To avoid repeatedly converting identical path strings, the class uses the
+    module-level ``PATH_TO_POINTS`` cache. Once a path has been converted,
+    its point data can be reused by subsequent instances with the same SVG
+    path-data string.
+
+    Parameters
+    ----------
+    path_obj : se.Path
+        A parsed SVG path object containing the geometric segments to convert.
+        Its ``d()`` method supplies the path-data string used for caching.
+    **kwargs
+        Additional keyword arguments passed to ``VMobject.__init__``.
+
+    Attributes
+    ----------
+    path_obj : se.Path
+        The original parsed SVG path object used to construct the geometry.
+    transform_cache : tuple[se.Matrix, np.ndarray, np.ndarray] or None
+        A cache containing the inverse transformation matrix, the associated
+        2D rotation/linear transformation array, and the translation vector
+        used while processing SVG arcs. Initialized to ``None`` and populated
+        when the first arc requires transformation information.
+
+    Initialization
+    --------------
+    The constructor initializes ``transform_cache`` to ``None``, stores the
+    provided path object in ``self.path_obj``, and invokes the parent
+    ``VMobject`` constructor.
+
+    The parent initialization process calls ``init_points`` as part of
+    constructing the mobject's geometry.
+
+    Point Initialization and Caching
+    --------------------------------
+    ``init_points`` converts the SVG path into Manim points.
+
+    The method obtains the path-data string using ``self.path_obj.d()`` and
+    checks whether that string is present in ``PATH_TO_POINTS``.
+
+    If the path string is not cached:
+        1. ``handle_commands`` processes the SVG path segments.
+        2. The generated point data is copied and stored in ``PATH_TO_POINTS``.
+
+    If the path string is already cached, the saved points are passed to
+    ``self.set_points`` instead of rebuilding the path.
+
+    The cache stores point data rather than complete mobject instances.
+    This allows different instances to reuse the geometric conversion while
+    maintaining their own mobject objects.
+
+    The cache key is the path-data string. It does not explicitly include
+    the path's transformation metadata or other configuration. Consequently,
+    the same path-data string may reuse the same cached points even when
+    other path properties differ.
+
+    Segment Processing
+    ------------------
+    ``handle_commands`` defines a mapping between supported SVG segment
+    classes and the corresponding Manim path-building operations.
+
+    The mapping is:
+
+    - ``se.Move`` → ``start_new_path(end)``
+    - ``se.Close`` → ``close_path()``
+    - ``se.Line`` → ``add_line_to(end, allow_null_line=False)``
+    - ``se.QuadraticBezier`` → ``add_quadratic_bezier_curve_to(control, end, allow_null_curve=False)``
+    - ``se.CubicBezier`` → ``add_cubic_bezier_curve_to(control1, control2, end)``
+
+    The method iterates over ``self.path_obj`` and checks each segment's
+    exact class. Arc segments are handled separately by ``handle_arc``.
+    All other segments are dispatched through the mapping.
+
+    For the mapped segment types, the required coordinate attributes are
+    read from each segment and converted to Manim's 3D coordinate format
+    using ``_convert_point_to_3d`` before being passed to the selected
+    function.
+
+    After processing the segments, the method checks whether a new path has
+    been started. If ``has_new_path_started()`` returns true, it removes the
+    last two points using ``resize_points``. This handles a trailing
+    ``Z M`` command pattern that would otherwise leave unwanted geometry
+    points behind.
+
+    Arc Conversion
+    --------------
+    ``handle_arc`` converts an SVG elliptical arc into Manim-compatible
+    quadratic Bézier geometry while accounting for the path's SVG transform.
+
+    SVG arcs can be represented by elliptical geometry, sweep angles,
+    rotation, and coordinate transformations. Manim's path representation
+    requires the arc to be approximated using its own curve primitives.
+    This method performs that conversion in several stages.
+
+    1. **Retrieve transformation data**
+
+       If ``transform_cache`` already exists, the method reuses the cached
+       inverse transformation, linear transformation array, and translation
+       vector.
+
+       Otherwise, it constructs an ``se.Matrix`` from the path's ``transform``
+       attribute, defaulting to an empty transform string if that attribute
+       is absent. It then builds the linear transformation matrix and
+       translation vector and computes the inverse transformation.
+
+       The resulting values are saved in ``transform_cache``.
+
+    2. **Apply the inverse transformation**
+
+       The SVG arc is multiplied by the inverse transformation matrix.
+       This removes the combined effect of the path's transform while the
+       arc's intermediate geometry is calculated.
+
+       The code's comments explain that the matrix obtained from the path
+       accounts for the combined effects of parent-group transformations in
+       the SVG representation.
+
+    3. **Determine the number of curve components**
+
+       The number of quadratic Bézier components is calculated from the
+       absolute sweep angle:
+
+       ``n_components = ceil(8 * abs(arc.sweep) / TAU)``
+
+       This makes the number of components proportional to the angular extent
+       of the arc. A larger sweep generally requires more components.
+
+    4. **Generate unit-circle arc points**
+
+       ``quadratic_bezier_points_for_arc`` generates the control-point data
+       needed to represent the arc on a unit circle. The resulting points are
+       rotated according to the arc's starting parameter angle using
+       ``rotation_about_z``.
+
+    5. **Convert the unit-circle arc to elliptical geometry**
+
+       The x-coordinates are scaled by ``arc.rx`` and the y-coordinates by
+       ``arc.ry``. The points are then rotated by the arc's own ellipse
+       rotation, obtained from ``arc.get_rotation().as_radians``.
+
+       The arc's center is added to place the points at the correct location.
+
+    6. **Apply the original transformation**
+
+       The linear transformation is applied to the first two coordinates,
+       followed by the translation vector. This transforms the computed
+       points back into the coordinate system expected for the original SVG
+       geometry.
+
+    7. **Append the generated points**
+
+       ``arc_points[1:]`` is passed to ``append_points``. The first point is
+       omitted because it corresponds to the beginning of the arc, which is
+       expected to connect to the geometry already present in the path.
+
+    Transformation Cache
+    --------------------
+    The ``transform_cache`` attribute avoids recalculating the same
+    transformation information for every arc in a path.
+
+    When the first arc is processed, the method:
+        - Creates an ``se.Matrix`` from the path's transform attribute.
+        - Builds a 2D linear transformation array from the matrix entries.
+        - Extracts the translation components into a 3D vector.
+        - Inverts the transformation matrix.
+        - Stores the inverse matrix, linear transformation array, and
+          translation vector in ``self.transform_cache``.
+
+    Subsequent arcs reuse these values.
+
+    The cached matrix is the inverse matrix after ``transform.inverse()``
+    has been called. The stored ``rot`` and ``shift`` arrays retain the
+    linear transformation and translation values extracted before inversion.
+
+    Methods
+    -------
+    init_points()
+        Initialize the mobject's point data from the SVG path, reusing
+        ``PATH_TO_POINTS`` when the path-data string has already been cached.
+    handle_commands()
+        Interpret the supported SVG path segments and construct the
+        corresponding Manim paths and curves.
+    handle_arc(arc)
+        Convert an SVG elliptical arc into quadratic Bézier point data while
+        accounting for the path's transformation.
+
+    Raises
+    ------
+    KeyError
+        May occur in ``handle_commands`` if a segment class other than
+        ``se.Arc`` is not present in the segment-to-function mapping.
+    AttributeError
+        May occur if the supplied path or one of its segments lacks an
+        expected attribute or method.
+    ValueError or other numerical exceptions
+        May propagate from transformation inversion or geometric operations
+        if the SVG transformation is invalid or non-invertible.
+
+    Notes
+    -----
+    This class depends on ``svgelements`` for SVG path parsing and on Manim's
+    vector-mobject methods for constructing the final geometry.
+
+    The class does not parse SVG markup itself. It expects an already-parsed
+    ``se.Path`` object, which is why it is commonly used by higher-level SVG
+    import classes.
+
+    The class relies on several module-level names, including ``PATH_TO_POINTS``,
+    ``_convert_point_to_3d``, ``quadratic_bezier_points_for_arc``,
+    ``rotation_about_z``, and ``TAU``. These must be available in the module
+    where the class is defined.
+
+    Examples
+    --------
+    Create a path using ``svgelements`` and convert it:
+
+    >>> import svgelements as se
+    >>> path = se.Path("M 0,0 L 1,0 L 1,1")
+    >>> mob = VMobjectFromSVGPath(path)
+
+    Create a curved path:
+
+    >>> path = se.Path("M 0,0 C 1,0 1,1 2,1")
+    >>> mob = VMobjectFromSVGPath(path)
+
+    Create a closed triangular path:
+
+    >>> path = se.Path("M 0,0 L 1,0 L 0.5,1 Z")
+    >>> mob = VMobjectFromSVGPath(path)
+
+    Use the resulting mobject in a scene:
+
+    >>> path = se.Path("M 0,0 L 1,0 L 1,1")
+    >>> mob = VMobjectFromSVGPath(path)
+    >>> self.add(mob)
+    """
+
     def __init__(
         self,
         path_obj: se.Path,
