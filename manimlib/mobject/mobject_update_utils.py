@@ -24,6 +24,33 @@ def assert_is_mobject_method(method):
 
 
 def always(method, *args, **kwargs):
+    """
+    Apply a method to a mobject on every update.
+
+    Parameters
+    ----------
+    method
+        Bound method of a Mobject to call on each update.
+    *args
+        Positional arguments passed to the method on every update.
+    **kwargs
+        Keyword arguments passed to the method on every update.
+
+    Returns
+    -------
+    Mobject
+        The mobject with the updater added.
+
+    Notes
+    -----
+    The method must be bound to a Mobject. The updater calls the
+    underlying function with the mobject as its first argument.
+
+    Examples
+    --------
+    >>> always(square.shift, RIGHT)
+    """
+
     assert_is_mobject_method(method)
     mobject = method.__self__
     func = method.__func__
