@@ -706,6 +706,90 @@ class Cone(Cylinder):
 
 
 class Line3D(Cylinder):
+    """
+    A three-dimensional line segment represented by a thin cylindrical surface.
+
+    Line3D inherits from :class:`Cylinder` and constructs a cylinder between
+    two endpoints. Its axis is determined by the vector from ``start`` to
+    ``end``, its height is the distance between those endpoints, and its
+    radius is half the requested width. The resulting cylinder is shifted
+    to the midpoint of the endpoints.
+
+    Parameters
+    ----------
+    start : Vect3
+        Starting point of the line segment.
+    end : Vect3
+        Ending point of the line segment.
+    width : float, optional
+        Diameter of the cylindrical line. Defaults to ``0.05``.
+    resolution : Tuple[int, int], optional
+        Number of samples along the angular and axial parameter directions.
+        Defaults to ``(21, 25)``.
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Cylinder`, except
+        for ``height``, ``radius``, ``axis``, and ``resolution``, which are
+        explicitly supplied by this constructor.
+
+    Attributes
+    ----------
+    Inherited from Cylinder
+        The line's cylindrical surface geometry, radius, height, and axis
+        are managed by the parent class.
+
+    Notes
+    -----
+    - The direction vector is computed as ``end - start``.
+    - The cylinder's height is ``get_norm(end - start)``, the Euclidean
+      distance between the endpoints.
+    - The cylinder's radius is ``width / 2``; therefore, ``width`` represents
+      the nominal diameter of the line.
+    - The direction vector is passed as the cylinder's ``axis`` so that its
+      original z-axis is aligned with the segment direction.
+    - After the parent constructor builds the cylinder, the object is shifted
+      by ``(start + end) / 2`` to place it at the segment's midpoint.
+    - This implementation assumes the inherited cylinder geometry is
+      initially centered around its local origin.
+    - If ``start`` and ``end`` are identical, the axis has zero length.
+      The implementation does not explicitly handle this degenerate case.
+    - The object is a cylindrical surface rather than a mathematical
+      zero-thickness line, and no separate end caps are created here.
+
+    Examples
+    --------
+    Create a 3D line segment::
+
+        line = Line3D(
+            start=np.array([0, 0, 0]),
+            end=np.array([2, 1, 3]),
+        )
+        self.add(line)
+
+    Customize the line's thickness and resolution::
+
+        line = Line3D(
+            start=LEFT,
+            end=RIGHT + 2 * OUT,
+            width=0.1,
+            resolution=(32, 20),
+        )
+        self.add(line)
+
+    Create a vertical segment::
+
+        line = Line3D(
+            start=ORIGIN,
+            end=2 * OUT,
+        )
+        self.add(line)
+
+    See Also
+    --------
+    Cylinder
+    Cone
+    Surface
+    """
+
     def __init__(
         self,
         start: Vect3,
