@@ -126,6 +126,47 @@ class Checkmark(TexTextFromPresetString):
 
 
 class Exmark(TexTextFromPresetString):
+    """
+    A preset LaTeX text mobject that displays an X-shaped cross symbol.
+
+    Exmark inherits from TexTextFromPresetString and uses the LaTeX command
+    R"\ding{55}" to render the symbol. Its default color is RED, making it
+    suitable for indicating an incorrect answer, a failed condition, rejection,
+    or an unsuccessful result in a scene.
+
+    The class provides a convenient way to display this preset symbol without
+    manually constructing a text mobject for the corresponding LaTeX command.
+
+    Class Attributes
+    ----------------
+    tex : str
+        LaTeX command R"\ding{55}", used to render the X-shaped symbol.
+
+    default_color : ManimColor
+        Defaults to RED.
+
+    Example
+    -------
+        mark = Exmark()
+        self.add(mark)
+
+    Display the symbol beside an incorrect answer:
+
+        answer = TexText("Incorrect")
+        mark = Exmark()
+        mark.next_to(answer, RIGHT)
+        self.add(answer, mark)
+
+    Notes
+    -----
+    - The symbol is rendered through the inherited TexTextFromPresetString
+      implementation.
+    - Rendering the dingbat symbol depends on the required LaTeX package and
+      the availability of the corresponding symbol in the TeX environment.
+    - RED is the default color; the final appearance may depend on inherited
+      color-handling behavior and constructor arguments.
+    """
+
     tex: str = R"\ding{55}"
     default_color: ManimColor = RED
 
