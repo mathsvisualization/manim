@@ -121,9 +121,128 @@ class MotionMobject(Mobject):
 
 class Button(Mobject):
     """
-        Pass any mobject and register an on_click method
+    Wrap a Mobject and execute a callback when it receives a mouse-press event.
 
-        The on_click method takes mobject as argument like updater
+    Button provides a simple way to make an existing Mobject behave like an
+    interactive button. It registers a mouse-press listener on the supplied
+    Mobject and calls the user-defined ``on_click`` callback when the event
+    is dispatched to that object.
+
+    The callback receives the Mobject associated with the mouse-press event,
+    similar to how a Mobject updater receives the object it updates.
+
+    Event Handling
+    --------------
+    The event system follows an event-bubbling model inspired by the DOM
+    event model in JavaScript. Mouse and keyboard events are dispatched
+    through the event system, and listeners can return ``False`` to stop
+    the event from bubbling further.
+
+    Button's internal mouse-press handler calls ``on_click(mob)`` and then
+    returns ``False``. This prevents the mouse-press event from continuing
+    to bubble beyond this handler according to the event system's
+    dispatching rules.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The visual object that acts as the button. A mouse-press listener
+        is registered on this object, which is then added as a submobject
+        of the Button.
+
+    on_click : Callable[[Mobject], Any]
+        The callback to execute when the button receives a mouse-press
+        event. It must accept one argument: the Mobject passed to the
+        internal event handler. The callback's return value is not used
+        by Button.
+
+    **kwargs
+        Additional keyword arguments forwarded to :class:`Mobject`.
+
+    Attributes
+    ----------
+    on_click : Callable
+        The user-provided callback invoked by the mouse-press handler.
+
+    mobject : Mobject
+        The visual object wrapped by the Button.
+
+    Methods
+    -------
+    mob_on_mouse_press(mob, event_data)
+        Handles the mouse-press event by invoking ``on_click(mob)`` and
+        returning ``False`` to stop further event bubbling.
+
+    Examples
+    --------
+    Create a button that prints a message when clicked::
+
+        def handle_click(mob):
+            print("Button clicked!")
+
+        visual = Square()
+        button = Button(visual, on_click=handle_click)
+        self.add(button)
+
+    Change an object's color when clicked::
+
+        def change_color(mob):
+            mob.set_color(RED)
+
+        square = Square()
+        button = Button(square, on_click=change_color)
+        self.add(button)
+
+    Use a text object as a button::
+
+        def handle_click(mob):
+            print("Selected:", mob)
+
+        label = Text("Click me")
+        button = Button(label, on_click=handle_click)
+        self.add(button)
+
+    Modify the scene from a callback::
+
+        def enlarge(mob):
+            mob.scale(1.2)
+
+        circle = Circle()
+        button = Button(circle, on_click=enlarge)
+        self.add(button)
+
+    Notes
+    -----
+    - ``mobject`` must be an instance of :class:`Mobject`; otherwise, the
+      constructor raises an ``AssertionError``.
+    - The supplied Mobject is used directly rather than copied.
+    - The callback receives one argument, the event-associated Mobject.
+      It does not receive ``event_data`` through the Button callback.
+    - The internal handler accepts ``event_data`` because it follows the
+      event-listener callback interface, but does not use it.
+    - The mouse-press listener is registered through
+      ``add_mouse_press_listner``.
+    - Button does not itself perform hit-testing, draw a button background,
+      or define hover, pressed, or released visual states. Those behaviors
+      depend on the event system and any additional code.
+    - The interaction requires a rendering or preview environment that
+      dispatches mouse events.
+    - The event system also exposes listeners for mouse motion, press,
+      release, drag, scroll, and keyboard press and release events.
+      These can be registered or removed using the corresponding
+      Mobject listener methods.
+
+    See Also
+    --------
+    Mobject
+        Base class for scene objects and event-listener registration.
+    MotionMobject
+        Wraps a Mobject to make it draggable using mouse-drag events.
+
+    References
+    ----------
+    Event bubbling in the DOM event model:
+    https://www.quirksmode.org/js/events_order.html
     """
 
     def __init__(self, mobject: Mobject, on_click: Callable[[Mobject]], **kwargs):
