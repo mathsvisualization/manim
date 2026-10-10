@@ -1391,6 +1391,188 @@ class VMobject(Mobject):
 
 
 class VGroup(Group, VMobject, Generic[SubVmobjectType]):
+    """
+    VGroup
+    ======
+
+    A group specialized for organizing and manipulating VMobject instances.
+
+    VGroup combines the behavior of Group and VMobject, allowing multiple
+    vector-based mobjects to be collected into a single object. It supports
+    the grouping operations inherited from its parent classes while enforcing
+    that any Mobject passed directly to its constructor must also be a
+    VMobject.
+
+    The class is generic over ``SubVmobjectType``, allowing its child type
+    to be represented in type annotations. This is useful for static type
+    checking and editor autocomplete when accessing elements of a VGroup.
+
+    Parameters
+    ----------
+    *vmobjects : SubVmobjectType or iterable of SubVmobjectType
+        VMobjects and/or iterables of VMobjects to ingest into the group.
+        The arguments are processed by ``_ingest_args``, which is responsible
+        for adding the supplied objects to the group.
+    **kwargs
+        Additional keyword arguments forwarded to the parent initialization
+        method through ``super().__init__``.
+
+    Inheritance
+    -----------
+    VGroup inherits from:
+
+    - ``Group``: Provides group-related behavior for containing and managing
+      submobjects.
+    - ``VMobject``: Provides vector-mobject behavior and associated rendering
+      and geometry functionality.
+    - ``Generic[SubVmobjectType]``: Provides a generic type parameter for
+      the child VMobject type.
+
+    Initialization
+    --------------
+    The constructor performs the following operations:
+
+    1. Calls ``super().__init__(**kwargs)`` to initialize the parent classes
+       according to the method resolution order.
+    2. Checks each direct positional argument. If an argument is a Mobject
+       but is not a VMobject, the constructor raises an Exception.
+    3. Calls ``_ingest_args(*vmobjects)`` to process and add the supplied
+       objects or iterables to the group.
+    4. If the group contains at least one submobject, updates its uniforms
+       using the uniforms of the first submobject.
+
+    The uniform update copies or merges the first child's uniform entries
+    into the group's uniform mapping according to the behavior of the
+    mapping's ``update`` method. It does not explicitly combine the uniform
+    values of every child.
+
+    Type Validation
+    ---------------
+    The constructor rejects a direct argument when both of the following
+    conditions are true:
+
+    - The argument is an instance of ``Mobject``.
+    - The argument is not an instance of ``VMobject``.
+
+    This prevents ordinary non-vector Mobjects, such as image-based
+    Mobjects, from being passed directly as children.
+
+    The check is performed on the top-level positional arguments before
+    ``_ingest_args`` processes them. The shown implementation does not
+    explicitly validate every element inside an iterable argument; any
+    additional validation depends on ``_ingest_args`` and the inherited
+    implementation.
+
+    Method: __add__
+    ----------------
+    __add__(other: VMobject) -> Self
+
+    Adds another VMobject to the group using the inherited ``add`` method.
+
+    Parameters
+    ----------
+    other : VMobject
+        The vector mobject to add.
+
+    Returns
+    -------
+    Self
+        The result returned by ``self.add(other)``, normally the same group
+        instance after the object has been added.
+
+    Behavior
+    --------
+    The method first asserts that ``other`` is an instance of ``VMobject``.
+    If the assertion succeeds, it returns ``self.add(other)``.
+
+    This overload allows expressions such as:
+
+        group = VGroup(circle) + square
+
+    The operation is an in-place-style group addition rather than ordinary
+    numeric addition: it delegates to ``add`` and returns the group.
+
+    The assertion is a runtime check when Python assertions are enabled.
+    Assertions can be disabled when Python runs with optimization enabled,
+    so this should not be treated as an unconditional validation mechanism.
+
+    Method: __getitem__
+    -------------------
+    __getitem__(index) -> SubVmobjectType
+
+    Returns a child of the group using the indexing behavior inherited
+    from the parent classes.
+
+    Parameters
+    ----------
+    index
+        An index or other supported indexing key accepted by the inherited
+        ``__getitem__`` implementation.
+
+    Returns
+    -------
+    SubVmobjectType
+        The selected submobject, annotated as the generic child type.
+
+    Behavior
+    --------
+    The method delegates directly to ``super().__getitem__(index)``.
+    It is included primarily to provide a more specific return type for
+    static type checkers and linters when accessing elements of a VGroup.
+
+    For example:
+
+        first_circle = VGroup(circle, square)[0]
+
+    The returned object is determined by the inherited indexing behavior.
+    This method does not perform additional runtime type conversion.
+
+    Uniform Handling
+    ----------------
+    After ingesting the constructor arguments, the class checks whether
+    ``self.submobjects`` is non-empty. If it is, the group's uniform mapping
+    is updated with the first submobject's uniforms.
+
+    This can help the group inherit uniform values needed for rendering.
+    However, the code shown does not verify that every child has identical
+    uniforms, nor does it explicitly reconcile conflicting values from
+    later children.
+
+    Notes
+    -----
+    - VGroup is intended for vector mobjects, rather than arbitrary Mobjects.
+    - ``_ingest_args`` determines how positional objects and iterable
+      arguments are expanded and added to the group.
+    - The class's generic parameter improves type information but does not,
+      by itself, enforce the child type at runtime.
+    - ``__add__`` delegates to ``add``; it should not be assumed to create
+      an independent copy of the group.
+    - ``__getitem__`` delegates to the parent implementation and exists
+      mainly to improve type inference.
+    - Exact grouping, indexing, and rendering behavior also depends on the
+      implementations of Group, VMobject, and their inherited methods.
+
+    Examples
+    --------
+    Create a group of vector mobjects:
+
+        circle = Circle()
+        square = Square()
+        group = VGroup(circle, square)
+
+    Access a child:
+
+        first_object = group[0]
+
+    Add another VMobject:
+
+        triangle = Triangle()
+        group + triangle
+
+    The final expression calls ``__add__``, which delegates to ``add``.
+    The group is updated in place, and the resulting group is returned.
+    """
+
     def __init__(self, *vmobjects: SubVmobjectType | Iterable[SubVmobjectType], **kwargs):
         super().__init__(**kwargs)
         if any(isinstance(vmob, Mobject) and not isinstance(vmob, VMobject) for vmob in vmobjects):
