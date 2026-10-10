@@ -1027,6 +1027,125 @@ class VFadeIn(Animation):
 
 
 class VFadeOut(VFadeIn):
+    """
+    Fade a VMobject out by gradually decreasing its stroke and fill opacity.
+
+    VFadeOut is a subclass of VFadeIn that reverses the opacity interpolation
+    used by its parent. Instead of revealing a vector object from transparent
+    to its original opacity, it transitions the object's stroke and fill
+    opacity from their starting values toward zero.
+
+    The animation reuses VFadeIn's ``interpolate_submobject()`` method by
+    passing ``1 - alpha`` as the interpolation parameter. As the animation
+    progresses, this reversed parameter decreases from 1 to 0, causing the
+    stroke and fill to fade out.
+
+    Parameters
+    ----------
+    vmobject : VMobject
+        The vector mobject to fade out. Its stroke and fill opacity are
+        interpolated toward zero.
+
+    remover : bool, optional
+        Whether the animated mobject should be removed from the scene when
+        the animation finishes. Defaults to True.
+
+    final_alpha_value : float, optional
+        The final alpha value used by the parent Animation configuration.
+        Defaults to 0.0. Its precise effect depends on the implementation
+        of the inherited animation lifecycle.
+
+    **kwargs
+        Additional keyword arguments forwarded through VFadeIn to Animation.
+
+    Methods
+    -------
+    interpolate_submobject(
+        submob: VMobject,
+        start: VMobject,
+        alpha: float
+    ) -> None
+        Fade out an individual VMobject submobject by delegating to
+        VFadeIn.interpolate_submobject() with the reversed progress value
+        ``1 - alpha``.
+
+        Parameters
+        ----------
+        submob : VMobject
+            The submobject whose stroke and fill opacity are being updated.
+        start : VMobject
+            The corresponding starting submobject, which supplies the
+            original stroke and fill opacity values.
+        alpha : float
+            The animation progress. The method passes ``1 - alpha`` to
+            the parent interpolation method.
+
+    Notes
+    -----
+    - VFadeOut is designed for VMobjects, not arbitrary Mobject instances.
+    - At alpha = 0, the parent receives 1, so the stroke and fill opacity
+      reach their original starting values.
+    - At alpha = 1, the parent receives 0, so the stroke and fill opacity
+      become zero.
+    - Intermediate alpha values reverse the opacity progression of VFadeIn.
+    - Stroke and fill opacity are handled independently.
+    - With the default ``remover=True``, the animation is configured to
+      remove the animated mobject during cleanup. Set ``remover=False`` if
+      the object should remain in the scene after the animation.
+    - The constructor forwards ``remover`` and ``final_alpha_value`` to
+      the parent class. Their behavior is determined by the inherited
+      animation implementation.
+
+    Examples
+    --------
+    Example 1: Fade out a circle.
+
+    >>> circle = Circle()
+    >>> scene.add(circle)
+    >>> scene.play(VFadeOut(circle))
+
+    The circle's stroke and fill gradually become transparent. With the
+    default remover setting, the circle is removed from the scene when
+    the animation finishes.
+
+    Example 2: Keep the mobject in the scene.
+
+    >>> square = Square()
+    >>> scene.add(square)
+    >>> scene.play(VFadeOut(square, remover=False))
+
+    The square fades out, but the animation is configured not to remove
+    it from the scene during cleanup. The square remains transparent
+    unless another operation changes its appearance.
+
+    Example 3: Control the duration.
+
+    >>> triangle = Triangle()
+    >>> scene.add(triangle)
+    >>> scene.play(VFadeOut(triangle, run_time=2))
+
+    The triangle fades out over two seconds, assuming the scene's animation
+    timing is measured in seconds.
+
+    Example 4: Understand the reversed alpha.
+
+    >>> alpha = 0.25
+    >>> reversed_alpha = 1 - alpha
+    >>> print(reversed_alpha)
+    0.75
+
+    At 25% animation progress, VFadeOut passes 0.75 to the parent method.
+    At 100% progress, it passes 0, producing zero stroke and fill opacity.
+
+    See Also
+    --------
+    VFadeIn
+    Animation
+    VMobject
+    FadeOut
+    FadeIn
+    """
+
     def __init__(
         self,
         vmobject: VMobject,
