@@ -261,6 +261,101 @@ class Button(Mobject):
 # Controls
 
 class ControlMobject(ValueTracker):
+    """
+    A ValueTracker-based base class for interactive controls in a scene.
+
+    ControlMobject extends ValueTracker with support for attaching visual
+    Mobjects and defining custom behavior when its value changes. It is
+    intended to be subclassed to implement controls that validate a new
+    value and animate the visual representation of that value.
+
+    The control is fixed in the camera frame and receives a no-op updater
+    to help prevent its data from being locked as static while waiting
+    in a scene.
+
+    Parameters
+    ----------
+    value : float
+        The initial value stored by the ValueTracker.
+
+    *mobjects : Mobject
+        Zero or more Mobjects to attach to the control. These can represent
+        the control's visual components.
+
+    **kwargs
+        Additional keyword arguments forwarded to :class:`ValueTracker`.
+
+    Attributes
+    ----------
+    Inherited from ValueTracker
+        The tracked numeric value and the methods used to access or update it.
+
+    Methods
+    -------
+    set_value(value)
+        Validates the requested value, invokes the animation hook, and then
+        updates the underlying ValueTracker value.
+
+    assert_value(value)
+        Validation hook for subclasses. The base implementation does nothing.
+
+    set_value_anim(value)
+        Animation hook for subclasses. The base implementation does nothing.
+
+    Examples
+    --------
+    Create a basic control with an initial value::
+
+        control = ControlMobject(0.5)
+
+    Attach visual objects to a control::
+
+        track = Line(LEFT, RIGHT)
+        marker = Dot()
+
+        control = ControlMobject(0.5, track, marker)
+        self.add(control)
+
+    Subclass ControlMobject to validate values and define custom animation::
+
+        class BoundedControl(ControlMobject):
+            def assert_value(self, value):
+                assert 0 <= value <= 1, "Value must be between 0 and 1"
+
+            def set_value_anim(self, value):
+                # Implement the visual update or animation here.
+                pass
+
+        control = BoundedControl(0.5)
+
+    Notes
+    -----
+    - ``ControlMobject`` is a base class intended for extension. Its
+      ``assert_value`` and ``set_value_anim`` methods are placeholders and
+      do not implement validation or animation by themselves.
+    - ``set_value`` calls ``assert_value(value)`` first, followed by
+      ``set_value_anim(value)``, and then delegates the actual value update
+      to ``ValueTracker.set_value(self, value)``.
+    - If validation raises an exception, the animation hook and underlying
+      value update are not reached.
+    - Subclasses should implement ``assert_value`` to enforce valid input
+      and ``set_value_anim`` to update or animate their visual components.
+    - The constructor attaches the supplied Mobjects as submobjects.
+    - The no-op updater is added to help avoid static-mobject data locking.
+    - ``fix_in_frame()`` keeps the control fixed relative to the camera
+      frame rather than behaving like an ordinary world-space object.
+    - The class does not define a particular visual appearance or input
+      mechanism. Subclasses must provide the behavior appropriate to
+      their intended control.
+
+    See Also
+    --------
+    ValueTracker
+        Stores a numeric value that can be accessed and updated.
+    Mobject
+        Base class for visual objects in a scene.
+    """
+
     def __init__(self, value: float, *mobjects: Mobject, **kwargs):
         super().__init__(value=value, **kwargs)
         self.add(*mobjects)
