@@ -645,6 +645,109 @@ class IntegerMatrix(DecimalMatrix):
 
 
 class TexMatrix(Matrix):
+    """
+    A specialized Matrix for rendering matrix entries as LaTeX expressions.
+
+    TexMatrix extends Matrix by passing a shared configuration dictionary to
+    the base class's element-construction process. Since Matrix converts
+    non-VMobject, non-numeric entries to Tex, string entries are rendered as
+    LaTeX expressions. Existing VMobjects are still reused, and float or
+    complex entries are still converted to DecimalNumber by the inherited
+    element_to_mobject() implementation.
+
+    Parameters
+    ----------
+    matrix : StringMatrixType
+        Two-dimensional iterable containing string expressions intended for
+        LaTeX rendering.
+    tex_config : dict, default={}
+        Keyword arguments forwarded to Tex through Matrix's element-conversion
+        process. Examples include text styling or other configuration accepted
+        by Tex.
+    **config
+        Additional keyword arguments forwarded to the parent Matrix constructor,
+        including spacing, bracket buffers, target height, element alignment,
+        and ellipsis options.
+
+    Attributes
+    ----------
+    mob_matrix : VMobjectMatrixType
+        Nested list of entry mobjects created by Matrix.
+    elements : list of VMobject
+        Flat list of ordinary matrix entries.
+    rows : VGroup
+        Group containing the matrix's rows.
+    columns : VGroup
+        Group containing the matrix's columns.
+    brackets : VGroup
+        Group containing the left and right matrix brackets.
+    ellipses : list of VMobject
+        Entry mobjects visually replaced by ellipsis symbols.
+
+    Methods
+    -------
+    All methods are inherited from Matrix, including row and column access,
+    entry retrieval, column coloring, background rectangles, copying, and
+    ellipsis replacement.
+
+    Notes
+    -----
+    - TexMatrix does not override element_to_mobject(). Consequently, it does
+      not force every entry to be a Tex object: existing VMobjects are returned
+      unchanged, while float and complex values are converted to DecimalNumber.
+      Other values are converted to Tex using their string representation.
+    - ``tex_config`` is passed as ``element_config`` to Matrix. It affects
+      entries constructed by Tex, but is not applied to existing VMobjects or
+      DecimalNumber entries.
+    - Matrix layout, bracket generation, and entry spacing are inherited from
+      Matrix.
+    - The input should be a nonempty, rectangular matrix supported by the
+      parent Matrix implementation.
+    - The ``tex_config`` default is a mutable dictionary. Avoid modifying it
+      in place to prevent shared-default side effects.
+    - LaTeX expressions must be supported by the active Tex compilation setup.
+
+    Examples
+    --------
+    Create a matrix containing LaTeX expressions::
+
+        matrix = TexMatrix([
+            [r"x^2", r"y^2"],
+            [r"\sin(\theta)", r"\cos(\theta)"],
+        ])
+
+        self.add(matrix)
+
+    Configure the rendered entries::
+
+        matrix = TexMatrix(
+            [
+                [r"\alpha", r"\beta"],
+                [r"\gamma", r"\delta"],
+            ],
+            tex_config={"color": BLUE},
+        )
+
+    Customize the spacing using inherited Matrix parameters::
+
+        matrix = TexMatrix(
+            [
+                [r"a", r"b"],
+                [r"c", r"d"],
+            ],
+            h_buff=0.8,
+            v_buff=0.6,
+        )
+
+    See Also
+    --------
+    Matrix
+    DecimalMatrix
+    IntegerMatrix
+    Tex
+    StringMatrixType
+    """
+
     def __init__(
         self,
         matrix: StringMatrixType,
