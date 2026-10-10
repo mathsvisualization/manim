@@ -554,6 +554,152 @@ class UnitInterval(NumberLine):
 
 
 class Slider(VGroup):
+    """
+    A labeled slider controlled by a ValueTracker.
+
+    Slider combines a NumberLine, a movable ArrowTip, and a
+    numeric label that updates automatically as the associated
+    ValueTracker changes. It can be used to visualize a changing
+    parameter in an animation or interactive mathematical scene.
+
+    Parameters
+    ----------
+    value_tracker
+        ValueTracker supplying the slider's current numerical value.
+        Its value determines the arrow tip's position and the
+        displayed numeric label.
+    x_range
+        Minimum and maximum values of the number line.
+        Defaults to (-5, 5).
+    var_name
+        Optional variable name displayed before the value,
+        such as ``x = 2.50``. If None, only the value is shown.
+    width
+        Geometric width of the number line. Defaults to 3.
+    unit_size
+        Accepted by the signature but not directly used in this
+        implementation. The number line is configured using width.
+    arrow_width
+        Width passed to ArrowTip. Defaults to 0.15.
+    arrow_length
+        Length passed to ArrowTip. Defaults to 0.15.
+    arrow_color
+        Color of the arrow tip and the variable-name portion
+        of the label. Defaults to YELLOW.
+    font_size
+        Font size of the main label. Defaults to 24.
+    label_buff
+        Spacing between the arrow tip and the label.
+        Defaults to SMALL_BUFF.
+    num_decimal_places
+        Number of decimal places shown in the changing value.
+        Defaults to 2.
+    tick_size
+        Tick size passed to NumberLine. Defaults to 0.05.
+    number_line_config
+        Additional configuration for NumberLine. These values
+        override the default x_range, width, and tick_size
+        settings when keys overlap.
+    arrow_tip_config
+        Additional ArrowTip configuration. These values override
+        the default arrow-tip settings when keys overlap.
+    decimal_config
+        Accepted by the signature but not used in this
+        implementation.
+    angle
+        Rotation angle of the number line, in radians.
+        Defaults to 0.
+    label_direction
+        Direction vector used to position the main label and
+        orient the arrow tip. If None, it is computed by rotating
+        UP by angle and rounding the resulting vector to two
+        decimal places.
+    add_tick_labels
+        Whether to add numerical labels to the number line.
+        Defaults to True.
+    tick_label_font_size
+        Font size of the number-line tick labels. Defaults to 16.
+
+    Attributes
+    ----------
+    number_line
+        NumberLine created as the slider's first submobject.
+    tip
+        ArrowTip that tracks the ValueTracker's value.
+    label
+        Tex label containing the optional variable name and value.
+
+    Notes
+    -----
+    - The slider consists of three submobjects: the number line,
+      the arrow tip, and the main label.
+    - The arrow tip moves to the point corresponding to the
+      current ValueTracker value whenever its updater runs.
+    - The displayed numeric value is updated through a
+      changeable Tex number and an updater.
+    - The main label is repositioned relative to the arrow tip
+      on every update.
+    - Values outside x_range are not explicitly clamped by
+      Slider; NumberLine's coordinate conversion determines
+      the resulting position.
+    - number_line_config can override the initial range, width,
+      and tick size because it is merged after their defaults.
+    - arrow_tip_config can override the initial tip configuration.
+    - unit_size and decimal_config are present in the signature
+      but are not used by the shown implementation.
+    - The variable name is passed to label[var_name].set_fill.
+      Therefore, var_name should correspond to a valid subobject
+      selector in the generated Tex expression.
+
+    Examples
+    --------
+    Create a slider controlled by a ValueTracker::
+
+        tracker = ValueTracker(0)
+        slider = Slider(tracker)
+
+    Display a named parameter::
+
+        tracker = ValueTracker(2.5)
+        slider = Slider(tracker, var_name="x")
+
+    Rotate the slider and position its label accordingly::
+
+        tracker = ValueTracker(1)
+        slider = Slider(
+            tracker,
+            angle=PI / 4,
+            var_name="t",
+        )
+
+    Customize the number line and tick labels::
+
+        tracker = ValueTracker(0)
+        slider = Slider(
+            tracker,
+            x_range=(-2, 2),
+            width=5,
+            add_tick_labels=True,
+            tick_label_font_size=20,
+        )
+
+    Animate the tracked value in a scene::
+
+        tracker = ValueTracker(-3)
+        slider = Slider(tracker, var_name="x")
+        self.add(slider)
+        self.play(tracker.animate.set_value(4), run_time=3)
+
+    See Also
+    --------
+    ValueTracker
+        Stores a numerical value that can be animated.
+    NumberLine
+        Provides the geometric scale and tick labels.
+    ArrowTip
+        Supplies the slider's movable indicator.
+    """
+
     def __init__(
         self,
         value_tracker: ValueTracker,
