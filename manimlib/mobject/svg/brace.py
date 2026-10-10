@@ -603,6 +603,87 @@ class BraceText(BraceLabel):
 
 
 class LineBrace(Brace):
+    """
+    A Brace specialization designed to place a brace relative to a Line while
+    accounting for the line's orientation.
+
+    LineBrace inherits from Brace and adapts its construction process for line
+    mobjects that may be rotated relative to the coordinate axes. It temporarily
+    rotates the supplied line to align it with the horizontal reference
+    orientation, constructs the brace using the inherited Brace implementation,
+    and then restores the line's original rotation. Finally, it rotates the
+    brace around the line's center so that the brace follows the line's
+    orientation.
+
+    This approach allows the brace to be positioned relative to an inclined
+    line without requiring the caller to manually rotate the line into a
+    horizontal orientation before constructing the brace.
+
+    Parameters
+    ----------
+    line : Line
+        The line mobject to annotate. Its angle is obtained using get_angle().
+        The line is temporarily rotated during brace construction and then
+        rotated back before the resulting brace is adjusted to match its
+        orientation.
+
+    direction : optional
+        Direction passed to Brace after the line has been temporarily rotated.
+        Defaults to UP. The direction is interpreted by the inherited Brace
+        implementation during its construction.
+
+    **kwargs
+        Additional keyword arguments forwarded to Brace, such as its buffer
+        or LaTeX representation options.
+
+    Construction Process
+    --------------------
+    1. Obtain the line's current angle using line.get_angle().
+    2. Rotate the line by the negative of that angle, temporarily aligning it
+       with the horizontal reference orientation.
+    3. Construct the brace by calling Brace.__init__ through super(), passing
+       the temporarily rotated line, the requested direction, and any additional
+       keyword arguments.
+    4. Rotate the line back by its original angle.
+    5. Rotate the newly constructed brace around the line's center by the
+       original angle.
+
+    The final rotation makes the brace follow the orientation of the line,
+    while the inherited Brace implementation handles its width and relative
+    placement.
+
+    Example
+    -------
+        line = Line(LEFT, RIGHT).rotate(PI / 4)
+        brace = LineBrace(line, direction=UP)
+        self.add(line, brace)
+
+    In this example, the brace is constructed relative to a line rotated by
+    45 degrees. LineBrace handles the temporary alignment and final rotation
+    internally.
+
+    Notes
+    -----
+    - LineBrace relies on the geometry and positioning behavior implemented by
+      Brace.
+    - The line is modified in place during construction, although the method
+      rotates it back to its original angle before completing.
+    - The final brace rotation uses line.get_center() as its rotation center.
+    - The implementation assumes that temporarily rotating the line is an
+      appropriate way to establish the reference orientation for brace
+      construction.
+    - The default direction is UP, unlike Brace's default direction of DOWN.
+    - The resulting placement depends on the line's geometry, the supplied
+      direction, and any additional arguments passed to Brace.
+
+    See Also
+    --------
+    Brace
+        Base class that renders and positions a LaTeX brace.
+    Line
+        Line mobject accepted as the target of the brace.
+    """
+
     def __init__(self, line: Line, direction=UP, **kwargs):
         angle = line.get_angle()
         line.rotate(-angle)
