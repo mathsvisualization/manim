@@ -257,6 +257,117 @@ class GrowFromCenter(GrowFromPoint):
 
 
 class GrowFromEdge(GrowFromPoint):
+    """
+    Animate a mobject growing from one of its bounding-box edges.
+
+    GrowFromEdge is a subclass of GrowFromPoint that automatically determines
+    the starting point from a specified direction relative to the mobject.
+    It uses ``mobject.get_bounding_box_point(edge)`` to find the point on the
+    mobject's bounding box corresponding to the given direction, then passes
+    that point to GrowFromPoint.
+
+    The inherited animation creates a starting version of the mobject, scales
+    it to zero size, moves it to the selected edge point, and transforms it
+    into the original target. This makes the object appear to expand outward
+    from the specified side.
+
+    Parameters
+    ----------
+    mobject : Mobject
+        The object to animate. Its bounding box is used to determine the
+        starting point.
+
+    edge : np.ndarray
+        A direction vector that identifies the bounding-box point from which
+        the object should grow. Common directions include ``UP``, ``DOWN``,
+        ``LEFT``, and ``RIGHT``. Diagonal directions can also be used.
+
+    **kwargs
+        Additional keyword arguments forwarded to GrowFromPoint and then
+        to Transform. These may include ``run_time`` and ``point_color``.
+
+    Methods
+    -------
+    __init__(mobject: Mobject, edge: np.ndarray, **kwargs)
+        Determine the starting point by calling
+        ``mobject.get_bounding_box_point(edge)`` and initialize the parent
+        GrowFromPoint animation with that point.
+
+    Inherited Behavior
+    ------------------
+    GrowFromEdge inherits the transformation setup from GrowFromPoint:
+
+    - Creates a copy of the original mobject as the target.
+    - Creates a starting mobject scaled to zero size.
+    - Moves the starting mobject to the calculated bounding-box point.
+    - Optionally applies ``point_color`` to the starting mobject.
+    - Uses the interpolation and cleanup behavior inherited from Transform.
+
+    Notes
+    -----
+    - The ``edge`` argument is a direction, not a literal coordinate.
+    - ``get_bounding_box_point(edge)`` selects a point on the bounding box
+      in the specified direction.
+    - For a typical rectangular object, ``RIGHT`` selects the middle of its
+      right side, while ``UP`` selects the middle of its top side.
+    - The starting point is calculated when the constructor runs.
+    - The precise location depends on the object's bounding box and the
+      direction supplied.
+
+    Examples
+    --------
+    Example 1: Grow a square from its left edge.
+
+    >>> square = Square()
+    >>> scene.play(GrowFromEdge(square, LEFT))
+
+    The square starts collapsed at the midpoint of its left bounding-box
+    edge and grows into its original shape.
+
+    Example 2: Grow a circle from the top.
+
+    >>> circle = Circle()
+    >>> scene.play(GrowFromEdge(circle, UP))
+
+    The circle grows from the topmost point of its bounding box.
+
+    Example 3: Grow an object from its bottom edge.
+
+    >>> triangle = Triangle()
+    >>> scene.play(GrowFromEdge(triangle, DOWN, run_time=2))
+
+    The triangle grows from the bottom of its bounding box over two seconds.
+
+    Example 4: Use a diagonal direction.
+
+    >>> square = Square()
+    >>> scene.play(GrowFromEdge(square, UR))
+
+    The starting point is selected from the upper-right direction of the
+    square's bounding box, so the square grows from that corner region.
+
+    Example 5: Customize the starting color.
+
+    >>> circle = Circle(color=BLUE)
+    >>> scene.play(
+    ...     GrowFromEdge(
+    ...         circle,
+    ...         RIGHT,
+    ...         point_color=YELLOW,
+    ...     )
+    ... )
+
+    The starting mobject is assigned yellow, while the target is a copy of
+    the original blue circle.
+
+    See Also
+    --------
+    GrowFromPoint
+    GrowFromCenter
+    Transform
+    Mobject.get_bounding_box_point
+    """
+
     def __init__(self, mobject: Mobject, edge: np.ndarray, **kwargs):
         point = mobject.get_bounding_box_point(edge)
         super().__init__(mobject, point, **kwargs)
