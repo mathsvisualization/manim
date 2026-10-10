@@ -140,6 +140,33 @@ def always_shift(
     direction: np.ndarray = RIGHT,
     rate: float = 0.1
 ) -> Mobject:
+    """
+    Continuously shift a mobject in a given direction.
+
+    Parameters
+    ----------
+    mobject
+        The mobject to shift.
+    direction
+        Direction vector of motion. Defaults to RIGHT.
+    rate
+        Shift distance per unit of time. Defaults to 0.1.
+
+    Returns
+    -------
+    Mobject
+        The mobject with the updater added.
+
+    Notes
+    -----
+    Movement depends on the frame time delta (dt), making the
+    motion rate independent of frame rate.
+
+    Examples
+    --------
+    >>> always_shift(square, direction=UP, rate=0.5)
+    """
+
     mobject.add_updater(
         lambda m, dt: m.shift(dt * rate * direction)
     )
