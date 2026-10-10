@@ -202,6 +202,78 @@ class ParametricCurve(VMobject):
 
 
 class FunctionGraph(ParametricCurve):
+    """
+    Represent the graph of a real-valued function as a parametric curve.
+
+    FunctionGraph converts a function of one real variable, ``y = f(x)``,
+    into a three-dimensional parametric curve of the form
+    ``(t, f(t), 0)``. The resulting graph lies in the XY-plane.
+
+    The curve is sampled over the specified x-range using the step size
+    provided in ``x_range``. Additional keyword arguments are passed to
+    :class:`ParametricCurve`.
+
+    Parameters
+    ----------
+    function : Callable[[float], float]
+        A callable representing the real-valued function to graph.
+        It receives an x-coordinate and returns the corresponding
+        y-coordinate.
+
+    x_range : Tuple[float, float, float], default=(-8, 8, 0.25)
+        The range and sampling step for the independent variable, given as
+        ``(x_min, x_max, step)``.
+
+    color : ManimColor, default=YELLOW
+        The color specified for the graph. Passed through ``kwargs`` to
+        the parent class and ultimately to the underlying VMobject.
+
+    **kwargs
+        Additional keyword arguments forwarded to :class:`ParametricCurve`.
+
+    Attributes
+    ----------
+    function : Callable[[float], float]
+        The original function used to calculate y-coordinates.
+
+    x_range : Tuple[float, float, float]
+        The range and sampling step used to construct the graph.
+
+    See Also
+    --------
+    ParametricCurve
+        Represents a general parametric curve in three-dimensional space.
+    Axes
+        Provides coordinate axes for plotting functions.
+
+    Examples
+    --------
+    Create a graph of a quadratic function::
+
+        graph = FunctionGraph(lambda x: x**2)
+
+    Specify a custom domain and sampling step::
+
+        graph = FunctionGraph(
+            lambda x: np.sin(x),
+            x_range=(-np.pi, np.pi, 0.1),
+        )
+
+    Notes
+    -----
+    The graph is represented parametrically as
+
+    .. math::
+
+        \mathbf{r}(t) = (t, f(t), 0).
+
+    The ``x_range`` step controls the sampling density. Smaller steps
+    generally produce a more detailed approximation but require more points.
+
+    The function must return values that can be used as y-coordinates.
+    Discontinuous or undefined regions may require special handling.
+    """
+
     def __init__(
         self,
         function: Callable[[float], float],
