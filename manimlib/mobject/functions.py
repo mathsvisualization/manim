@@ -291,6 +291,84 @@ class FunctionGraph(ParametricCurve):
 
 
 class ImplicitFunction(VMobject):
+    """
+    Plot an implicit curve defined by a scalar function of two variables.
+
+    ImplicitFunction visualizes the zero-level set of a function
+    ``f(x, y)``. It uses ``plot_isoline`` to approximate the curve satisfying
+
+    .. math::
+
+        f(x, y) = 0.
+
+    The resulting curves are represented as paths in the XY-plane, with
+    their z-coordinates set to zero. The plotting region and approximation
+    detail can be controlled through the constructor parameters.
+
+    Parameters
+    ----------
+    func : Callable[[float, float], float]
+        A function of two variables. The implicit curve consists of points
+        ``(x, y)`` where ``func(x, y)`` is zero.
+
+    x_range : Tuple[float, float], default=(-FRAME_X_RADIUS, FRAME_X_RADIUS)
+        The minimum and maximum x-coordinates of the plotting region.
+
+    y_range : Tuple[float, float], default=(-FRAME_Y_RADIUS, FRAME_Y_RADIUS)
+        The minimum and maximum y-coordinates of the plotting region.
+
+    min_depth : int, default=5
+        Minimum subdivision depth used by ``plot_isoline`` when approximating
+        the implicit curve.
+
+    max_quads : int, default=1500
+        Maximum number of quadrilateral regions used by ``plot_isoline``
+        during the approximation.
+
+    use_smoothing : bool, default=False
+        If True, smooths the generated paths after constructing them.
+
+    **kwargs
+        Additional keyword arguments forwarded to :class:`VMobject`.
+
+    Notes
+    -----
+    - The function is evaluated as ``func(x, y)`` through the mapping
+      ``u -> func(u[0], u[1])``.
+    - The isoline algorithm returns a list of curves, each represented
+      by a sequence of two-dimensional points.
+    - Empty curves are discarded, and a zero z-coordinate is appended
+      to every remaining point.
+    - Each curve is added as a separate path using ``start_new_path`` and
+      ``add_points_as_corners``.
+    - Smoothing is disabled by default, so the paths retain their
+      corner-based approximation unless ``use_smoothing=True``.
+
+    Examples
+    --------
+    Plot a circle defined implicitly::
+
+        circle = ImplicitFunction(
+            lambda x, y: x**2 + y**2 - 1
+        )
+
+    Plot a hyperbola over a custom region::
+
+        hyperbola = ImplicitFunction(
+            lambda x, y: x**2 - y**2 - 1,
+            x_range=(-4, 4),
+            y_range=(-3, 3),
+            use_smoothing=True,
+        )
+
+    See Also
+    --------
+    ParametricCurve
+        Represents a curve using a parameterized function.
+    Axes
+        Provides coordinate axes for plotting mathematical objects.
+    """
+
     def __init__(
         self,
         func: Callable[[float, float], float],
